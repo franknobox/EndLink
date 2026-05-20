@@ -1,6 +1,7 @@
+using EndLink.Combat;
 using UnityEngine;
 
-namespace EndLink.Combat
+namespace EndLink.Ally
 {
     /// <summary>
     /// 队友战斗执行器。
@@ -39,7 +40,7 @@ namespace EndLink.Combat
 
         /// <summary>
         /// 运行时替换助战动作。
-        /// 主要用于调试、后续队伍配置系统，或简单编译/PlayMode 测试。
+        /// 主要用于调试、后续队伍配置系统，或简单 PlayMode 测试。
         /// </summary>
         public void SetAssistAction(CombatActionDefinition action)
         {

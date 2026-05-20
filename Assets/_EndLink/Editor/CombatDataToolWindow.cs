@@ -37,7 +37,7 @@ namespace EndLink.Editor
         private void OnGUI()
         {
             DrawHeader();
-            _selectedTab = GUILayout.Toolbar(_selectedTab, TabNames);
+            DrawTabToolbar();
             EditorGUILayout.Space(8f);
 
             _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
@@ -73,10 +73,24 @@ namespace EndLink.Editor
             EditorGUILayout.Space(6f);
         }
 
+        private void DrawTabToolbar()
+        {
+            int nextTab = GUILayout.Toolbar(_selectedTab, TabNames);
+
+            if (nextTab == _selectedTab)
+            {
+                return;
+            }
+
+            _selectedTab = nextTab;
+            GUI.FocusControl(string.Empty);
+        }
+
         private void DrawActionCreator()
         {
             DrawFolderField("Folder", ActionsFolder);
-            _actionAssetName = EditorGUILayout.TextField("Asset Name", _actionAssetName);
+            GUI.SetNextControlName("EndLink.CombatDataTool.ActionAssetName");
+            _actionAssetName = EditorGUILayout.TextField("Action Asset Name", _actionAssetName);
 
             using (new EditorGUILayout.HorizontalScope())
             {
@@ -95,7 +109,8 @@ namespace EndLink.Editor
         private void DrawTagDefinitionCreator()
         {
             DrawFolderField("Folder", TagDefinitionsFolder);
-            _tagAssetName = EditorGUILayout.TextField("Asset Name", _tagAssetName);
+            GUI.SetNextControlName("EndLink.CombatDataTool.TagDefinitionAssetName");
+            _tagAssetName = EditorGUILayout.TextField("Tag Asset Name", _tagAssetName);
 
             using (new EditorGUILayout.HorizontalScope())
             {
@@ -114,7 +129,8 @@ namespace EndLink.Editor
         private void DrawCombinationRuleCreator()
         {
             DrawFolderField("Folder", TagCombinationRulesFolder);
-            _combinationRuleAssetName = EditorGUILayout.TextField("Asset Name", _combinationRuleAssetName);
+            GUI.SetNextControlName("EndLink.CombatDataTool.CombinationRuleAssetName");
+            _combinationRuleAssetName = EditorGUILayout.TextField("Rule Asset Name", _combinationRuleAssetName);
 
             using (new EditorGUILayout.HorizontalScope())
             {

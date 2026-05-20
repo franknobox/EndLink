@@ -1,14 +1,16 @@
+using EndLink.Combat;
 using UnityEngine;
 
-namespace EndLink.Combat
+namespace EndLink.Ally
 {
     /// <summary>
-    /// 队友的大脑组件。
+    /// 队友大脑组件。
     /// 负责监听 CombatEventsBus，并根据当前规则判断是否让队友响应。
-    /// 它不直接生成 Hitbox，也不写入伤害数据；真正的攻击执行交给 AllyCombatDriver。
+    /// 它不直接生成 Hitbox，也不直接执行动作；真正的状态切换交给 AllyStateMachine。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(AllyCombatDriver))]
+    [RequireComponent(typeof(AllyStateMachine))]
     public sealed class AllyBrain : MonoBehaviour
     {
         [Header("组件引用")]
@@ -16,8 +18,12 @@ namespace EndLink.Combat
         [SerializeField]
         private AllyCombatDriver combatDriver;
 
+        [Tooltip("队友状态机。为空时会自动从同一 GameObject 上获取。")]
+        [SerializeField]
+        private AllyStateMachine stateMachine;
+
         [Header("响应规则")]
-        [Tooltip("是否响应 Hitbox 命中事件。当前木桩队友阶段推荐开启：主角命中木桩后，队友立刻对同一目标补一次助战。")]
+        [Tooltip("是否响应 Hitbox 命中事件。当前木桩队友阶段推荐开启：主角命中木桩后，队友请求进入 Assist 状态。")]
         [SerializeField]
         private bool respondToHitLanded = true;
 
@@ -54,6 +60,20 @@ namespace EndLink.Combat
             }
         }
 
+        /// <summary>当前绑定的队友状态机。</summary>
+        public AllyStateMachine StateMachine
+        {
+            get
+            {
+                if (stateMachine == null)
+                {
+                    stateMachine = GetComponent<AllyStateMachine>();
+                }
+
+                return stateMachine;
+            }
+        }
+
         /// <summary>最近一次响应事件时锁定的目标。</summary>
         public Transform CurrentTarget => _currentTarget;
 
@@ -62,6 +82,11 @@ namespace EndLink.Combat
             if (combatDriver == null)
             {
                 combatDriver = GetComponent<AllyCombatDriver>();
+            }
+
+            if (stateMachine == null)
+            {
+                stateMachine = GetComponent<AllyStateMachine>();
             }
         }
 
@@ -78,6 +103,7 @@ namespace EndLink.Combat
         private void Reset()
         {
             combatDriver = GetComponent<AllyCombatDriver>();
+            stateMachine = GetComponent<AllyStateMachine>();
         }
 
         private void HandleCombatEvent(CombatEvent eventData)
@@ -95,11 +121,11 @@ namespace EndLink.Combat
                 Debug.Log($"AllyBrain responding to {eventData.EventType}, target: {targetName}", this);
             }
 
-            bool executed = CombatDriver != null && CombatDriver.ExecuteAssist(target);
+            bool requested = StateMachine != null && StateMachine.RequestAssist(target);
 
-            if (!executed && logDecisions)
+            if (!requested && logDecisions)
             {
-                Debug.Log("AllyBrain 决定响应，但 AllyCombatDriver 未能执行助战。", this);
+                Debug.Log("AllyBrain decided to respond, but AllyStateMachine rejected the Assist request.", this);
             }
         }
 
