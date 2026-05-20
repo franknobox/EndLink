@@ -25,10 +25,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 计划内容：
 
 - 队伍管理：维护固定主控、助战队友列表、存活状态、入队/离队和队伍槽位。
-- 主控绑定：相机、输入、玩家状态机始终绑定同一个主控角色，暂不实现主控切换。
-- 队友专用状态机：已建立 `AllyStateMachine` 第一版，包含 Idle、Follow、Assist、Hit、Dead，后续接入实际跟随移动和更细的队友战斗状态。
-- 跟随 AI：助战队友跟随主控移动，保持合适距离、队形和避让。
-- 助战响应：队友根据主控攻击、命中标签、连携事件或冷却窗口释放简单助战行为。
+- 跟随 AI：已接入 `AllyFollowMotor` 第一版，助战队友可在 Follow 状态中跟随主控并保持队形偏移；后续补避让和队伍槽位。
 - 基础队友战斗 AI：队友能选择目标、调整站位、释放简单技能，但不承担完整玩家操作能力。
 - 通用角色能力沉淀：在玩家和队友都出现重复需求后，再抽出 `CharacterMotor`、`CharacterHealth`、通用 Hit/Dead 规则等共享层，避免过早抽象。
 - 小队表现调度：避免多个队友同时挤占同一空间或同时触发过多表现。
@@ -54,7 +51,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 ### 当前情况概览
 
-项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/StateMachine`、`Assets/_EndLink/Combat` 和 `Assets/_EndLink/Ally`。控制与状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、玩家生命值与受击接线、玩家 Animator 桥接、基础攻击驱动、通用 Hitbox、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友状态机骨架和木桩敌人的第一版基础设施。
+项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/StateMachine`、`Assets/_EndLink/Combat` 和 `Assets/_EndLink/Ally`。控制与状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、玩家生命值与受击接线、玩家 Animator 桥接、基础攻击驱动、通用 Hitbox、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友状态机骨架、队友跟随移动第一版和木桩敌人的第一版基础设施。
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
@@ -76,6 +73,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | [玩家战斗驱动](#feature-player-combat-driver) | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |
 | [队友助战基础组件](#feature-ally-assist) | 已完成脚本第一版 | 提供队友事件响应大脑和队友战斗执行器，用于验证队友根据战斗事件释放一次助战行为。 |
 | [队友有限状态机](#feature-ally-state-machine) | 已完成骨架第一版 | 提供 Idle、Follow、Assist、Hit、Dead 五个状态，用于承接队友跟随、助战、受击和死亡流程。 |
+| [队友跟随移动](#feature-ally-follow-motor) | 已完成第一版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移点并平滑转向。 |
 | [通用 Hitbox 基类](#feature-hitbox) | 已完成第一版 | 负责 Trigger 命中检测、Enemy Layer 过滤、重复命中去重，并向目标传递伤害、击退和标签。 |
 | [木桩敌人](#feature-enemy-dummy) | 已完成第一版 | 用于验证 Hitbox 命中、扣血、死亡、受击/死亡事件和基础调试显示。 |
 | [当前架构边界](#feature-architecture-boundary) | 已建立初版约定 | 初步明确输入读取、玩家移动、相机控制、状态机、战斗驱动、命中检测之间的职责边界。 |
@@ -599,7 +597,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `AllyStateMachine` 是队友专用有限状态机，不依赖玩家输入系统。
 - 当前包含 `Idle`、`Follow`、`Assist`、`Hit`、`Dead` 五个状态。
 - `Idle` 表示没有跟随目标的待机状态。
-- `Follow` 当前是跟随状态占位，只保存跟随目标并维持状态，实际跟随移动下一步接入。
+- `Follow` 在有跟随目标时每帧调用 `AllyFollowMotor.TickFollow(deltaTime)`，实际移动由跟随移动组件负责。
 - `Assist` 表示队友响应战斗事件后的助战状态，进入状态时调用 `AllyCombatDriver.ExecuteAssist(target)`。
 - `Hit` 表示队友受击硬直状态，可打断 Follow 和 Assist。
 - `Dead` 是终止状态，不再响应跟随、助战和受击请求。
@@ -614,6 +612,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `Assets/_EndLink/Ally/AllyStateContext.cs`
 - `Assets/_EndLink/Ally/AllyIdleState.cs`
 - `Assets/_EndLink/Ally/AllyFollowState.cs`
+- `Assets/_EndLink/Ally/AllyFollowMotor.cs`
 - `Assets/_EndLink/Ally/AllyAssistState.cs`
 - `Assets/_EndLink/Ally/AllyHitState.cs`
 - `Assets/_EndLink/Ally/AllyDeadState.cs`
@@ -630,6 +629,47 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `followTarget`：跟随目标，通常后续会绑定主控角色
 - `assistDuration`：助战状态最短持续时间
 - `hitDuration`：受击状态持续时间
+
+</details>
+
+<a id="feature-ally-follow-motor"></a>
+
+### Feature：队友跟随移动
+
+<details>
+<summary>展开详情</summary>
+
+
+功能说明：
+
+- `AllyFollowMotor` 是队友跟随移动组件，不依赖 NavMesh。
+- 支持优先使用 `CharacterController.Move` 移动；如果队友没有 `CharacterController`，会回退为直接修改 `Transform.position`。
+- `AllyStateMachine` 负责保存跟随目标并同步给 `AllyFollowMotor`。
+- `AllyFollowState` 每帧调用 `TickFollow(deltaTime)`，因此 Assist、Hit、Dead 状态不会继续抢跟随移动。
+- 队友会移动到主控的本地队形偏移点，移动时面向移动方向，停下时面向跟随目标。
+- 当前只处理平面 XZ 跟随，后续如果需要复杂地形、障碍和避让，再接 NavMesh 或队伍槽位系统。
+
+对应脚本：
+
+- `Assets/_EndLink/Ally/AllyFollowMotor.cs`
+- `Assets/_EndLink/Ally/AllyFollowState.cs`
+- `Assets/_EndLink/Ally/AllyStateMachine.cs`
+
+相关物体：
+
+- 队友根物体
+  - `AllyStateMachine`
+  - `AllyFollowMotor`
+  - 可选 `CharacterController`
+
+关键配置：
+
+- `followTarget`：跟随目标，通常拖固定主控角色
+- `followDistance`：当 `formationOffset` 为零时使用的默认后方距离
+- `stopDistance`：距离队形点小于该值时停止移动
+- `moveSpeed`：队友跟随移动速度
+- `rotationSpeed`：队友转向速度
+- `formationOffset`：相对主控的本地队形偏移，X 是左右，Z 是前后
 
 </details>
 

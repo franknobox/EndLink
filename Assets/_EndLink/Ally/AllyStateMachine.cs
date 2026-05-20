@@ -6,10 +6,11 @@ namespace EndLink.Ally
 {
     /// <summary>
     /// 队友有限状态机。
-    /// 当前负责 Idle、Follow、Assist、Hit、Dead 的状态切换；不读取玩家输入，也不直接监听战斗事件。
+    /// 当前负责 Idle、Follow、Assist、Hit、Dead 的状态切换，不读取玩家输入，也不直接监听战斗事件。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(AllyCombatDriver))]
+    [RequireComponent(typeof(AllyFollowMotor))]
     public sealed class AllyStateMachine : MonoBehaviour
     {
         [Header("初始状态")]
@@ -18,7 +19,7 @@ namespace EndLink.Ally
         private AllyStateId initialState = AllyStateId.Idle;
 
         [Header("跟随")]
-        [Tooltip("队友跟随目标。当前 Follow 状态只持有目标引用，下一步接跟随移动时会使用它。")]
+        [Tooltip("队友跟随目标，通常拖固定主控角色。实际移动由 AllyFollowMotor 执行。")]
         [SerializeField]
         private Transform followTarget;
 
@@ -35,6 +36,7 @@ namespace EndLink.Ally
         private readonly Dictionary<AllyStateId, IAllyState> _states = new();
         private IAllyState _currentState;
         private AllyCombatDriver _combatDriver;
+        private AllyFollowMotor _followMotor;
         private Transform _currentAssistTarget;
 
         /// <summary>当前状态标识，方便 Inspector 和调试工具观察。</summary>
@@ -42,6 +44,9 @@ namespace EndLink.Ally
 
         /// <summary>当前绑定的队友战斗执行器。</summary>
         public AllyCombatDriver CombatDriver => _combatDriver;
+
+        /// <summary>当前绑定的队友跟随移动组件。</summary>
+        public AllyFollowMotor FollowMotor => _followMotor;
 
         /// <summary>当前跟随目标。</summary>
         public Transform FollowTarget => followTarget;
@@ -65,11 +70,13 @@ namespace EndLink.Ally
         private void Awake()
         {
             _combatDriver = GetComponent<AllyCombatDriver>();
+            _followMotor = GetComponent<AllyFollowMotor>();
 
             AllyStateContext context = new AllyStateContext(
                 this,
                 transform,
-                _combatDriver);
+                _combatDriver,
+                _followMotor);
 
             RegisterState(new AllyIdleState(context));
             RegisterState(new AllyFollowState(context));
@@ -80,7 +87,8 @@ namespace EndLink.Ally
 
         private void Start()
         {
-            ChangeState(initialState);
+            _followMotor.SetFollowTarget(followTarget);
+            ChangeState(followTarget != null ? AllyStateId.Follow : initialState);
         }
 
         private void Update()
@@ -118,11 +126,12 @@ namespace EndLink.Ally
 
         /// <summary>
         /// 设置队友跟随目标。
-        /// 当前只负责保存引用和在 Idle/Follow 之间切换；实际移动下一步由跟随组件处理。
+        /// 状态机保存目标引用并同步给 AllyFollowMotor，然后在 Idle / Follow 之间切换。
         /// </summary>
         public void SetFollowTarget(Transform target)
         {
             followTarget = target;
+            _followMotor.SetFollowTarget(target);
 
             if (CurrentStateId == AllyStateId.Dead || CurrentStateId == AllyStateId.Assist || CurrentStateId == AllyStateId.Hit)
             {

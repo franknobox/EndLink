@@ -1,7 +1,9 @@
 namespace EndLink.Ally
 {
     /// <summary>
-    /// 闃熷弸璺熼殢鐘舵€併€?    /// 绗竴鐗堝彧浣滀负鐘舵€佸崰浣嶏紝涓嶅疄闄呯Щ鍔紱鍚庣画鎺?Follow Motor 鎴?NavMesh/CharacterController 璺熼殢閫昏緫銆?    /// </summary>
+    /// 队友跟随状态。
+    /// 状态本身只负责判断是否仍有跟随目标，并把每帧移动委托给 AllyFollowMotor。
+    /// </summary>
     public sealed class AllyFollowState : AllyStateBase
     {
         public AllyFollowState(AllyStateContext context) : base(context)
@@ -15,8 +17,10 @@ namespace EndLink.Ally
             if (Context.FollowTarget == null)
             {
                 Context.StateMachine.ChangeState(AllyStateId.Idle);
+                return;
             }
+
+            Context.FollowMotor.TickFollow(deltaTime);
         }
     }
 }
-

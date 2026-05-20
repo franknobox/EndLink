@@ -3,39 +3,45 @@ using UnityEngine;
 namespace EndLink.Ally
 {
     /// <summary>
-    /// 闃熷弸鐘舵€佷笂涓嬫枃銆?    /// 缁熶竴淇濆瓨鐘舵€佽繍琛屾墍闇€鐨勫閮ㄤ緷璧栵紝閬垮厤姣忎釜鐘舵€佸弽澶?GetComponent銆?    /// </summary>
+    /// 队友状态共享上下文。
+    /// 状态对象通过上下文访问状态机、Transform、战斗执行器和跟随移动器，避免每个状态重复 GetComponent。
+    /// </summary>
     public sealed class AllyStateContext
     {
         public AllyStateContext(
             AllyStateMachine stateMachine,
             Transform transform,
-            AllyCombatDriver combatDriver)
+            AllyCombatDriver combatDriver,
+            AllyFollowMotor followMotor)
         {
             StateMachine = stateMachine;
             Transform = transform;
             CombatDriver = combatDriver;
+            FollowMotor = followMotor;
         }
 
-        /// <summary>鎵€灞炵姸鎬佹満銆?/summary>
+        /// <summary>队友状态机。</summary>
         public AllyStateMachine StateMachine { get; }
 
-        /// <summary>闃熷弸鏍硅妭鐐?Transform銆?/summary>
+        /// <summary>队友根物体 Transform。</summary>
         public Transform Transform { get; }
 
-        /// <summary>闃熷弸鎴樻枟鎵ц鍣紝鍙礋璐ｆ墽琛屽姩浣滃拰鐢熸垚 Hitbox銆?/summary>
+        /// <summary>队友战斗执行器，只负责生成 Hitbox 和执行动作。</summary>
         public AllyCombatDriver CombatDriver { get; }
 
-        /// <summary>褰撳墠璺熼殢鐩爣銆傜涓€鐗堝彧鎸佹湁寮曠敤锛屼笅涓€姝ユ帴璺熼殢绉诲姩鏃朵娇鐢ㄣ€?/summary>
+        /// <summary>队友跟随移动器，只在 Follow 状态中被 Tick 驱动。</summary>
+        public AllyFollowMotor FollowMotor { get; }
+
+        /// <summary>当前跟随目标。</summary>
         public Transform FollowTarget => StateMachine.FollowTarget;
 
-        /// <summary>褰撳墠鍔╂垬鐩爣銆?/summary>
+        /// <summary>当前助战目标。</summary>
         public Transform CurrentAssistTarget => StateMachine.CurrentAssistTarget;
 
-        /// <summary>鍔╂垬鐘舵€佹寔缁椂闂淬€?/summary>
+        /// <summary>当前助战状态持续时间。</summary>
         public float AssistDuration => StateMachine.CurrentAssistDuration;
 
-        /// <summary>鍙楀嚮鐘舵€佹寔缁椂闂淬€?/summary>
+        /// <summary>受击状态持续时间。</summary>
         public float HitDuration => StateMachine.HitDuration;
     }
 }
-
