@@ -19,8 +19,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 计划内容：
 
-- 标签系统：为角色、技能、状态、敌人弱点、连携条件提供统一标签描述。
-- 事件总栈：集中派发战斗事件，例如命中、受击、破防、技能释放、连携窗口打开等。
+- 事件总栈接线：已完成全局战斗事件总栈基础版，后续把攻击、命中、受伤、死亡和标签变化逐步接入事件流。
 - 连携触发规则：定义哪些事件、标签和条件可以触发队友协同。
 - 助战队友木桩验证：先用无 AI 或极简 AI 的固定队友占位，验证连携触发和响应链路。
 - 战斗日志/调试面板：显示事件流和标签判断结果，便于调试复杂连携逻辑。
@@ -67,7 +66,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 ### 当前情况概览
 
-项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/StateMachine` 和 `Assets/_EndLink/Combat`。控制与状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用命名空间 `EndLink.Combat`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、玩家生命值与受击接线、玩家 Animator 桥接、基础攻击驱动、通用 Hitbox 和木桩敌人的第一版基础设施。
+项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/StateMachine` 和 `Assets/_EndLink/Combat`。控制与状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用命名空间 `EndLink.Combat`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、玩家生命值与受击接线、玩家 Animator 桥接、基础攻击驱动、通用 Hitbox、战斗标签系统、战斗事件总栈基础版和木桩敌人的第一版基础设施。
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
@@ -83,6 +82,8 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | 玩家 Animator 桥接 | 已完成第一版 | 负责把玩家状态、移动速度和状态进入触发器同步到 Animator 参数，不参与状态决策。 |
 | 玩家目标选择 | 已完成基础版 | 负责在 Enemy Layer 中按范围、角度和距离选择当前战斗目标，不控制镜头或 UI。 |
 | 战斗动作配置 | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和大招的伤害、冷却、时序、Hitbox 和命中标签。 |
+| 战斗标签系统 | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、增删事件、合法检查和标签组合转化规则。 |
+| 战斗事件总栈 | 已完成基础版 | 提供全局战斗事件类型、事件数据、事件广播入口和调试日志监听器。 |
 | 玩家战斗驱动 | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |
 | 通用 Hitbox 基类 | 已完成第一版 | 负责 Trigger 命中检测、Enemy Layer 过滤、重复命中去重，并向目标传递伤害、击退和标签。 |
 | 木桩敌人 | 已完成第一版 | 用于验证 Hitbox 命中、扣血、死亡、受击/死亡事件和基础调试显示。 |
@@ -259,7 +260,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 - `PlayerHealth` 负责玩家生命值、受伤、治疗和死亡接线。
 - 同时实现 `IHitReceiver` 和 `IDamageable`，方便后续敌人 Hitbox、环境伤害或调试工具统一调用。
-- `ReceiveHit(HitboxHitInfo hitInfo)` 会转发到 `TakeDamage(int damage, string tag)`。
+- `ReceiveHit(HitboxHitInfo hitInfo)` 会转发到 `TakeDamage(int damage, CombatTagDefinition tag)`。
 - 受到有效伤害且未死亡时，会扣除生命值并请求 `PlayerStateMachine.RequestHit()`。
 - 生命值首次降到 0 时，会请求 `PlayerStateMachine.RequestDead()`。
 - 支持 `OnHealthChanged`、`OnDamaged`、`OnHealed` 和 `OnDead` 事件。
@@ -361,7 +362,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `CombatActionType` 描述动作性质，不描述释放者来源。
 - 当前动作类型包括 `BasicAttack`、`Skill`、`LinkAttack`、`Ultimate`。
 - 主控、队友和敌人后续可以共用同一套动作类型，释放者来源应由后续战斗事件数据携带。
-- 动作配置包含伤害、击退、命中标签、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置和生命周期。
+- 动作配置包含伤害、击退、`CombatTagDefinition` 命中标签、标签持续时间、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置和生命周期。
 
 对应脚本：
 
@@ -378,13 +379,79 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `LinkAttack`：连携攻击
 - `Ultimate`：大招
 
+### Feature：战斗标签系统
+
+功能说明：
+
+- 战斗标签系统只服务 Combat，不做全项目泛用 GameplayTag。
+- `CombatTagDefinition` 是标签定义资产，包含 `tagId`、显示名和说明。
+- 标签合法检查当前要求标签资产非空且 `tagId` 非空。
+- `CombatTagContainer` 挂在目标身上，负责保存多标签、持续时间、添加、移除、过期和清空。
+- `CombatTagContainer` 支持永久标签和限时标签，限时标签会在 `Update` 中自动倒计时并过期移除。
+- `CombatTagCombinationRule` 描述 A + B => C 的组合转化规则，可选择转化后移除源标签，并可配置结果标签持续时间。
+- 容器提供 `OnTagAdded`、`OnTagRemoved`、`OnTagExpired`、`OnTagRefreshed` 和 `OnTagTransformed` 事件。
+- 对外提供 `ICombatTagReadable` 和 `ICombatTagReceiver`，后续连携规则、AI、UI 和状态效果系统应优先依赖接口。
+- `CombatActionDefinition`、`HitboxBase` 和 `HitboxHitInfo` 已支持 `CombatTagDefinition` 标签通道。
+- 旧的 string tag 通道已移除，伤害链路统一使用 `CombatTagDefinition`。
+- 命中时如果目标实现 `ICombatTagReceiver`，`HitboxBase` 会把 `CombatTagDefinition` 添加到目标标签容器。
+
+对应脚本：
+
+- `Assets/_EndLink/Combat/Tags/CombatTagDefinition.cs`
+- `Assets/_EndLink/Combat/Tags/CombatTagCombinationRule.cs`
+- `Assets/_EndLink/Combat/Tags/CombatTagContainer.cs`
+- `Assets/_EndLink/Combat/Tags/CombatTagInterfaces.cs`
+
+相关资产：
+
+- `CombatTagDefinition` 数据资产：可通过 `Create > EndLink > Combat > Combat Tag Definition` 创建
+- `CombatTagCombinationRule` 数据资产：可通过 `Create > EndLink > Combat > Combat Tag Combination Rule` 创建
+
+相关物体：
+
+- 需要被连携规则查询的目标
+  - `CombatTagContainer`
+
+### Feature：战斗事件总栈
+
+功能说明：
+
+- `CombatEventsBus` 是全局战斗事件广播入口。
+- `CombatEvent` 是一条战斗事件的数据结构，包含事件类型、来源、目标、动作配置、战斗标签、伤害、命中信息和时间戳。
+- `CombatEventType` 目前包含 `ActionStarted`、`HitLanded`、`Damaged`、`Dead`、`TagAdded`、`TagRemoved`、`TagExpired`、`TagTransformed`。
+- `CombatEventLog` 是白模阶段用的日志监听器，订阅事件后把事件流打印到 Console。
+- 事件总栈只广播事实，不保存状态，不决定连携规则，不直接驱动队友 AI。
+- 当前只是基础版，后续需要把 `PlayerCombatDriver`、`HitboxBase`、`PlayerHealth`、`EnemyDummy` 和 `CombatTagContainer` 的关键节点逐步接入。
+
+对应脚本：
+
+- `Assets/_EndLink/Combat/Events/CombatEventType.cs`
+- `Assets/_EndLink/Combat/Events/CombatEvent.cs`
+- `Assets/_EndLink/Combat/Events/CombatEventsBus.cs`
+- `Assets/_EndLink/Combat/Events/CombatEventLog.cs`
+
+相关物体：
+
+- 任意调试物体
+  - `CombatEventLog`
+
+关键接口：
+
+- `CombatEventsBus.Raised`：全局事件订阅入口
+- `CombatEventsBus.Raise(...)`：广播通用事件
+- `CombatEventsBus.RaiseActionStarted(...)`
+- `CombatEventsBus.RaiseHitLanded(...)`
+- `CombatEventsBus.RaiseDamaged(...)`
+- `CombatEventsBus.RaiseDead(...)`
+- `CombatEventsBus.RaiseTagAdded(...)`
+
 ### Feature：玩家战斗驱动
 
 功能说明：
 
 - `PlayerCombatDriver` 不读取输入，不决定是否能进入攻击状态。
 - 状态机决定能否攻击，`PlayerCombatDriver` 只负责执行攻击表现和判定。
-- 支持通过 `CombatActionDefinition` 配置普攻的伤害、击退、标签、冷却、Hitbox 和生成参数。
+- 支持通过 `CombatActionDefinition` 配置普攻的伤害、击退、`CombatTagDefinition` 标签、标签持续时间、冷却、Hitbox 和生成参数。
 - 未配置 `CombatActionDefinition` 时，仍会回退使用组件上的兼容默认字段。
 - 当前执行内容是在角色正前方生成指定 Hitbox prefab。
 - 支持攻击冷却，防止攻击过快触发。
@@ -423,7 +490,8 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 只对 Layer 为 `Enemy` 的目标生效。
 - 使用 `HashSet<Collider>` 记录已经命中过的 Collider，避免同一个 Hitbox 重复命中同一目标。
 - 命中后查找目标父级上的 `IHitReceiver`。
-- 命中信息通过 `HitboxHitInfo` 传递，包含伤害、击退、标签、命中点、命中方向、Owner、Hitbox 和命中的 Collider。
+- 命中信息通过 `HitboxHitInfo` 传递，包含伤害、击退、`CombatTagDefinition` 标签、标签持续时间、命中点、命中方向、Owner、Hitbox 和命中的 Collider。
+- 命中时如果目标实现 `ICombatTagReceiver`，会把 `CombatTagDefinition` 添加到目标标签容器。
 - 命中后触发 `UnityEvent<Collider>`，方便后续挂音效、特效或调试组件。
 
 对应脚本：
@@ -442,7 +510,8 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 - `damageAmount`：伤害值
 - `knockbackForce`：击退力
-- `tagToApply`：命中标签，例如 `Break`
+- `combatTagToApply`：命中战斗标签资产
+- `combatTagDuration`：命中战斗标签持续时间，小于等于 0 表示永久标签
 - `onHit`：命中事件
 
 配置注意：
@@ -458,7 +527,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 - `EnemyDummy` 用于验证 Hitbox 命中链路。
 - 同时实现 `IHitReceiver` 和 `IDamageable`。
-- `ReceiveHit(HitboxHitInfo hitInfo)` 会转发到 `TakeDamage(int damage, string tag)`。
+- `ReceiveHit(HitboxHitInfo hitInfo)` 会转发到 `TakeDamage(int damage, CombatTagDefinition tag)`。
 - 支持 `maxHealth` / `CurrentHealth` / `IsDead`，受到伤害后会扣血，生命值降到 0 时进入死亡状态。
 - 受击后使用 URP 友好的 `MaterialPropertyBlock` 改写 `_BaseColor`，瞬间变为浅红不透明色，`0.1` 秒后恢复原色。
 - 死亡后切换为灰色，方便白模阶段观察木桩状态。
@@ -490,6 +559,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `PlayerAnimatorDriver` 只把状态机和移动速度同步到 Animator 参数，不反向控制状态机。
 - `PlayerTargeting` 只负责当前战斗目标选择，不控制相机锁定、UI 或攻击执行。
 - `PlayerCombatDriver` 不读取输入，只执行攻击表现和判定。
+- `CombatEventsBus` 只广播战斗事实，不保存状态、不决定连携规则、不直接驱动表现。
 - `HitboxBase` 负责命中检测和命中信息派发，不负责敌人如何扣血或表现。
 - `ThirdPersonCameraController` 负责相机目标旋转、缩放和 Cinemachine 参数，不负责玩家移动。
 - `EnemyDummy` 是临时验证对象，后续正式敌人应复用 `IHitReceiver` / `IDamageable` 接口。
@@ -497,5 +567,5 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 后续需要调整：
 
 - 当前攻击仍是固定时间驱动，后续接动画后应改为动画事件或攻击窗口驱动。
-- 当前标签仍是 string，后续连携系统阶段应替换为统一 GameplayTag 或 ScriptableObject 标签资产。
+- 战斗标签已迁移为 `CombatTagDefinition`，后续需要把标签事件接入 `CombatEventsBus`。
 - 当前 Hitbox 使用即时 Instantiate/Destroy，后续攻击频繁后建议切换对象池。

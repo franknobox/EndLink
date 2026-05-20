@@ -128,7 +128,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.HitboxBase
   damageAmount: 10
   knockbackForce: 3
-  tagToApply: Break
+  combatTagToApply: {fileID: 0}
+  combatTagDuration: 0
   onHit:
     m_PersistentCalls:
       m_Calls: []

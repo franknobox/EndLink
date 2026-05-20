@@ -96,14 +96,14 @@ namespace EndLink.Combat
         /// </summary>
         public void ReceiveHit(HitboxHitInfo hitInfo)
         {
-            TakeDamage(Mathf.RoundToInt(hitInfo.DamageAmount), hitInfo.TagToApply);
+            TakeDamage(Mathf.RoundToInt(hitInfo.DamageAmount), hitInfo.CombatTagToApply);
         }
 
         /// <summary>
         /// 接收伤害并同步玩家状态机。
         /// 有效伤害会扣除生命值；生命值归零进入 Dead，否则进入 Hit。
         /// </summary>
-        public void TakeDamage(int damage, string tag)
+        public void TakeDamage(int damage, CombatTagDefinition tag)
         {
             if (_isDead)
             {
@@ -122,7 +122,7 @@ namespace EndLink.Combat
             if (logHealthChanges)
             {
                 Debug.Log(
-                    $"Player took {appliedDamage} damage, tag: {tag}, hp: {_currentHealth}/{maxHealth}",
+                    $"Player took {appliedDamage} damage, tag: {GetTagLogText(tag)}, hp: {_currentHealth}/{maxHealth}",
                     this);
             }
 
@@ -222,6 +222,11 @@ namespace EndLink.Combat
             string stateText = _isDead ? "Dead" : $"{_currentHealth}/{maxHealth}";
             gameObject.name = $"{_originalName} [{stateText}]";
         }
+
+        private static string GetTagLogText(CombatTagDefinition tag)
+        {
+            return tag != null ? tag.TagId : "None";
+        }
     }
 
     /// <summary>
@@ -235,10 +240,10 @@ namespace EndLink.Combat
 
     /// <summary>
     /// 玩家受伤事件。
-    /// 参数依次为：实际伤害值、命中标签。
+    /// 参数依次为：实际伤害值、命中战斗标签。
     /// </summary>
     [System.Serializable]
-    public sealed class PlayerHealthDamagedEvent : UnityEvent<int, string>
+    public sealed class PlayerHealthDamagedEvent : UnityEvent<int, CombatTagDefinition>
     {
     }
 

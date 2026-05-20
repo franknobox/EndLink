@@ -54,9 +54,13 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float knockbackForce = 3f;
 
-        [Tooltip("动作命中时施加的标签，例如 Break、Launch、Down。留空表示不施加标签。")]
+        [Tooltip("动作命中时施加的战斗标签资产。新逻辑应优先使用它。")]
         [SerializeField]
-        private string tagToApply = "Break";
+        private CombatTagDefinition combatTagToApply;
+
+        [Tooltip("战斗标签持续时间。小于等于 0 表示永久标签。")]
+        [SerializeField, Min(0f)]
+        private float combatTagDuration;
 
         [Header("冷却与时序")]
         [Tooltip("动作冷却时间。冷却未结束时不应再次释放同一个动作。")]
@@ -118,9 +122,14 @@ namespace EndLink.Combat
         public float KnockbackForce => knockbackForce;
 
         /// <summary>
-        /// 命中时施加的标签。
+        /// 命中时施加的战斗标签资产。
         /// </summary>
-        public string TagToApply => tagToApply;
+        public CombatTagDefinition CombatTagToApply => combatTagToApply;
+
+        /// <summary>
+        /// 战斗标签持续时间。小于等于 0 表示永久标签。
+        /// </summary>
+        public float CombatTagDuration => combatTagDuration;
 
         /// <summary>
         /// 冷却时间。

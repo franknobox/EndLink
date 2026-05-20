@@ -14,7 +14,8 @@ namespace EndLink.Combat
             Collider hitCollider,
             float damageAmount,
             float knockbackForce,
-            string tagToApply,
+            CombatTagDefinition combatTagToApply,
+            float combatTagDuration,
             Vector3 hitPoint,
             Vector3 hitDirection)
         {
@@ -23,7 +24,8 @@ namespace EndLink.Combat
             HitCollider = hitCollider;
             DamageAmount = damageAmount;
             KnockbackForce = knockbackForce;
-            TagToApply = tagToApply;
+            CombatTagToApply = combatTagToApply;
+            CombatTagDuration = Mathf.Max(0f, combatTagDuration);
             HitPoint = hitPoint;
             HitDirection = hitDirection;
         }
@@ -43,8 +45,11 @@ namespace EndLink.Combat
         /// <summary>击退力。</summary>
         public float KnockbackForce { get; }
 
-        /// <summary>命中时附加的标签，例如 Break。</summary>
-        public string TagToApply { get; }
+        /// <summary>命中时附加的战斗标签资产。</summary>
+        public CombatTagDefinition CombatTagToApply { get; }
+
+        /// <summary>战斗标签持续时间。小于等于 0 表示永久标签。</summary>
+        public float CombatTagDuration { get; }
 
         /// <summary>命中点。</summary>
         public Vector3 HitPoint { get; }

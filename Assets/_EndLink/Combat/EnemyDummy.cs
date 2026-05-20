@@ -105,13 +105,13 @@ namespace EndLink.Combat
         /// </summary>
         public void ReceiveHit(HitboxHitInfo hitInfo)
         {
-            TakeDamage(Mathf.RoundToInt(hitInfo.DamageAmount), hitInfo.TagToApply);
+            TakeDamage(Mathf.RoundToInt(hitInfo.DamageAmount), hitInfo.CombatTagToApply);
         }
 
         /// <summary>
         /// 接收伤害，扣除血量，触发受击/死亡事件，并执行调试反馈。
         /// </summary>
-        public void TakeDamage(int damage, string tag)
+        public void TakeDamage(int damage, CombatTagDefinition tag)
         {
             if (_isDead)
             {
@@ -124,7 +124,7 @@ namespace EndLink.Combat
             if (logHits)
             {
                 Debug.Log(
-                    $"EnemyDummy took {appliedDamage} damage, tag: {tag}, hp: {_currentHealth}/{maxHealth}",
+                    $"EnemyDummy took {appliedDamage} damage, tag: {GetTagLogText(tag)}, hp: {_currentHealth}/{maxHealth}",
                     this);
             }
 
@@ -236,14 +236,19 @@ namespace EndLink.Combat
             _propertyBlock.SetColor(BaseColorId, color);
             _meshRenderer.SetPropertyBlock(_propertyBlock);
         }
+
+        private static string GetTagLogText(CombatTagDefinition tag)
+        {
+            return tag != null ? tag.TagId : "None";
+        }
     }
 
     /// <summary>
     /// 木桩受击事件。
-    /// 参数依次为：实际伤害值、命中标签。
+    /// 参数依次为：实际伤害值、命中战斗标签。
     /// </summary>
     [System.Serializable]
-    public sealed class EnemyDummyDamagedEvent : UnityEvent<int, string>
+    public sealed class EnemyDummyDamagedEvent : UnityEvent<int, CombatTagDefinition>
     {
     }
 }

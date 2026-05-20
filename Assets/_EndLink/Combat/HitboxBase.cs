@@ -24,9 +24,13 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float knockbackForce = 3f;
 
-        [Tooltip("命中时挂载到目标的标签，例如 Break。早期使用字符串，后续可替换为统一 GameplayTag。")]
+        [Tooltip("命中时施加到目标 CombatTagContainer 的战斗标签资产。新逻辑应优先使用它。")]
         [SerializeField]
-        private string tagToApply = "Break";
+        private CombatTagDefinition combatTagToApply;
+
+        [Tooltip("战斗标签持续时间。小于等于 0 表示永久标签。")]
+        [SerializeField, Min(0f)]
+        private float combatTagDuration;
 
         [Header("事件")]
         [Tooltip("成功命中 Enemy Layer 且目标实现 IHitReceiver 后触发。可用于挂音效、特效或调试输出。")]
@@ -44,8 +48,11 @@ namespace EndLink.Combat
         /// <summary>本 Hitbox 的击退力。</summary>
         public float KnockbackForce => knockbackForce;
 
-        /// <summary>本 Hitbox 命中时附加的标签。</summary>
-        public string TagToApply => tagToApply;
+        /// <summary>本 Hitbox 命中时附加的战斗标签资产。</summary>
+        public CombatTagDefinition CombatTagToApply => combatTagToApply;
+
+        /// <summary>本 Hitbox 命中时附加的战斗标签持续时间。小于等于 0 表示永久标签。</summary>
+        public float CombatTagDuration => combatTagDuration;
 
         /// <summary>成功命中事件。</summary>
         public HitboxUnityEvent OnHit => onHit;
@@ -74,6 +81,7 @@ namespace EndLink.Combat
         {
             damageAmount = Mathf.Max(0f, damageAmount);
             knockbackForce = Mathf.Max(0f, knockbackForce);
+            combatTagDuration = Mathf.Max(0f, combatTagDuration);
 
             if (TryGetComponent(out Collider hitboxCollider))
             {
@@ -90,13 +98,14 @@ namespace EndLink.Combat
         }
 
         /// <summary>
-        /// 运行时配置 Hitbox 参数，方便技能数据或测试代码覆盖 prefab 默认值。
+        /// 运行时配置 Hitbox 参数，使用新的 CombatTagDefinition 标签通道。
         /// </summary>
-        public void Configure(float damage, float knockback, string hitTag)
+        public void Configure(float damage, float knockback, CombatTagDefinition combatTag, float tagDuration)
         {
             damageAmount = Mathf.Max(0f, damage);
             knockbackForce = Mathf.Max(0f, knockback);
-            tagToApply = hitTag;
+            combatTagToApply = combatTag;
+            combatTagDuration = Mathf.Max(0f, tagDuration);
         }
 
         /// <summary>
@@ -124,6 +133,7 @@ namespace EndLink.Combat
 
             HitboxHitInfo hitInfo = BuildHitInfo(other);
             receiver.ReceiveHit(hitInfo);
+            ApplyCombatTag(other);
             onHit.Invoke(other);
         }
 
@@ -173,9 +183,21 @@ namespace EndLink.Combat
                 other,
                 damageAmount,
                 knockbackForce,
-                tagToApply,
+                combatTagToApply,
+                combatTagDuration,
                 hitPoint,
                 hitDirection);
+        }
+
+        private void ApplyCombatTag(Collider other)
+        {
+            if (combatTagToApply == null)
+            {
+                return;
+            }
+
+            ICombatTagReceiver tagReceiver = other.GetComponentInParent<ICombatTagReceiver>();
+            tagReceiver?.AddTag(combatTagToApply, combatTagDuration);
         }
     }
 
