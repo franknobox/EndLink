@@ -27,8 +27,27 @@ namespace EndLink.Core
         [SerializeField, Range(0f, 1f)]
         private float attackMoveInputScale = 0f;
 
+        [Header("技能状态")]
+        [Tooltip("通用技能状态的基础持续时间。胶囊白模阶段先用时间控制，接动画和技能配置后可改为数据或动画事件驱动。")]
+        [SerializeField, Min(0.01f)]
+        private float skillDuration = 0.65f;
+
+        [Tooltip("技能期间移动输入倍率。0 表示站桩施法，0.3 表示允许轻微滑步，1 表示完全保留移动。")]
+        [SerializeField, Range(0f, 1f)]
+        private float skillMoveInputScale = 0f;
+
+        [Header("受击状态")]
+        [Tooltip("受击硬直的基础持续时间。白模阶段先用时间控制，后续可由攻击数据、受击动画或韧性系统决定。")]
+        [SerializeField, Min(0.01f)]
+        private float hitDuration = 0.3f;
+
+        [Tooltip("受击期间移动输入倍率。0 表示完全失控，0.3 表示允许轻微滑动，1 表示完全保留移动。")]
+        [SerializeField, Range(0f, 1f)]
+        private float hitMoveInputScale = 0f;
+
         private readonly Dictionary<PlayerStateId, IPlayerState> _states = new();
         private IPlayerState _currentState;
+        private bool _skillRequested;
 
         /// <summary>
         /// 当前状态标识，便于调试面板或 Inspector 观察。
@@ -44,6 +63,26 @@ namespace EndLink.Core
         /// 攻击状态移动输入倍率。
         /// </summary>
         public float AttackMoveInputScale => attackMoveInputScale;
+
+        /// <summary>
+        /// 技能状态持续时间。
+        /// </summary>
+        public float SkillDuration => skillDuration;
+
+        /// <summary>
+        /// 技能状态移动输入倍率。
+        /// </summary>
+        public float SkillMoveInputScale => skillMoveInputScale;
+
+        /// <summary>
+        /// 受击状态持续时间。
+        /// </summary>
+        public float HitDuration => hitDuration;
+
+        /// <summary>
+        /// 受击状态移动输入倍率。
+        /// </summary>
+        public float HitMoveInputScale => hitMoveInputScale;
 
         private void Awake()
         {
@@ -68,6 +107,9 @@ namespace EndLink.Core
             RegisterState(new PlayerIdleState(context));
             RegisterState(new PlayerMoveState(context));
             RegisterState(new PlayerAttackState(context));
+            RegisterState(new PlayerSkillState(context));
+            RegisterState(new PlayerHitState(context));
+            RegisterState(new PlayerDeadState(context));
         }
 
         private void Start()
@@ -100,6 +142,61 @@ namespace EndLink.Core
             _currentState?.Exit();
             _currentState = nextState;
             _currentState.Enter();
+        }
+
+        /// <summary>
+        /// 请求进入通用技能状态。
+        /// 当前项目的生成输入类里还没有 Skill action，所以先提供一个统一入口，
+        /// 后续可以由输入读取器、UI、调试工具或技能栏系统调用。
+        /// </summary>
+        public void RequestSkill()
+        {
+            if (CurrentStateId == PlayerStateId.Dead || CurrentStateId == PlayerStateId.Hit)
+            {
+                return;
+            }
+
+            _skillRequested = true;
+        }
+
+        /// <summary>
+        /// 请求进入受击状态。
+        /// 受击可以打断移动、攻击和技能，但不能覆盖死亡状态。
+        /// </summary>
+        public void RequestHit()
+        {
+            if (CurrentStateId == PlayerStateId.Dead)
+            {
+                return;
+            }
+
+            _skillRequested = false;
+            ChangeState(PlayerStateId.Hit);
+        }
+
+        /// <summary>
+        /// 请求进入死亡状态。
+        /// 死亡是当前玩家状态机的最高优先级终止状态，会清理尚未消费的技能请求。
+        /// </summary>
+        public void RequestDead()
+        {
+            _skillRequested = false;
+            ChangeState(PlayerStateId.Dead);
+        }
+
+        /// <summary>
+        /// 消费一次技能请求。
+        /// 只允许状态上下文调用，避免多个状态重复响应同一次技能请求。
+        /// </summary>
+        internal bool ConsumeSkillRequest()
+        {
+            if (!_skillRequested)
+            {
+                return false;
+            }
+
+            _skillRequested = false;
+            return true;
         }
 
         private void RegisterState(IPlayerState state)

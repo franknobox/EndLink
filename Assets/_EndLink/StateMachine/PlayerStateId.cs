@@ -8,6 +8,9 @@ namespace EndLink.Core
         None = 0,
         Idle = 1,
         Move = 2,
-        Attack = 3
+        Attack = 3,
+        Skill = 4,
+        Hit = 5,
+        Dead = 6
     }
 }

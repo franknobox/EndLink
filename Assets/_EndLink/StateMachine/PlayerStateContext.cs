@@ -60,6 +60,28 @@ namespace EndLink.Core
         public float AttackMoveInputScale => StateMachine.AttackMoveInputScale;
 
         /// <summary>
+        /// 通用技能状态的基础持续时间。
+        /// 白模阶段先用固定时间表示一次技能施放窗口，后续可由动画事件或技能配置驱动。
+        /// </summary>
+        public float SkillDuration => StateMachine.SkillDuration;
+
+        /// <summary>
+        /// 技能期间移动输入倍率。0 表示站桩施法，1 表示完全保留移动。
+        /// </summary>
+        public float SkillMoveInputScale => StateMachine.SkillMoveInputScale;
+
+        /// <summary>
+        /// 受击状态的基础持续时间。
+        /// 白模阶段先用固定硬直时间，后续可根据攻击强度、受击动画或韧性系统调整。
+        /// </summary>
+        public float HitDuration => StateMachine.HitDuration;
+
+        /// <summary>
+        /// 受击期间移动输入倍率。0 表示完全失控，1 表示保留完整移动输入。
+        /// </summary>
+        public float HitMoveInputScale => StateMachine.HitMoveInputScale;
+
+        /// <summary>
         /// 当前移动输入是否超过死区。
         /// </summary>
         public bool HasMoveInput => InputReader.MoveInput.sqrMagnitude > PlayerStateBase.MoveInputDeadZoneSqr;
@@ -71,11 +93,26 @@ namespace EndLink.Core
         public bool CanStartAttack => CombatDriver.CanAttack;
 
         /// <summary>
+        /// 当前是否允许开始一次技能。
+        /// 这里先保留为固定允许；后续可以接入技能冷却、资源、禁用输入和受击硬直判断。
+        /// </summary>
+        public bool CanStartSkill => true;
+
+        /// <summary>
         /// 消费一次攻击输入。
         /// </summary>
         public bool ConsumeAttackPressed()
         {
             return InputReader.ConsumeAttackPressed();
+        }
+
+        /// <summary>
+        /// 消费一次技能请求。
+        /// 现阶段由 PlayerStateMachine.RequestSkill 临时写入，后续可接入新版 Input System 的 Skill action。
+        /// </summary>
+        public bool ConsumeSkillRequested()
+        {
+            return StateMachine.ConsumeSkillRequest();
         }
     }
 }

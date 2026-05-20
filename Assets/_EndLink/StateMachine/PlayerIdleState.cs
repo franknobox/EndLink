@@ -17,6 +17,12 @@ namespace EndLink.Core
 
         public override void Tick(float deltaTime)
         {
+            if (Context.ConsumeSkillRequested() && Context.CanStartSkill)
+            {
+                Context.StateMachine.ChangeState(PlayerStateId.Skill);
+                return;
+            }
+
             if (Context.ConsumeAttackPressed() && Context.CanStartAttack)
             {
                 Context.StateMachine.ChangeState(PlayerStateId.Attack);
