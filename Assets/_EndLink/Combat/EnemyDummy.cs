@@ -105,13 +105,18 @@ namespace EndLink.Combat
         /// </summary>
         public void ReceiveHit(HitboxHitInfo hitInfo)
         {
-            TakeDamage(Mathf.RoundToInt(hitInfo.DamageAmount), hitInfo.CombatTagToApply);
+            ApplyDamage(Mathf.RoundToInt(hitInfo.DamageAmount), hitInfo.CombatTagToApply, hitInfo.Owner);
         }
 
         /// <summary>
         /// 接收伤害，扣除血量，触发受击/死亡事件，并执行调试反馈。
         /// </summary>
         public void TakeDamage(int damage, CombatTagDefinition tag)
+        {
+            ApplyDamage(damage, tag, null);
+        }
+
+        private void ApplyDamage(int damage, CombatTagDefinition tag, GameObject source)
         {
             if (_isDead)
             {
@@ -129,11 +134,12 @@ namespace EndLink.Combat
             }
 
             onDamaged.Invoke(appliedDamage, tag);
+            CombatEventsBus.RaiseDamaged(source, gameObject, appliedDamage, tag);
             UpdateDebugDisplay();
 
             if (_currentHealth <= 0)
             {
-                Die();
+                Die(source);
                 return;
             }
 
@@ -182,7 +188,7 @@ namespace EndLink.Combat
             _flashCoroutine = StartCoroutine(FlashHitColor());
         }
 
-        private void Die()
+        private void Die(GameObject source)
         {
             if (_isDead)
             {
@@ -205,6 +211,7 @@ namespace EndLink.Combat
             }
 
             onDead.Invoke();
+            CombatEventsBus.RaiseDead(source, gameObject);
         }
 
         private void UpdateDebugDisplay()

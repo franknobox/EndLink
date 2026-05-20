@@ -132,6 +132,7 @@ namespace EndLink.Combat
             _hitColliders.Add(other);
 
             HitboxHitInfo hitInfo = BuildHitInfo(other);
+            CombatEventsBus.RaiseHitLanded(_owner, ResolveHitTarget(receiver, other), hitInfo);
             receiver.ReceiveHit(hitInfo);
             ApplyCombatTag(other);
             onHit.Invoke(other);
@@ -198,6 +199,16 @@ namespace EndLink.Combat
 
             ICombatTagReceiver tagReceiver = other.GetComponentInParent<ICombatTagReceiver>();
             tagReceiver?.AddTag(combatTagToApply, combatTagDuration);
+        }
+
+        private static GameObject ResolveHitTarget(IHitReceiver receiver, Collider fallbackCollider)
+        {
+            if (receiver is Component receiverComponent)
+            {
+                return receiverComponent.gameObject;
+            }
+
+            return fallbackCollider != null ? fallbackCollider.gameObject : null;
         }
     }
 

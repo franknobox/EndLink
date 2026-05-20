@@ -96,7 +96,7 @@ namespace EndLink.Combat
         /// </summary>
         public void ReceiveHit(HitboxHitInfo hitInfo)
         {
-            TakeDamage(Mathf.RoundToInt(hitInfo.DamageAmount), hitInfo.CombatTagToApply);
+            ApplyDamage(Mathf.RoundToInt(hitInfo.DamageAmount), hitInfo.CombatTagToApply, hitInfo.Owner);
         }
 
         /// <summary>
@@ -104,6 +104,11 @@ namespace EndLink.Combat
         /// 有效伤害会扣除生命值；生命值归零进入 Dead，否则进入 Hit。
         /// </summary>
         public void TakeDamage(int damage, CombatTagDefinition tag)
+        {
+            ApplyDamage(damage, tag, null);
+        }
+
+        private void ApplyDamage(int damage, CombatTagDefinition tag, GameObject source)
         {
             if (_isDead)
             {
@@ -127,11 +132,12 @@ namespace EndLink.Combat
             }
 
             onDamaged.Invoke(appliedDamage, tag);
+            CombatEventsBus.RaiseDamaged(source, gameObject, appliedDamage, tag);
             NotifyHealthChanged();
 
             if (_currentHealth <= 0)
             {
-                Die();
+                Die(source);
                 return;
             }
 
@@ -183,7 +189,7 @@ namespace EndLink.Combat
             NotifyHealthChanged();
         }
 
-        private void Die()
+        private void Die(GameObject source)
         {
             if (_isDead)
             {
@@ -199,6 +205,7 @@ namespace EndLink.Combat
             }
 
             onDead.Invoke();
+            CombatEventsBus.RaiseDead(source, gameObject);
 
             if (requestDeadStateOnDeath)
             {

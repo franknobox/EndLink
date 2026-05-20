@@ -37,6 +37,7 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float attackCooldown = 0.45f;
 
+        private PlayerTargeting _targeting;
         private float _nextAttackTime;
 
         /// <summary>
@@ -73,6 +74,11 @@ namespace EndLink.Combat
         public void SetHitboxPrefab(GameObject prefab)
         {
             hitboxPrefab = prefab;
+        }
+
+        private void Awake()
+        {
+            TryGetComponent(out _targeting);
         }
 
         /// <summary>
@@ -118,9 +124,20 @@ namespace EndLink.Combat
             }
 
             Destroy(hitboxInstance, GetHitboxLifetime(actionDefinition));
+            CombatEventsBus.RaiseActionStarted(gameObject, GetCurrentTargetObject(), actionDefinition);
 
             _nextAttackTime = Time.time + GetAttackCooldown();
             return true;
+        }
+
+        private GameObject GetCurrentTargetObject()
+        {
+            if (_targeting == null || !_targeting.HasTarget)
+            {
+                return null;
+            }
+
+            return _targeting.CurrentTarget != null ? _targeting.CurrentTarget.gameObject : null;
         }
 
         private float GetAttackCooldown()

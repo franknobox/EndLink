@@ -252,18 +252,21 @@ namespace EndLink.Combat
         {
             LogTagChange("added", tag);
             onTagAdded.Invoke(this, tag);
+            CombatEventsBus.RaiseTagAdded(gameObject, gameObject, tag);
         }
 
         private void NotifyTagRemoved(CombatTagDefinition tag)
         {
             LogTagChange("removed", tag);
             onTagRemoved.Invoke(this, tag);
+            CombatEventsBus.RaiseTagRemoved(gameObject, gameObject, tag);
         }
 
         private void NotifyTagExpired(CombatTagDefinition tag)
         {
             LogTagChange("expired", tag);
             onTagExpired.Invoke(this, tag);
+            CombatEventsBus.RaiseTagExpired(gameObject, gameObject, tag);
         }
 
         private void NotifyTagRefreshed(CombatTagDefinition tag)
@@ -285,6 +288,7 @@ namespace EndLink.Combat
             }
 
             onTagTransformed.Invoke(this, firstTag, secondTag, resultTag);
+            CombatEventsBus.RaiseTagTransformed(gameObject, gameObject, resultTag);
         }
 
         private void LogInvalidTag(CombatTagDefinition tag)
