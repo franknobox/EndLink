@@ -4,7 +4,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 文档更新原则：不变动结构，实际开发与计划有冲突则调整文档表述。
 开发规划：有新增就新增，做完了就去掉，表述简洁。
-已做内容：更新尽量简洁明了，
+已做内容：更新尽量简洁明了，写清现有的内容，不用把演变沿革都写上去。
 
 ## 后续开发规划
 
@@ -24,16 +24,14 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 计划内容：
 
-- 队伍管理：维护固定主控、助战队友列表、存活状态、入队/离队和队伍槽位。
-- 跟随 AI：已接入 `AllyFollowMotor` 第一版，助战队友可在 Follow 状态中跟随主控并保持队形偏移；后续补避让和队伍槽位。
+- 队伍管理：维护固定主控、助战队友列表、存活状态、入队/离队和队伍槽位。小队表现调度
+- 跟随 AI：已接入 `AllyFollowMotor` 第二版；后续补更完整的队伍槽位调度。
 - 基础队友战斗 AI：队友能选择目标、调整站位、释放简单技能，但不承担完整玩家操作能力。
-- 通用角色能力沉淀：在玩家和队友都出现重复需求后，再抽出 `CharacterMotor`、`CharacterHealth`、通用 Hit/Dead 规则等共享层，避免过早抽象。
-- 小队表现调度：避免多个队友同时挤占同一空间或同时触发过多表现。
+- 通用角色能力沉淀：玩家和队友出现重复需求后，再抽出`CharacterHealth`、通用Hit/Dead规则等共享层，避免过早抽象。
 
 阶段完成标准：
 
 - 同屏至少 2 到 3 名角色能稳定行动。
-- 主控角色始终固定，镜头和输入不会被队友逻辑打断。
 - 助战队友能跟随主控，并根据战斗事件参与简单战斗。
 - 队友状态机和玩家状态机职责分离，队友不依赖玩家输入系统也能独立行动。
 
@@ -51,7 +49,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 ### 当前情况概览
 
-项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/StateMachine`、`Assets/_EndLink/Combat` 和 `Assets/_EndLink/Ally`。控制与状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、玩家生命值与受击接线、玩家 Animator 桥接、基础攻击驱动、通用 Hitbox、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友状态机骨架、队友跟随移动第一版和木桩敌人的第一版基础设施。
+项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/StateMachine`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally` 和 `Assets/_EndLink/Party`。控制与状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、玩家生命值与受击接线、玩家 Animator 桥接、基础攻击驱动、通用 Hitbox、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友状态机骨架、队友跟随移动第一版、固定三人小队管理第一版和木桩敌人的第一版基础设施。
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
@@ -73,7 +71,8 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | [玩家战斗驱动](#feature-player-combat-driver) | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |
 | [队友助战基础组件](#feature-ally-assist) | 已完成脚本第一版 | 提供队友事件响应大脑和队友战斗执行器，用于验证队友根据战斗事件释放一次助战行为。 |
 | [队友有限状态机](#feature-ally-state-machine) | 已完成骨架第一版 | 提供 Idle、Follow、Assist、Hit、Dead 五个状态，用于承接队友跟随、助战、受击和死亡流程。 |
-| [队友跟随移动](#feature-ally-follow-motor) | 已完成第一版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移点并平滑转向。 |
+| [队友跟随移动](#feature-ally-follow-motor) | 已完成手感增强版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持平滑减速、追赶、远距离归位和简易避让。 |
+| [固定三人小队管理](#feature-party-manager) | 已完成第一版 | 负责保存固定主控和 2 个队友槽位，统一分配队友跟随目标和队形偏移。 |
 | [通用 Hitbox 基类](#feature-hitbox) | 已完成第一版 | 负责 Trigger 命中检测、Enemy Layer 过滤、重复命中去重，并向目标传递伤害、击退和标签。 |
 | [木桩敌人](#feature-enemy-dummy) | 已完成第一版 | 用于验证 Hitbox 命中、扣血、死亡、受击/死亡事件和基础调试显示。 |
 | [当前架构边界](#feature-architecture-boundary) | 已建立初版约定 | 初步明确输入读取、玩家移动、相机控制、状态机、战斗驱动、命中检测之间的职责边界。 |
@@ -646,8 +645,14 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 支持优先使用 `CharacterController.Move` 移动；如果队友没有 `CharacterController`，会回退为直接修改 `Transform.position`。
 - `AllyStateMachine` 负责保存跟随目标并同步给 `AllyFollowMotor`。
 - `AllyFollowState` 每帧调用 `TickFollow(deltaTime)`，因此 Assist、Hit、Dead 状态不会继续抢跟随移动。
-- 队友会移动到主控的本地队形偏移点，移动时面向移动方向，停下时面向跟随目标。
-- 当前只处理平面 XZ 跟随，后续如果需要复杂地形、障碍和避让，再接 NavMesh 或队伍槽位系统。
+- 队友会移动到主控的本地队形偏移范围，移动时面向移动方向，停下后的朝向由 `idleFacingMode` 决定。
+- 支持 `arrivalSmoothTime` 平滑加减速，降低接近队形点时的机械感。
+- 支持 `catchUpDistance` 和 `catchUpSpeedMultiplier`，队友落后较远时会加速追上。
+- 支持 `teleportDistance`，队友极端远离队形点时会直接归位，避免长距离丢失。
+- 支持 `followSlotSoftness`，队友进入队形点周围软半径后就算到位，不强制踩死精确坐标。
+- 支持第一版简易避让：离主控太近时会被推开，配置 `avoidanceLayerMask` 后也能对其他队友做局部排斥。
+- `formationOffset` 现在由 `PartyManager` 的队友槽位统一配置，`AllyFollowMotor` Inspector 中不再单独显示该字段。
+- 当前只处理平面 XZ 跟随和局部避让，后续如果需要复杂地形、障碍绕路，再接 NavMesh 或更完整的队伍槽位调度。
 
 对应脚本：
 
@@ -667,9 +672,62 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `followTarget`：跟随目标，通常拖固定主控角色
 - `followDistance`：当 `formationOffset` 为零时使用的默认后方距离
 - `stopDistance`：距离队形点小于该值时停止移动
+- `followSlotSoftness`：队形点软半径，范围内算到位
 - `moveSpeed`：队友跟随移动速度
+- `arrivalSmoothTime`：接近队形点时的速度阻尼时间
+- `catchUpDistance` / `catchUpSpeedMultiplier`：追赶距离和追赶速度倍率
+- `teleportDistance`：极端远离时的归位距离，设置为 0 可关闭
 - `rotationSpeed`：队友转向速度
-- `formationOffset`：相对主控的本地队形偏移，X 是左右，Z 是前后
+- `idleFacingMode`：停下后的朝向模式
+- `formationOffset`：不再在 `AllyFollowMotor` 上直接配置，改由 `PartyFormationSlot` 写入
+- `avoidanceEnabled`：是否启用简易避让
+- `followTargetAvoidRadius`：离主控小于该半径时推离主控
+- `allyAvoidRadius`：离其他队友小于该半径时推开
+- `avoidanceStrength`：避让方向混合强度
+- `avoidanceLayerMask`：参与队友间避让检测的 Layer，建议给队友角色单独设置 Layer 后在这里勾选
+
+</details>
+
+<a id="feature-party-manager"></a>
+
+### Feature：固定三人小队管理
+
+<details>
+<summary>展开详情</summary>
+
+
+功能说明：
+
+- `PartyManager` 是固定三人小队的场景级管理入口。
+- 第一版只支持固定主控 + 2 个固定队友，不做主控切换、入队离队或复杂编队。
+- `PartyFormationSlot` 保存单个队友槽位，包含槽位名、队友状态机和队形偏移。
+- 初始化时，`PartyManager` 会把 `mainCharacter` 设置为两个队友的跟随目标。
+- 初始化时，`PartyManager` 会把两个槽位的 `formationOffset` 写入各自队友的 `AllyFollowMotor`。
+- 后续队友 AI、连携规则或调试工具需要知道“谁是主控，谁是队友”时，可以从 `PartyManager` 查询。
+
+对应脚本：
+
+- `Assets/_EndLink/Party/PartyManager.cs`
+- `Assets/_EndLink/Party/PartyFormationSlot.cs`
+- `Assets/_EndLink/Ally/AllyFollowMotor.cs`
+- `Assets/_EndLink/Ally/AllyStateMachine.cs`
+
+相关物体：
+
+- 场景管理物体
+  - `PartyManager`
+- 主控角色根物体
+  - 拖入 `mainCharacter`
+- 两个队友根物体
+  - 分别拖入 `allySlotA` / `allySlotB`
+
+关键配置：
+
+- `mainCharacter`：固定主控角色
+- `allySlotA`：第一个队友槽位
+- `allySlotB`：第二个队友槽位
+- `formationOffset`：每个队友相对主控的本地队形偏移，例如左后 `(-1.5, 0, -2.5)`、右后 `(1.5, 0, -2.5)`
+- `logInitialization`：是否打印小队初始化日志
 
 </details>
 
