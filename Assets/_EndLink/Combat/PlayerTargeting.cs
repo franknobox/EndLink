@@ -175,6 +175,11 @@ namespace EndLink.Combat
                     continue;
                 }
 
+                if (!IsCombatTargetValid(candidate))
+                {
+                    continue;
+                }
+
                 if (!TryCalculateTargetScore(candidate, originPosition, referenceForward, out float score))
                 {
                     continue;
@@ -233,6 +238,11 @@ namespace EndLink.Combat
                 return false;
             }
 
+            if (!IsCombatTargetValid(target))
+            {
+                return false;
+            }
+
             Transform origin = GetSearchOrigin();
             Vector3 toTarget = target.position - origin.position;
             toTarget.y = 0f;
@@ -248,6 +258,12 @@ namespace EndLink.Combat
 
             IHitReceiver receiver = targetCollider.GetComponentInParent<IHitReceiver>();
             return receiver is Component receiverComponent ? receiverComponent.transform : targetCollider.transform;
+        }
+
+        private static bool IsCombatTargetValid(Transform target)
+        {
+            ICombatTarget combatTarget = target.GetComponentInParent<ICombatTarget>();
+            return combatTarget == null || combatTarget.IsTargetable;
         }
 
         private Transform GetSearchOrigin()

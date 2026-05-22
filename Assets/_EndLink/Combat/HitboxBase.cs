@@ -148,6 +148,11 @@ namespace EndLink.Combat
                 return false;
             }
 
+            if (!IsCombatTargetable(other))
+            {
+                return false;
+            }
+
             return !_hitColliders.Contains(other);
         }
 
@@ -209,6 +214,12 @@ namespace EndLink.Combat
             }
 
             return fallbackCollider != null ? fallbackCollider.gameObject : null;
+        }
+
+        private static bool IsCombatTargetable(Collider other)
+        {
+            ICombatTarget combatTarget = other.GetComponentInParent<ICombatTarget>();
+            return combatTarget == null || combatTarget.IsTargetable;
         }
     }
 

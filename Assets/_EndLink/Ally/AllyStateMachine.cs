@@ -32,10 +32,6 @@ namespace EndLink.Ally
         [SerializeField, Min(0.01f)]
         private float assistReengageRange = 2.4f;
 
-        [Tooltip("助战接近最长持续时间。超过后放弃助战并回到跟随。")]
-        [SerializeField, Min(0.01f)]
-        private float assistApproachTimeout = 2.5f;
-
         [Tooltip("队友与主控距离超过该值时放弃助战并回到跟随。设置为 0 表示不因距离主控过远而取消。")]
         [SerializeField, Min(0f)]
         private float assistBreakOffDistance = 12f;
@@ -49,6 +45,11 @@ namespace EndLink.Ally
         [Tooltip("队友受击硬直的基础持续时间。")]
         [SerializeField, Min(0.01f)]
         private float hitDuration = 0.3f;
+
+        [Header("调试")]
+        [Tooltip("是否打印队友状态切换日志。排查助战中断、回到跟随等问题时开启。")]
+        [SerializeField]
+        private bool logStateChanges;
 
         private readonly Dictionary<AllyStateId, IAllyState> _states = new();
         private IAllyState _currentState;
@@ -76,9 +77,6 @@ namespace EndLink.Ally
 
         /// <summary>持续助战时重新接近目标的距离。</summary>
         public float AssistReengageRange => assistReengageRange;
-
-        /// <summary>助战接近超时时间。</summary>
-        public float AssistApproachTimeout => assistApproachTimeout;
 
         /// <summary>主控离队友过远时放弃助战的距离。</summary>
         public float AssistBreakOffDistance => assistBreakOffDistance;
@@ -130,7 +128,6 @@ namespace EndLink.Ally
         {
             assistAttackRange = Mathf.Max(0.01f, assistAttackRange);
             assistReengageRange = Mathf.Max(assistAttackRange, assistReengageRange);
-            assistApproachTimeout = Mathf.Max(0.01f, assistApproachTimeout);
             assistBreakOffDistance = Mathf.Max(0f, assistBreakOffDistance);
             assistDuration = Mathf.Max(0.01f, assistDuration);
             hitDuration = Mathf.Max(0.01f, hitDuration);
@@ -153,9 +150,18 @@ namespace EndLink.Ally
                 return;
             }
 
+            AllyStateId previousStateId = CurrentStateId;
+
             _currentState?.Exit();
             _currentState = nextState;
             _currentState.Enter();
+
+            if (logStateChanges)
+            {
+                Debug.Log(
+                    $"AllyState: {previousStateId} -> {nextStateId} | follow={GetTransformName(followTarget)} | assist={GetTransformName(_currentAssistTarget)}",
+                    this);
+            }
         }
 
         /// <summary>
@@ -262,6 +268,11 @@ namespace EndLink.Ally
         private void RegisterState(IAllyState state)
         {
             _states[state.StateId] = state;
+        }
+
+        private static string GetTransformName(Transform target)
+        {
+            return target != null ? target.name : "None";
         }
     }
 }

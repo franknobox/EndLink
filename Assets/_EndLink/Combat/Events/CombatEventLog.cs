@@ -12,7 +12,7 @@ namespace EndLink.Combat
     {
         [Tooltip("是否打印事件日志。")]
         [SerializeField]
-        private bool logEvents = true;
+        private bool logEvents;
 
         [Tooltip("是否打印 Source 和 Target 名称。")]
         [SerializeField]

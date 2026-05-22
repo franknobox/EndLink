@@ -45,6 +45,11 @@ namespace EndLink.Core
         [SerializeField, Range(0f, 1f)]
         private float hitMoveInputScale = 0f;
 
+        [Header("调试")]
+        [Tooltip("是否打印玩家状态切换日志。默认关闭，避免 Console 被每帧流程噪声淹没。")]
+        [SerializeField]
+        private bool logStateChanges;
+
         private readonly Dictionary<PlayerStateId, IPlayerState> _states = new();
         private IPlayerState _currentState;
         private bool _skillRequested;
@@ -90,13 +95,6 @@ namespace EndLink.Core
             PlayerController controller = GetComponent<PlayerController>();
             PlayerCombatDriver combatDriver = GetComponent<PlayerCombatDriver>();
 
-            if (combatDriver == null)
-            {
-                Debug.LogError("PlayerStateMachine 需要同一物体上挂载 PlayerCombatDriver。", this);
-                enabled = false;
-                return;
-            }
-
             PlayerStateContext context = new PlayerStateContext(
                 this,
                 transform,
@@ -139,9 +137,16 @@ namespace EndLink.Core
                 return;
             }
 
+            PlayerStateId previousStateId = CurrentStateId;
+
             _currentState?.Exit();
             _currentState = nextState;
             _currentState.Enter();
+
+            if (logStateChanges)
+            {
+                Debug.Log($"PlayerState: {previousStateId} -> {nextStateId}", this);
+            }
         }
 
         /// <summary>

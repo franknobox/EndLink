@@ -8,31 +8,16 @@ namespace EndLink.Ally
     /// </summary>
     public sealed class AllyAssistApproachState : AllyStateBase
     {
-        private float _elapsedTime;
-
         public AllyAssistApproachState(AllyStateContext context) : base(context)
         {
         }
 
         public override AllyStateId StateId => AllyStateId.AssistApproach;
 
-        public override void Enter()
-        {
-            _elapsedTime = 0f;
-        }
-
         public override void Tick(float deltaTime)
         {
-            _elapsedTime += deltaTime;
-
             Transform target = Context.CurrentAssistTarget;
             if (target == null || !target.gameObject.activeInHierarchy || IsMainCharacterTooFar())
-            {
-                Context.StateMachine.CancelAssist(target);
-                return;
-            }
-
-            if (_elapsedTime >= Context.AssistApproachTimeout)
             {
                 Context.StateMachine.CancelAssist(target);
                 return;

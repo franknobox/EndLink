@@ -1,0 +1,81 @@
+using EndLink.Combat;
+using UnityEngine;
+
+namespace EndLink.Enemies
+{
+    /// <summary>
+    /// 正式敌人的根入口组件。
+    /// 它只负责暴露敌人身份和关键组件引用，不直接处理扣血、移动、AI 或攻击。
+    /// </summary>
+    [DisallowMultipleComponent]
+    [RequireComponent(typeof(EnemyHealth))]
+    [RequireComponent(typeof(CombatTagContainer))]
+    public sealed class EnemyActor : MonoBehaviour, ICombatTarget
+    {
+        [Header("目标点")]
+        [Tooltip("用于锁定、寻路和计算距离的目标点。为空时使用敌人根物体。")]
+        [SerializeField]
+        private Transform targetTransform;
+
+        [Tooltip("视觉根节点。当前只作为后续动画/表现预留引用。")]
+        [SerializeField]
+        private Transform bodyRoot;
+
+        private EnemyHealth _health;
+        private CombatTagContainer _tagContainer;
+
+        /// <summary>敌人生命组件。</summary>
+        public EnemyHealth Health
+        {
+            get
+            {
+                if (_health == null)
+                {
+                    _health = GetComponent<EnemyHealth>();
+                }
+
+                return _health;
+            }
+        }
+
+        /// <summary>敌人的战斗标签容器。</summary>
+        public CombatTagContainer TagContainer
+        {
+            get
+            {
+                if (_tagContainer == null)
+                {
+                    _tagContainer = GetComponent<CombatTagContainer>();
+                }
+
+                return _tagContainer;
+            }
+        }
+
+        /// <summary>用于锁定、寻路和计算距离的目标点。</summary>
+        public Transform TargetTransform => targetTransform != null ? targetTransform : transform;
+
+        /// <summary>视觉根节点。</summary>
+        public Transform BodyRoot => bodyRoot;
+
+        /// <summary>敌人是否存活。</summary>
+        public bool IsAlive => Health != null && !Health.IsDead;
+
+        /// <summary>敌人当前是否可作为战斗目标。</summary>
+        public bool IsTargetable => Health != null && Health.IsTargetable;
+
+        private void Awake()
+        {
+            _health = GetComponent<EnemyHealth>();
+            _tagContainer = GetComponent<CombatTagContainer>();
+        }
+
+        private void Reset()
+        {
+            _health = GetComponent<EnemyHealth>();
+            _tagContainer = GetComponent<CombatTagContainer>();
+            targetTransform = transform;
+            bodyRoot = transform;
+        }
+    }
+}

@@ -47,9 +47,6 @@ namespace EndLink.Ally
         /// <summary>持续助战时重新接近目标的距离。</summary>
         public float AssistReengageRange => StateMachine.AssistReengageRange;
 
-        /// <summary>助战接近最大持续时间。</summary>
-        public float AssistApproachTimeout => StateMachine.AssistApproachTimeout;
-
         /// <summary>主控离队友过远时放弃助战的距离。</summary>
         public float AssistBreakOffDistance => StateMachine.AssistBreakOffDistance;
 

@@ -1,0 +1,37 @@
+namespace EndLink.Enemies
+{
+    /// <summary>
+    /// 敌人警觉状态。
+    /// 当前只做短暂停留，之后根据是否存在有效目标进入 Combat 或回到 Idle。
+    /// </summary>
+    public sealed class EnemyAlertState : EnemyStateBase
+    {
+        private float _elapsedTime;
+
+        public EnemyAlertState(EnemyStateContext context) : base(context)
+        {
+        }
+
+        /// <inheritdoc />
+        public override EnemyStateId StateId => EnemyStateId.Alert;
+
+        /// <inheritdoc />
+        public override void Enter()
+        {
+            _elapsedTime = 0f;
+        }
+
+        /// <inheritdoc />
+        public override void Tick(float deltaTime)
+        {
+            _elapsedTime += deltaTime;
+
+            if (_elapsedTime < Context.AlertDuration)
+            {
+                return;
+            }
+
+            Context.StateMachine.ChangeState(Context.HasValidTarget ? EnemyStateId.Combat : EnemyStateId.Idle);
+        }
+    }
+}

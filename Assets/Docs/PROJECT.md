@@ -9,10 +9,10 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 ## 后续开发规划
 
 ### 1. 单人行动基底
-内容：基本完成，技能后面做，键位后面再配置完整
+内容：基本完成
 
 ### 2. 连携战斗基底
-内容：战斗日志/调试面板之后做，连携触发具体规则有待设计
+内容：战斗日志/调试面板之后做，连携触发具体规则有待设计，技能后面做，键位后面再配置完整
 
 ### 3. 固定主控与助战队友表现
 
@@ -23,24 +23,39 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 通用角色能力沉淀：玩家和队友出现重复需求后，再抽出`CharacterHealth`、通用Hit/Dead规则等共享层，避免过早抽象。
 
 阶段完成标准：
-- 同屏至少 2 到 3 名角色能稳定行动。
 - 助战队友能跟随主控，并根据战斗事件参与简单战斗。
 - 队友状态机和玩家状态机职责分离，队友不依赖玩家输入系统也能独立行动。
 
-### 4. 待定方向
+### 4. 敌人基础制作
 
-后续根据前三阶段验证结果再定，可能包括：
+目标是从“木桩验证命中”推进到“可被连携战斗稳定测试的真实敌人基底”。敌人不需要一开始就复杂，但必须有完整的战斗生命周期、目标有效性、基础行为和调试反馈，否则主控与队友的连携链路很难判断是否正确。
+
+计划内容：
+- 敌人通用基底：已建立正式敌人脚本结构和大状态机骨架，后续接入移动、战斗执行和行为树。
+- 敌人移动与转向：第一版可继续使用 CharacterController 或简单 Transform 移动，后续场景复杂后再评估 NavMesh。
+- 敌人攻击能力：使用 `CombatActionDefinition` 配置普通攻击，复用 Hitbox 与事件系统，让玩家和队友能受到敌人攻击。
+- 敌人目标选择：优先锁定主控，也可以根据仇恨或最近角色选择目标，第一版保持简单。
+- 死亡与目标失效：死亡后不再被锁定、不再被队友持续助战、不再接收有效命中，保留必要死亡表现。
+
+阶段完成标准：
+- 至少一个正式敌人可以主动接近并攻击主控。
+- 主控和两个队友可以围绕该敌人触发持续助战。
+- 敌人死亡后能从目标系统和助战流程中稳定移除。
+- 仍保留 `EnemyDummy` 作为轻量命中测试对象。
+
+### 5. 待定方向
+
+后续根据前面阶段验证结果再定，可能包括：
 - 锁定目标系统与战斗镜头。
-- 更完整的技能编辑方式。
 - 连携 UI 和时机反馈。
-- 敌人 AI 与 Boss 机制。
+- Boss 机制。
 - 关卡小场景和战斗节奏验证。
 
 ## 当前已完成内容
 
 ### 当前情况概览
 
-项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/StateMachine`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally` 和 `Assets/_EndLink/Party`。控制与状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、玩家生命值与受击接线、玩家 Animator 桥接、基础攻击驱动、通用 Hitbox、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友状态机骨架、队友跟随移动第一版、固定三人小队管理第一版和木桩敌人的第一版基础设施。
+项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/StateMachine`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party` 和 `Assets/_EndLink/Enemies`。控制与状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、玩家生命值与受击接线、玩家 Animator 桥接、基础攻击驱动、通用 Hitbox、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友状态机骨架、队友跟随移动第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架和木桩敌人的第一版基础设施。
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
@@ -58,12 +73,13 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | [战斗动作配置](#feature-combat-action) | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和大招的伤害、冷却、时序、Hitbox 和命中标签。 |
 | [战斗标签系统](#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、增删事件、合法检查和标签组合转化规则。 |
 | [战斗数据编辑工具](#feature-combat-data-tool) | 已完成第一版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则数据资产。 |
-| [战斗事件总栈](#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口和调试日志监听器，当前已接入攻击、命中、受伤、死亡和标签变化。 |
+| [战斗事件总栈](#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
 | [玩家战斗驱动](#feature-player-combat-driver) | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |
 | [队友助战基础组件](#feature-ally-assist) | 已完成持续助战第一版 | 提供队友事件响应大脑和队友战斗执行器，用于主控命中敌人后让队友自动接近目标并持续攻击。 |
 | [队友有限状态机](#feature-ally-state-machine) | 已完成助战接近版 | 提供 Idle、Follow、AssistApproach、Assist、Hit、Dead 六个状态，用于承接队友跟随、接近助战、攻击、受击和死亡流程。 |
 | [队友跟随移动](#feature-ally-follow-motor) | 已完成手感增强版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持平滑减速、追赶、远距离归位和简易避让。 |
 | [固定三人小队管理](#feature-party-manager) | 已完成第一版 | 负责保存固定主控和 2 个队友槽位，统一分配队友跟随目标和队形偏移。 |
+| [敌人通用基底](#feature-enemy-foundation) | 已完成第一版 | 提供正式敌人身份入口、生命受击、死亡目标失效、目标有效性接口和大状态机骨架。 |
 | [通用 Hitbox 基类](#feature-hitbox) | 已完成第一版 | 负责 Trigger 命中检测、Enemy Layer 过滤、重复命中去重，并向目标传递伤害、击退和标签。 |
 | [木桩敌人](#feature-enemy-dummy) | 已完成第一版 | 用于验证 Hitbox 命中、扣血、死亡、受击/死亡事件和基础调试显示。 |
 | [当前架构边界](#feature-architecture-boundary) | 已建立初版约定 | 初步明确输入读取、玩家移动、相机控制、状态机、战斗驱动、命中检测之间的职责边界。 |
@@ -451,13 +467,12 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 <details>
 <summary>展开详情</summary>
-
-
 功能说明：
 - `CombatEventsBus` 是全局战斗事件广播入口。
 - `CombatEvent` 是一条战斗事件的数据结构，包含事件类型、来源、目标、动作配置、战斗标签、伤害、命中信息和时间戳。
 - `CombatEventType` 目前包含 `ActionStarted`、`HitLanded`、`Damaged`、`Dead`、`TagAdded`、`TagRemoved`、`TagExpired`、`TagTransformed`。
-- `CombatEventLog` 是白模阶段用的日志监听器，订阅事件后把事件流打印到 Console。
+- `CombatEventLog` 是白模阶段用的 Console 日志监听器，默认不打印，必要时手动开启。
+- `CombatMonitorWindow` 是 Editor 战斗事件监视窗口，通过 `EndLink > Debug > Combat Monitor` 打开，订阅事件后以表格查看最近的战斗事件。
 - 事件总栈只广播事实，不保存状态，不决定连携规则，不直接驱动队友 AI。
 - 当前已接入 `PlayerCombatDriver` 的动作开始、`HitboxBase` 的命中、`PlayerHealth` / `EnemyDummy` 的受伤与死亡，以及 `CombatTagContainer` 的标签添加、移除、过期和组合转化。
 
@@ -466,10 +481,14 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `Assets/_EndLink/Combat/Events/CombatEvent.cs`
 - `Assets/_EndLink/Combat/Events/CombatEventsBus.cs`
 - `Assets/_EndLink/Combat/Events/CombatEventLog.cs`
+- `Assets/_EndLink/Editor/CombatMonitorWindow.cs`
 
 相关物体：
 - 任意调试物体
   - `CombatEventLog`
+
+相关 Editor 工具：
+- `EndLink > Debug > Combat Monitor`
 
 关键接口：
 - `CombatEventsBus.Raised`：全局事件订阅入口
@@ -546,7 +565,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `Follow` 在有跟随目标时每帧调用 `AllyFollowMotor.TickFollow(deltaTime)`，实际移动由跟随移动组件负责。
 - `AssistApproach` 表示队友响应战斗事件后的助战接近状态，会调用 `AllyFollowMotor.TickMoveToPosition(...)` 跑向目标附近。
 - `Assist` 表示队友进入攻击距离后的助战攻击状态，会在目标有效且主控没有远离时持续攻击；目标拉开距离后回到 `AssistApproach` 重新接近。
-- 目标死亡、目标丢失、接近超时或主控距离过远时，助战流程会取消并回到 Follow / Idle。
+- 目标死亡、目标丢失或主控距离过远时，助战流程会取消并回到 Follow / Idle。
 - `Hit` 表示队友受击硬直状态，可打断 Follow 和 Assist。
 - `Dead` 是终止状态，不再响应跟随、助战和受击请求。
 - `AllyBrain` 判断事件是否值得响应，`AllyStateMachine` 判断当前能否进入 Assist，`AllyCombatDriver` 只执行动作和 Hitbox。
@@ -575,7 +594,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `followTarget`：跟随目标，通常后续会绑定主控角色
 - `assistAttackRange`：队友接近助战目标到该距离后开始攻击
 - `assistReengageRange`：持续助战时，目标离队友超过该距离会重新接近
-- `assistApproachTimeout`：接近目标超时后取消助战
 - `assistBreakOffDistance`：队友距离主控过远时取消助战，设置为 0 可关闭
 - `assistDuration`：助战状态最短持续时间
 - `hitDuration`：受击状态持续时间
@@ -675,6 +693,65 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 </details>
 
+<a id="feature-enemy-foundation"></a>
+
+### Feature：敌人通用基底
+
+<details>
+<summary>展开详情</summary>
+功能说明：
+- `EnemyActor` 是正式敌人的根入口组件，只暴露敌人身份、目标点和生命组件引用。
+- `EnemyActor` 要求同物体挂载 `CombatTagContainer`，保证正式敌人天然支持战斗标签、持续标签和组合转化。
+- `EnemyHealth` 负责正式敌人的血量、受击、死亡、死亡事件和白模调试反馈。
+- `EnemyHealth` 同时实现 `IHitReceiver`、`IDamageable` 和 `ICombatTarget`。
+- `ICombatTarget` 是战斗目标有效性接口，当前用于判断目标死亡后是否还能被锁定、搜索或命中。
+- 敌人死亡后默认 `IsTargetable = false`，后续 `PlayerTargeting`、`AllyBrain` 和 `HitboxBase` 会跳过不可目标对象。
+- `EnemyStateMachine` 管理 `Idle`、`Alert`、`Combat`、`Hit`、`Dead` 五个敌人大状态。
+- `Combat` 当前保持空转，后续作为行为树的外层挂载点，内部再承载追击、站位、攻击、技能等细节行为。
+- `Hit` 作为独立大状态处理受击打断，不放进 Combat 行为树，方便后续加入硬直、霸体、击倒等规则。
+- `EnemyDummy` 暂时保留为轻量命中测试对象，不强行迁移到正式敌人基底。
+
+对应脚本：
+- `Assets/_EndLink/Enemies/EnemyActor.cs`
+- `Assets/_EndLink/Enemies/EnemyHealth.cs`
+- `Assets/_EndLink/Enemies/EnemyStateMachine.cs`
+- `Assets/_EndLink/Enemies/EnemyStateId.cs`
+- `Assets/_EndLink/Enemies/IEnemyState.cs`
+- `Assets/_EndLink/Enemies/EnemyStateBase.cs`
+- `Assets/_EndLink/Enemies/EnemyStateContext.cs`
+- `Assets/_EndLink/Enemies/EnemyIdleState.cs`
+- `Assets/_EndLink/Enemies/EnemyAlertState.cs`
+- `Assets/_EndLink/Enemies/EnemyCombatState.cs`
+- `Assets/_EndLink/Enemies/EnemyHitState.cs`
+- `Assets/_EndLink/Enemies/EnemyDeadState.cs`
+- `Assets/_EndLink/Combat/Tags/CombatTagContainer.cs`
+- `Assets/_EndLink/Combat/ICombatTarget.cs`
+- `Assets/_EndLink/Combat/IHitReceiver.cs`
+- `Assets/_EndLink/Combat/IDamageable.cs`
+
+相关物体：
+- 正式敌人根物体
+  - `EnemyActor`
+  - `EnemyHealth`
+  - `CombatTagContainer`
+  - Collider
+  - Layer 设置为 `Enemy`
+
+关键配置：
+- `targetTransform`：锁定、寻路和计算距离使用的目标点
+- `maxHealth`：敌人最大生命值
+- `initialState`：敌人启用后的初始大状态，通常为 `Idle`
+- `alertDuration`：`Alert` 状态停留时间
+- `hitDuration`：`Hit` 受击硬直时间
+- `initialTags`：敌人启用时默认拥有的战斗标签
+- `combinationRules`：敌人身上标签组合转化使用的规则
+- `untargetableOnDeath`：死亡后是否不再作为有效战斗目标
+- `disableCollidersOnDeath`：死亡后是否禁用非 Trigger Collider
+- `feedbackRenderer`：受击和死亡变色使用的 MeshRenderer
+- `showHealthInName`：是否在 GameObject 名字上显示血量
+
+</details>
+
 <a id="feature-player-combat-driver"></a>
 
 ### Feature：玩家战斗驱动
@@ -729,6 +806,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 使用 `OnTriggerEnter` 检测命中。
 - 只对 Layer 为 `Enemy` 的目标生效。
 - 使用 `HashSet<Collider>` 记录已经命中过的 Collider，避免同一个 Hitbox 重复命中同一目标。
+- 如果目标实现 `ICombatTarget` 且 `IsTargetable == false`，Hitbox 会跳过该目标。
 - 命中后查找目标父级上的 `IHitReceiver`。
 - 命中信息通过 `HitboxHitInfo` 传递，包含伤害、击退、`CombatTagDefinition` 标签、标签持续时间、命中点、命中方向、Owner、Hitbox 和命中的 Collider。
 - 命中时如果目标实现 `ICombatTagReceiver`，会把 `CombatTagDefinition` 添加到目标标签容器。
@@ -739,6 +817,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `Assets/_EndLink/Combat/HitboxBase.cs`
 - `Assets/_EndLink/Combat/HitboxHitInfo.cs`
 - `Assets/_EndLink/Combat/IHitReceiver.cs`
+- `Assets/_EndLink/Combat/ICombatTarget.cs`
 
 相关资产：
 - `Assets/_EndLink/Combat/Hitbox_Base.prefab`

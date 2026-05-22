@@ -144,7 +144,7 @@ namespace EndLink.Ally
 
             if (!requested && logDecisions)
             {
-                Debug.Log("AllyBrain decided to respond, but AllyStateMachine rejected the Assist request.", this);
+                Debug.Log($"AllyBrain assist rejected: {GetAssistRejectReason(target)}", this);
             }
         }
 
@@ -181,7 +181,7 @@ namespace EndLink.Ally
             if (eventData.Target != null && eventData.Target != gameObject)
             {
                 target = eventData.Target.transform;
-                return target != null;
+                return target != null && IsCombatTargetValid(target);
             }
 
             return searchNearestEnemyWhenNoEventTarget && TryFindNearestEnemy(out target);
@@ -217,7 +217,7 @@ namespace EndLink.Ally
                 }
 
                 Transform candidateTarget = ResolveTargetTransform(hit);
-                if (candidateTarget == null)
+                if (candidateTarget == null || !IsCombatTargetValid(candidateTarget))
                 {
                     continue;
                 }
@@ -245,6 +245,46 @@ namespace EndLink.Ally
             }
 
             return hit.transform;
+        }
+
+        private static bool IsCombatTargetValid(Transform target)
+        {
+            ICombatTarget combatTarget = target.GetComponentInParent<ICombatTarget>();
+            return combatTarget == null || combatTarget.IsTargetable;
+        }
+
+        private string GetAssistRejectReason(Transform target)
+        {
+            if (target == null)
+            {
+                return "target is null";
+            }
+
+            if (StateMachine == null)
+            {
+                return "state machine is missing";
+            }
+
+            AllyStateId currentStateId = StateMachine.CurrentStateId;
+            if (currentStateId == AllyStateId.Dead
+                || currentStateId == AllyStateId.Hit
+                || currentStateId == AllyStateId.AssistApproach
+                || currentStateId == AllyStateId.Assist)
+            {
+                return $"state is {currentStateId}";
+            }
+
+            if (CombatDriver == null)
+            {
+                return "combat driver is missing";
+            }
+
+            if (!CombatDriver.CanAssist)
+            {
+                return "combat driver cannot assist, usually cooldown or action configuration";
+            }
+
+            return "unknown state machine rejection";
         }
     }
 }
