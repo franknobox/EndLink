@@ -15,6 +15,11 @@ namespace EndLink.Combat
     {
         private const string EnemyLayerName = "Enemy";
 
+        [Header("目标过滤")]
+        [Tooltip("允许命中的目标 Layer。默认使用 Enemy Layer；后续敌人攻击玩家或特殊 Hitbox 可以在预制体或子类中改写。")]
+        [SerializeField]
+        private LayerMask targetLayerMask;
+
         [Header("命中参数")]
         [Tooltip("本 Hitbox 命中时造成的伤害值。")]
         [SerializeField, Min(0f)]
@@ -39,7 +44,6 @@ namespace EndLink.Combat
 
         private readonly HashSet<Collider> _hitColliders = new();
         private Collider _triggerCollider;
-        private int _enemyLayer;
         private GameObject _owner;
 
         /// <summary>本 Hitbox 的伤害值。</summary>
@@ -54,6 +58,9 @@ namespace EndLink.Combat
         /// <summary>本 Hitbox 命中时附加的战斗标签持续时间。小于等于 0 表示永久标签。</summary>
         public float CombatTagDuration => combatTagDuration;
 
+        /// <summary>允许命中的目标 Layer。</summary>
+        public LayerMask TargetLayerMask => targetLayerMask;
+
         /// <summary>成功命中事件。</summary>
         public HitboxUnityEvent OnHit => onHit;
 
@@ -61,7 +68,7 @@ namespace EndLink.Combat
         {
             _triggerCollider = GetComponent<Collider>();
             _triggerCollider.isTrigger = true;
-            _enemyLayer = LayerMask.NameToLayer(EnemyLayerName);
+            EnsureTargetLayerMask();
         }
 
         protected virtual void OnEnable()
@@ -75,6 +82,8 @@ namespace EndLink.Combat
             {
                 hitboxCollider.isTrigger = true;
             }
+
+            targetLayerMask = GetDefaultTargetLayerMask();
         }
 
         protected virtual void OnValidate()
@@ -87,6 +96,8 @@ namespace EndLink.Combat
             {
                 hitboxCollider.isTrigger = true;
             }
+
+            EnsureTargetLayerMask();
         }
 
         /// <summary>
@@ -143,7 +154,7 @@ namespace EndLink.Combat
         /// </summary>
         protected virtual bool CanHit(Collider other)
         {
-            if (other == null || other.gameObject.layer != _enemyLayer)
+            if (other == null || !IsTargetLayerAllowed(other))
             {
                 return false;
             }
@@ -203,7 +214,29 @@ namespace EndLink.Combat
             }
 
             ICombatTagReceiver tagReceiver = other.GetComponentInParent<ICombatTagReceiver>();
-            tagReceiver?.AddTag(combatTagToApply, combatTagDuration);
+            tagReceiver?.AddTag(combatTagToApply, combatTagDuration, _owner);
+        }
+
+        /// <summary>
+        /// 判断 Collider 所在 Layer 是否允许命中。子类可覆盖以实现阵营、友伤或特殊目标规则。
+        /// </summary>
+        protected virtual bool IsTargetLayerAllowed(Collider other)
+        {
+            return other != null && ((1 << other.gameObject.layer) & targetLayerMask.value) != 0;
+        }
+
+        private void EnsureTargetLayerMask()
+        {
+            if (targetLayerMask.value == 0)
+            {
+                targetLayerMask = GetDefaultTargetLayerMask();
+            }
+        }
+
+        private static LayerMask GetDefaultTargetLayerMask()
+        {
+            int enemyLayer = LayerMask.NameToLayer(EnemyLayerName);
+            return enemyLayer >= 0 ? 1 << enemyLayer : 0;
         }
 
         private static GameObject ResolveHitTarget(IHitReceiver receiver, Collider fallbackCollider)

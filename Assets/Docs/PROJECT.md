@@ -12,23 +12,19 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 内容：基本完成
 
 ### 2. 连携战斗基底
-内容：战斗日志/调试面板之后做，连携触发具体规则有待设计，技能后面做，键位后面再配置完整
+内容：连携触发具体规则有待设计，技能后面做，键位后面再配置完整
 
 ### 3. 固定主控与助战队友表现
 
-计划内容：
+内容：
 - 队伍管理：维护固定主控、助战队友列表、存活状态、入队/离队和队伍槽位。小队表现调度
 - 跟随 AI：已接入 `AllyFollowMotor` 第二版；后续补更完整的队伍槽位调度。
 - 基础队友战斗 AI：队友能选择目标、调整站位、释放简单技能，但不承担完整玩家操作能力。
-- 通用角色能力沉淀：玩家和队友出现重复需求后，再抽出`CharacterHealth`、通用Hit/Dead规则等共享层，避免过早抽象。
-
-阶段完成标准：
-- 助战队友能跟随主控，并根据战斗事件参与简单战斗。
-- 队友状态机和玩家状态机职责分离，队友不依赖玩家输入系统也能独立行动。
+- 通用角色能力沉淀：玩家和队友出现重复需求后，再抽出共享层，避免过早抽象。
 
 ### 4. 敌人基础制作
 
-目标是从“木桩验证命中”推进到“可被连携战斗稳定测试的真实敌人基底”。敌人不需要一开始就复杂，但必须有完整的战斗生命周期、目标有效性、基础行为和调试反馈，否则主控与队友的连携链路很难判断是否正确。
+目标是从“木桩验证命中”推进到“可被连携战斗稳定测试的真实敌人基底”。敌人必须有完整的战斗生命周期、目标有效性、基础行为和调试反馈，否则主控与队友的连携链路很难判断是否正确。
 
 计划内容：
 - 敌人通用基底：已建立正式敌人脚本结构和大状态机骨架，后续接入移动、战斗执行和行为树。
@@ -71,7 +67,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | [玩家 Animator 桥接](#feature-player-animator) | 已完成第一版 | 负责把玩家状态、移动速度和状态进入触发器同步到 Animator 参数，不参与状态决策。 |
 | [玩家目标选择](#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按范围、角度和距离选择当前战斗目标，不控制镜头或 UI。 |
 | [战斗动作配置](#feature-combat-action) | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和大招的伤害、冷却、时序、Hitbox 和命中标签。 |
-| [战斗标签系统](#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、增删事件、合法检查和标签组合转化规则。 |
+| [战斗标签系统](#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和标签组合转化规则。 |
 | [战斗数据编辑工具](#feature-combat-data-tool) | 已完成第一版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则数据资产。 |
 | [战斗事件总栈](#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
 | [玩家战斗驱动](#feature-player-combat-driver) | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |
@@ -80,7 +76,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | [队友跟随移动](#feature-ally-follow-motor) | 已完成手感增强版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持平滑减速、追赶、远距离归位和简易避让。 |
 | [固定三人小队管理](#feature-party-manager) | 已完成第一版 | 负责保存固定主控和 2 个队友槽位，统一分配队友跟随目标和队形偏移。 |
 | [敌人通用基底](#feature-enemy-foundation) | 已完成第一版 | 提供正式敌人身份入口、生命受击、死亡目标失效、目标有效性接口和大状态机骨架。 |
-| [通用 Hitbox 基类](#feature-hitbox) | 已完成第一版 | 负责 Trigger 命中检测、Enemy Layer 过滤、重复命中去重，并向目标传递伤害、击退和标签。 |
+| [通用 Hitbox 基类](#feature-hitbox) | 已完成第一版 | 负责 Trigger 命中检测、可配置目标 Layer 过滤、重复命中去重，并向目标传递伤害、击退和标签。 |
 | [木桩敌人](#feature-enemy-dummy) | 已完成第一版 | 用于验证 Hitbox 命中、扣血、死亡、受击/死亡事件和基础调试显示。 |
 | [当前架构边界](#feature-architecture-boundary) | 已建立初版约定 | 初步明确输入读取、玩家移动、相机控制、状态机、战斗驱动、命中检测之间的职责边界。 |
 
@@ -411,10 +407,11 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `CombatTagCombinationRule` 描述 A + B => C 的组合转化规则，可选择转化后移除源标签，并可配置结果标签持续时间。
 - 容器提供 `OnTagAdded`、`OnTagRemoved`、`OnTagExpired`、`OnTagRefreshed` 和 `OnTagTransformed` 事件。
 - 标签添加、移除、过期和组合转化时会同步通过 `CombatEventsBus` 广播事件。
+- 标签添加和移除接口支持传入 `source`，事件总线可以表达“谁给谁挂载或移除了某个标签”。
 - 对外提供 `ICombatTagReadable` 和 `ICombatTagReceiver`，后续连携规则、AI、UI 和状态效果系统应优先依赖接口。
 - `CombatActionDefinition`、`HitboxBase` 和 `HitboxHitInfo` 已支持 `CombatTagDefinition` 标签通道。
 - 旧的 string tag 通道已移除，伤害链路统一使用 `CombatTagDefinition`。
-- 命中时如果目标实现 `ICombatTagReceiver`，`HitboxBase` 会把 `CombatTagDefinition` 添加到目标标签容器。
+- 命中时如果目标实现 `ICombatTagReceiver`，`HitboxBase` 会把 `CombatTagDefinition` 添加到目标标签容器，并把 Hitbox owner 作为标签来源。
 
 对应脚本：
 - `Assets/_EndLink/Combat/Tags/CombatTagDefinition.cs`
@@ -804,12 +801,13 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 功能说明：
 - `HitboxBase` 是大多数攻击判定的基础组件。
 - 使用 `OnTriggerEnter` 检测命中。
-- 只对 Layer 为 `Enemy` 的目标生效。
+- 通过 `targetLayerMask` 过滤可命中的目标 Layer，默认回填 `Enemy` Layer。
+- 子类可以覆盖目标 Layer 判断，用于后续阵营、友伤或特殊目标规则。
 - 使用 `HashSet<Collider>` 记录已经命中过的 Collider，避免同一个 Hitbox 重复命中同一目标。
 - 如果目标实现 `ICombatTarget` 且 `IsTargetable == false`，Hitbox 会跳过该目标。
 - 命中后查找目标父级上的 `IHitReceiver`。
 - 命中信息通过 `HitboxHitInfo` 传递，包含伤害、击退、`CombatTagDefinition` 标签、标签持续时间、命中点、命中方向、Owner、Hitbox 和命中的 Collider。
-- 命中时如果目标实现 `ICombatTagReceiver`，会把 `CombatTagDefinition` 添加到目标标签容器。
+- 命中时如果目标实现 `ICombatTagReceiver`，会把 `CombatTagDefinition` 添加到目标标签容器，并把 Hitbox owner 传入标签事件来源。
 - 命中后触发 `UnityEvent<Collider>`，方便后续挂音效、特效或调试组件。
 - 命中后会通过 `CombatEventsBus` 广播 `HitLanded`。
 
@@ -825,6 +823,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `Assets/_EndLink/Combat/Mat_Wave.mat`
 
 关键配置：
+- `targetLayerMask`：允许命中的目标 Layer，默认 Enemy
 - `damageAmount`：伤害值
 - `knockbackForce`：击退力
 - `combatTagToApply`：命中战斗标签资产
@@ -834,7 +833,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 配置注意：
 - Hitbox 的 Collider 必须勾选 `Is Trigger`。
 - 为保证 `OnTriggerEnter` 稳定触发，Hitbox prefab 建议带 `Rigidbody`，设置 `Is Kinematic = true`、`Use Gravity = false`。
-- 敌人 Collider 所在物体必须设置为 `Enemy` Layer。
+- 当前玩家和队友攻击用的 Hitbox 默认要求敌人 Collider 所在物体设置为 `Enemy` Layer；后续其他攻击类型可通过 `targetLayerMask` 改为 Player、Ally 或自定义 Layer。
 - `ProjectSettings/TagManager.asset` 中已经添加 `Enemy` Layer。
 
 </details>

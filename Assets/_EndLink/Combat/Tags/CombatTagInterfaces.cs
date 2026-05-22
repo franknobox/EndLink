@@ -22,10 +22,19 @@ namespace EndLink.Combat
         /// <summary>添加永久标签。</summary>
         bool AddTag(CombatTagDefinition tag);
 
+        /// <summary>添加永久标签，并记录标签来源。source 通常是施加该标签的攻击者或系统对象。</summary>
+        bool AddTag(CombatTagDefinition tag, UnityEngine.GameObject source);
+
         /// <summary>添加带持续时间的标签。duration 小于等于 0 时视为永久标签。</summary>
         bool AddTag(CombatTagDefinition tag, float duration);
 
+        /// <summary>添加带持续时间的标签，并记录标签来源。duration 小于等于 0 时视为永久标签。</summary>
+        bool AddTag(CombatTagDefinition tag, float duration, UnityEngine.GameObject source);
+
         /// <summary>移除标签。</summary>
         bool RemoveTag(CombatTagDefinition tag);
+
+        /// <summary>移除标签，并记录移除来源。source 通常是触发移除的攻击者、规则或系统对象。</summary>
+        bool RemoveTag(CombatTagDefinition tag, UnityEngine.GameObject source);
     }
 }

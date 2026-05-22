@@ -75,7 +75,7 @@ namespace EndLink.Combat
                     continue;
                 }
 
-                AddTag(initialTag.Tag, initialTag.HasDuration ? initialTag.RemainingDuration : 0f);
+                AddTag(initialTag.Tag, initialTag.HasDuration ? initialTag.RemainingDuration : 0f, gameObject);
             }
         }
 
@@ -107,17 +107,35 @@ namespace EndLink.Combat
         /// <summary>添加永久标签。</summary>
         public bool AddTag(CombatTagDefinition tag)
         {
-            return AddTag(tag, 0f);
+            return AddTag(tag, 0f, gameObject);
+        }
+
+        /// <summary>添加永久标签，并记录标签来源。</summary>
+        public bool AddTag(CombatTagDefinition tag, GameObject source)
+        {
+            return AddTag(tag, 0f, source);
         }
 
         /// <summary>添加标签。duration 小于等于 0 时表示永久标签。</summary>
         public bool AddTag(CombatTagDefinition tag, float duration)
         {
-            return AddTagInternal(tag, duration, true, 0);
+            return AddTag(tag, duration, gameObject);
+        }
+
+        /// <summary>添加标签并记录标签来源。duration 小于等于 0 时表示永久标签。</summary>
+        public bool AddTag(CombatTagDefinition tag, float duration, GameObject source)
+        {
+            return AddTagInternal(tag, duration, source, true, 0);
         }
 
         /// <summary>移除标签。</summary>
         public bool RemoveTag(CombatTagDefinition tag)
+        {
+            return RemoveTag(tag, gameObject);
+        }
+
+        /// <summary>移除标签，并记录移除来源。</summary>
+        public bool RemoveTag(CombatTagDefinition tag, GameObject source)
         {
             if (!IsLegalTag(tag))
             {
@@ -132,7 +150,7 @@ namespace EndLink.Combat
             }
 
             _activeTags.RemoveAt(index);
-            NotifyTagRemoved(tag);
+            NotifyTagRemoved(tag, source);
             return true;
         }
 
@@ -174,6 +192,7 @@ namespace EndLink.Combat
         private bool AddTagInternal(
             CombatTagDefinition tag,
             float duration,
+            GameObject source,
             bool evaluateCombinations,
             int combinationDepth)
         {
@@ -193,18 +212,18 @@ namespace EndLink.Combat
             else
             {
                 _activeTags.Add(new ActiveCombatTag(tag, duration));
-                NotifyTagAdded(tag);
+                NotifyTagAdded(tag, source);
             }
 
             if (evaluateCombinations && combinationDepth < MaxCombinationDepth)
             {
-                TryApplyCombinationRules(tag, combinationDepth);
+                TryApplyCombinationRules(tag, source, combinationDepth);
             }
 
             return true;
         }
 
-        private void TryApplyCombinationRules(CombatTagDefinition addedTag, int combinationDepth)
+        private void TryApplyCombinationRules(CombatTagDefinition addedTag, GameObject source, int combinationDepth)
         {
             foreach (CombatTagCombinationRule rule in combinationRules)
             {
@@ -215,12 +234,12 @@ namespace EndLink.Combat
 
                 if (rule.RemoveSourceTags)
                 {
-                    RemoveTag(rule.FirstTag);
-                    RemoveTag(rule.SecondTag);
+                    RemoveTag(rule.FirstTag, source);
+                    RemoveTag(rule.SecondTag, source);
                 }
 
-                AddTagInternal(rule.ResultTag, rule.ResultDuration, true, combinationDepth + 1);
-                NotifyTagTransformed(rule.FirstTag, rule.SecondTag, rule.ResultTag);
+                AddTagInternal(rule.ResultTag, rule.ResultDuration, source, true, combinationDepth + 1);
+                NotifyTagTransformed(rule.FirstTag, rule.SecondTag, rule.ResultTag, source);
                 return;
             }
         }
@@ -248,18 +267,18 @@ namespace EndLink.Combat
             return tag != null && tag.IsValid;
         }
 
-        private void NotifyTagAdded(CombatTagDefinition tag)
+        private void NotifyTagAdded(CombatTagDefinition tag, GameObject source)
         {
             LogTagChange("added", tag);
             onTagAdded.Invoke(this, tag);
-            CombatEventsBus.RaiseTagAdded(gameObject, gameObject, tag);
+            CombatEventsBus.RaiseTagAdded(source, gameObject, tag);
         }
 
-        private void NotifyTagRemoved(CombatTagDefinition tag)
+        private void NotifyTagRemoved(CombatTagDefinition tag, GameObject source)
         {
             LogTagChange("removed", tag);
             onTagRemoved.Invoke(this, tag);
-            CombatEventsBus.RaiseTagRemoved(gameObject, gameObject, tag);
+            CombatEventsBus.RaiseTagRemoved(source, gameObject, tag);
         }
 
         private void NotifyTagExpired(CombatTagDefinition tag)
@@ -278,7 +297,8 @@ namespace EndLink.Combat
         private void NotifyTagTransformed(
             CombatTagDefinition firstTag,
             CombatTagDefinition secondTag,
-            CombatTagDefinition resultTag)
+            CombatTagDefinition resultTag,
+            GameObject source)
         {
             if (logTagChanges)
             {
@@ -288,7 +308,7 @@ namespace EndLink.Combat
             }
 
             onTagTransformed.Invoke(this, firstTag, secondTag, resultTag);
-            CombatEventsBus.RaiseTagTransformed(gameObject, gameObject, resultTag);
+            CombatEventsBus.RaiseTagTransformed(source, gameObject, resultTag);
         }
 
         private void LogInvalidTag(CombatTagDefinition tag)
