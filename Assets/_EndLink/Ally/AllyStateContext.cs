@@ -4,7 +4,7 @@ namespace EndLink.Ally
 {
     /// <summary>
     /// 队友状态共享上下文。
-    /// 状态对象通过上下文访问状态机、Transform、战斗执行器和跟随移动器，避免每个状态重复 GetComponent。
+    /// 状态对象通过上下文访问状态机、Transform、战斗执行器和移动器，避免每个状态重复 GetComponent。
     /// </summary>
     public sealed class AllyStateContext
     {
@@ -29,17 +29,29 @@ namespace EndLink.Ally
         /// <summary>队友战斗执行器，只负责生成 Hitbox 和执行动作。</summary>
         public AllyCombatDriver CombatDriver { get; }
 
-        /// <summary>队友跟随移动器，只在 Follow 状态中被 Tick 驱动。</summary>
+        /// <summary>队友移动器，负责跟随、接近目标和局部避让。</summary>
         public AllyFollowMotor FollowMotor { get; }
 
-        /// <summary>当前跟随目标。</summary>
+        /// <summary>当前跟随目标，通常是固定主控。</summary>
         public Transform FollowTarget => StateMachine.FollowTarget;
 
         /// <summary>当前助战目标。</summary>
         public Transform CurrentAssistTarget => StateMachine.CurrentAssistTarget;
 
-        /// <summary>当前助战状态持续时间。</summary>
+        /// <summary>当前助战攻击状态持续时间。</summary>
         public float AssistDuration => StateMachine.CurrentAssistDuration;
+
+        /// <summary>助战接近时进入攻击的距离。</summary>
+        public float AssistAttackRange => StateMachine.AssistAttackRange;
+
+        /// <summary>持续助战时重新接近目标的距离。</summary>
+        public float AssistReengageRange => StateMachine.AssistReengageRange;
+
+        /// <summary>助战接近最大持续时间。</summary>
+        public float AssistApproachTimeout => StateMachine.AssistApproachTimeout;
+
+        /// <summary>主控离队友过远时放弃助战的距离。</summary>
+        public float AssistBreakOffDistance => StateMachine.AssistBreakOffDistance;
 
         /// <summary>受击状态持续时间。</summary>
         public float HitDuration => StateMachine.HitDuration;

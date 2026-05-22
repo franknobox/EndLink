@@ -9,28 +9,20 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 ## 后续开发规划
 
 ### 1. 单人行动基底
-
 内容：基本完成，技能后面做，键位后面再配置完整
 
-
 ### 2. 连携战斗基底
-
-计划内容：战斗日志/调试面板之后做，连携触发具体规则有待设计
-
+内容：战斗日志/调试面板之后做，连携触发具体规则有待设计
 
 ### 3. 固定主控与助战队友表现
 
-目标是从“系统能跑”推进到“固定主控 + 2 到 3 名助战队友在场景中有可信表现”。主控角色保持唯一且长期稳定，队友只负责跟随、站位、响应事件和释放助战行为。
-
 计划内容：
-
 - 队伍管理：维护固定主控、助战队友列表、存活状态、入队/离队和队伍槽位。小队表现调度
 - 跟随 AI：已接入 `AllyFollowMotor` 第二版；后续补更完整的队伍槽位调度。
 - 基础队友战斗 AI：队友能选择目标、调整站位、释放简单技能，但不承担完整玩家操作能力。
 - 通用角色能力沉淀：玩家和队友出现重复需求后，再抽出`CharacterHealth`、通用Hit/Dead规则等共享层，避免过早抽象。
 
 阶段完成标准：
-
 - 同屏至少 2 到 3 名角色能稳定行动。
 - 助战队友能跟随主控，并根据战斗事件参与简单战斗。
 - 队友状态机和玩家状态机职责分离，队友不依赖玩家输入系统也能独立行动。
@@ -38,7 +30,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 ### 4. 待定方向
 
 后续根据前三阶段验证结果再定，可能包括：
-
 - 锁定目标系统与战斗镜头。
 - 更完整的技能编辑方式。
 - 连携 UI 和时机反馈。
@@ -69,8 +60,8 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | [战斗数据编辑工具](#feature-combat-data-tool) | 已完成第一版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则数据资产。 |
 | [战斗事件总栈](#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口和调试日志监听器，当前已接入攻击、命中、受伤、死亡和标签变化。 |
 | [玩家战斗驱动](#feature-player-combat-driver) | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |
-| [队友助战基础组件](#feature-ally-assist) | 已完成脚本第一版 | 提供队友事件响应大脑和队友战斗执行器，用于验证队友根据战斗事件释放一次助战行为。 |
-| [队友有限状态机](#feature-ally-state-machine) | 已完成骨架第一版 | 提供 Idle、Follow、Assist、Hit、Dead 五个状态，用于承接队友跟随、助战、受击和死亡流程。 |
+| [队友助战基础组件](#feature-ally-assist) | 已完成持续助战第一版 | 提供队友事件响应大脑和队友战斗执行器，用于主控命中敌人后让队友自动接近目标并持续攻击。 |
+| [队友有限状态机](#feature-ally-state-machine) | 已完成助战接近版 | 提供 Idle、Follow、AssistApproach、Assist、Hit、Dead 六个状态，用于承接队友跟随、接近助战、攻击、受击和死亡流程。 |
 | [队友跟随移动](#feature-ally-follow-motor) | 已完成手感增强版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持平滑减速、追赶、远距离归位和简易避让。 |
 | [固定三人小队管理](#feature-party-manager) | 已完成第一版 | 负责保存固定主控和 2 个队友槽位，统一分配队友跟随目标和队形偏移。 |
 | [通用 Hitbox 基类](#feature-hitbox) | 已完成第一版 | 负责 Trigger 命中检测、Enemy Layer 过滤、重复命中去重，并向目标传递伤害、击退和标签。 |
@@ -86,7 +77,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - 使用已生成的 `InputSystem_Actions` C# 包装类。
 - 玩家移动输入和相机输入分开读取，避免输入读取器承担移动或相机逻辑。
 - 移动输入读取 `Player/Move`。
@@ -95,17 +85,14 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 鼠标滚轮缩放暂时通过 `Mouse.current.scroll` 读取，后续可迁移到独立 `Zoom` action。
 
 对应脚本：
-
 - `Assets/_EndLink/Control/InputSystem_Actions.cs`
 - `Assets/_EndLink/Control/PlayerInputReader.cs`
 - `Assets/_EndLink/Control/PlayerCameraInputReader.cs`
 
 相关资产：
-
 - `Assets/_EndLink/Control/InputSystem_Actions.inputactions`
 
 相关物体：
-
 - 玩家物体：挂载 `PlayerInputReader`
 - 第三人称相机控制物体：挂载 `PlayerCameraInputReader`
 
@@ -120,7 +107,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - 基于 `CharacterController` 移动。
 - 使用 `Mathf.SmoothDamp` 做平滑加速和减速。
 - 支持手动重力和贴地速度。
@@ -129,12 +115,10 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 当前移动调用权已经交给 `PlayerStateMachine`，`PlayerController` 暴露 `TickMovement`，不再自行在 `Update` 中读取输入移动。
 
 对应脚本：
-
 - `Assets/_EndLink/Control/PlayerController.cs`
 - `Assets/_EndLink/Control/PlayerInputReader.cs`
 
 相关物体：
-
 - 玩家根物体
   - `CharacterController`
 - `PlayerInputReader`
@@ -142,7 +126,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `PlayerStateMachine`
 
 关键配置：
-
 - `moveSpeed`：移动速度
 - `accelerationSmoothTime`：加速阻尼
 - `decelerationSmoothTime`：减速阻尼
@@ -160,7 +143,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - 基于 Cinemachine 3.1.6。
 - 使用 `CinemachineCamera` 和 `CinemachineThirdPersonFollow`。
 - 支持越肩、较高、较开阔的第三人称视角。
@@ -170,16 +152,13 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 支持鼠标锁定，方便第三人称自由视角操作。
 
 对应脚本：
-
 - `Assets/_EndLink/Control/ThirdPersonCameraController.cs`
 - `Assets/_EndLink/Control/PlayerCameraInputReader.cs`
 
 相关包：
-
 - `com.unity.cinemachine`：当前版本 `3.1.6`
 
 相关物体：
-
 - `Main Camera`
   - `Camera`
   - `CinemachineBrain`
@@ -192,7 +171,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
   - `ThirdPersonCameraController`
 
 关键配置：
-
 - `defaultDistance`：默认相机距离
 - `minDistance` / `maxDistance`：缩放范围
 - `zoomSpeed` / `zoomSmoothTime`：缩放速度和平滑
@@ -217,7 +195,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - 使用代码状态机，不依赖 Animator StateMachine。
 - 当前包含 `Idle`、`Move`、`Attack`、`Skill`、`Hit`、`Dead` 六个状态。
 - `Idle` 和 `Move` 会消费攻击输入，检查攻击冷却后切换到 `Attack`。
@@ -228,7 +205,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `Dead` 可以被外部通过 `RequestDead()` 触发，是当前最高优先级终止状态。
 
 对应脚本：
-
 - `Assets/_EndLink/StateMachine/IPlayerState.cs`
 - `Assets/_EndLink/StateMachine/PlayerStateId.cs`
 - `Assets/_EndLink/StateMachine/PlayerStateContext.cs`
@@ -242,7 +218,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `Assets/_EndLink/StateMachine/PlayerStateMachine.cs`
 
 相关物体：
-
 - 玩家根物体
   - `PlayerStateMachine`
   - `PlayerInputReader`
@@ -250,7 +225,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
   - `PlayerCombatDriver`
 
 关键配置：
-
 - `initialState`：初始状态
 - `attackDuration`：攻击状态持续时间
 - `attackMoveInputScale`：攻击期间移动输入倍率
@@ -270,7 +244,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - `PlayerHealth` 负责玩家生命值、受伤、治疗和死亡接线。
 - 同时实现 `IHitReceiver` 和 `IDamageable`，方便后续敌人 Hitbox、环境伤害或调试工具统一调用。
 - `ReceiveHit(HitboxHitInfo hitInfo)` 会转发到 `TakeDamage(int damage, CombatTagDefinition tag)`。
@@ -281,20 +254,17 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 当前不把 Debuff / Buff 逻辑直接放进 `PlayerHealth`，后续应由独立状态效果系统处理，再通过事件或接口影响生命值与状态机。
 
 对应脚本：
-
 - `Assets/_EndLink/Combat/PlayerHealth.cs`
 - `Assets/_EndLink/Combat/IHitReceiver.cs`
 - `Assets/_EndLink/Combat/IDamageable.cs`
 - `Assets/_EndLink/StateMachine/PlayerStateMachine.cs`
 
 相关物体：
-
 - 玩家根物体
   - `PlayerHealth`
   - `PlayerStateMachine`
 
 关键配置：
-
 - `maxHealth`：玩家最大生命值
 - `requestHitStateOnDamage`：受伤时是否请求进入 Hit 状态
 - `requestDeadStateOnDeath`：死亡时是否请求进入 Dead 状态
@@ -312,7 +282,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - `PlayerAnimatorDriver` 是状态机到 Animator 的轻薄桥接层。
 - 不读取输入，不决定状态切换，不直接控制移动或战斗。
 - 每帧读取 `PlayerStateMachine.CurrentStateId` 和 `CharacterController.velocity`。
@@ -321,12 +290,10 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 参数名都可以在 Inspector 修改；Animator Controller 不存在对应参数时会安全跳过。
 
 对应脚本：
-
 - `Assets/_EndLink/Control/PlayerAnimatorDriver.cs`
 - `Assets/_EndLink/StateMachine/PlayerStateMachine.cs`
 
 相关物体：
-
 - 玩家根物体
   - `PlayerAnimatorDriver`
   - `PlayerStateMachine`
@@ -335,7 +302,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
   - `Animator`
 
 关键配置：
-
 - `animator`：目标 Animator，可为空自动查找子物体
 - `moveSpeedParameter`：水平移动速度参数名
 - `isMovingParameter`：是否移动参数名
@@ -355,7 +321,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - `PlayerTargeting` 是基础目标选择组件，放在战斗层。
 - 只负责搜索并保存当前目标，不控制相机、不绘制 UI、不决定攻击逻辑。
 - 默认搜索 `Enemy` Layer。
@@ -365,16 +330,13 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 对外提供 `TryAcquireTarget()`、`SetCurrentTarget(Transform target)` 和 `ClearTarget()`。
 
 对应脚本：
-
 - `Assets/_EndLink/Combat/PlayerTargeting.cs`
 
 相关物体：
-
 - 玩家根物体
   - `PlayerTargeting`
 
 关键配置：
-
 - `searchRadius`：搜索半径
 - `maxTargetAngle`：最大可锁定角度
 - `targetLayerMask`：目标 LayerMask，默认 Enemy
@@ -395,7 +357,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - `CombatActionDefinition` 是战斗动作数据资产，用于描述一次普通攻击、技能、连携攻击或大招。
 - `CombatActionType` 描述动作性质，不描述释放者来源。
 - 当前动作类型包括 `BasicAttack`、`Skill`、`LinkAttack`、`Ultimate`。
@@ -403,16 +364,13 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 动作配置包含伤害、击退、`CombatTagDefinition` 命中标签、标签持续时间、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置和生命周期。
 
 对应脚本：
-
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
 
 相关资产：
-
 - `CombatActionDefinition` 数据资产：可通过 `Create > EndLink > Combat > Combat Action Definition` 创建
 - 推荐存放路径：`Assets/_EndLink/Data/CombatData/Actions`
 
 关键类型：
-
 - `BasicAttack`：普通攻击
 - `Skill`：普通技能
 - `LinkAttack`：连携攻击
@@ -429,7 +387,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - 战斗标签系统只服务 Combat，不做全项目泛用 GameplayTag。
 - `CombatTagDefinition` 是标签定义资产，包含 `tagId`、显示名和说明。
 - 标签合法检查当前要求标签资产非空且 `tagId` 非空。
@@ -444,14 +401,12 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 命中时如果目标实现 `ICombatTagReceiver`，`HitboxBase` 会把 `CombatTagDefinition` 添加到目标标签容器。
 
 对应脚本：
-
 - `Assets/_EndLink/Combat/Tags/CombatTagDefinition.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagCombinationRule.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagContainer.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagInterfaces.cs`
 
 相关资产：
-
 - `CombatTagDefinition` 数据资产：可通过 `Create > EndLink > Combat > Combat Tag Definition` 创建
 - `CombatTagCombinationRule` 数据资产：可通过 `Create > EndLink > Combat > Combat Tag Combination Rule` 创建
 - 推荐存放路径：
@@ -459,7 +414,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
   - `Assets/_EndLink/Data/CombatData/Tags/CombinationRules`
 
 相关物体：
-
 - 需要被连携规则查询的目标
   - `CombatTagContainer`
 
@@ -474,7 +428,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - 通过菜单 `EndLink > Combat Data Tool` 打开。
 - 提供 `Actions`、`Tag Definitions`、`Combination Rules` 和 `Asset List` 四个标签页。
 - 前三个标签页分别用于快捷创建 `CombatActionDefinition`、`CombatTagDefinition` 和 `CombatTagCombinationRule`。
@@ -483,11 +436,9 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 工具会确保目标目录存在，当前固定使用项目约定的数据路径。
 
 对应脚本：
-
 - `Assets/_EndLink/Editor/CombatDataToolWindow.cs`
 
 相关数据目录：
-
 - `Assets/_EndLink/Data/CombatData/Actions`
 - `Assets/_EndLink/Data/CombatData/Tags/Definitions`
 - `Assets/_EndLink/Data/CombatData/Tags/CombinationRules`
@@ -503,7 +454,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - `CombatEventsBus` 是全局战斗事件广播入口。
 - `CombatEvent` 是一条战斗事件的数据结构，包含事件类型、来源、目标、动作配置、战斗标签、伤害、命中信息和时间戳。
 - `CombatEventType` 目前包含 `ActionStarted`、`HitLanded`、`Damaged`、`Dead`、`TagAdded`、`TagRemoved`、`TagExpired`、`TagTransformed`。
@@ -512,19 +462,16 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 当前已接入 `PlayerCombatDriver` 的动作开始、`HitboxBase` 的命中、`PlayerHealth` / `EnemyDummy` 的受伤与死亡，以及 `CombatTagContainer` 的标签添加、移除、过期和组合转化。
 
 对应脚本：
-
 - `Assets/_EndLink/Combat/Events/CombatEventType.cs`
 - `Assets/_EndLink/Combat/Events/CombatEvent.cs`
 - `Assets/_EndLink/Combat/Events/CombatEventsBus.cs`
 - `Assets/_EndLink/Combat/Events/CombatEventLog.cs`
 
 相关物体：
-
 - 任意调试物体
   - `CombatEventLog`
 
 关键接口：
-
 - `CombatEventsBus.Raised`：全局事件订阅入口
 - `CombatEventsBus.Raise(...)`：广播通用事件
 - `CombatEventsBus.RaiseActionStarted(...)`
@@ -547,9 +494,11 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - `AllyBrain` 是队友大脑，负责监听 `CombatEventsBus` 并判断是否响应。
 - `AllyBrain` 默认响应 `HitLanded` 事件，忽略自己发出的事件，可选只响应指定来源，例如主控玩家。
+- 主控命中敌人后，`AllyBrain` 会优先锁定该事件目标并请求队友进入助战流程。
+- 事件目标为空时，`AllyBrain` 可按 `enemyLayerMask` 和 `targetSearchRadius` 搜索主控附近最近敌人。
+- 目标死亡时，`AllyBrain` 会监听 `Dead` 事件并请求状态机取消当前助战。
 - `AllyBrain` 不直接生成 Hitbox，不写伤害数据，只把事件目标交给 `AllyStateMachine.RequestAssist(...)`。
 - `AllyCombatDriver` 是队友战斗执行器，职责类似 `PlayerCombatDriver`，但不读取输入，也不决定什么时候出手。
 - `AllyCombatDriver` 根据 `CombatActionDefinition` 生成 Hitbox，并写入伤害、击退、战斗标签和标签持续时间。
@@ -557,7 +506,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 当前版本用于验证木桩队友参与连携的最短链路，后续可接入队友状态机、跟随 AI、站位和更完整的连携规则。
 
 对应脚本：
-
 - `Assets/_EndLink/Ally/AllyBrain.cs`
 - `Assets/_EndLink/Ally/AllyCombatDriver.cs`
 - `Assets/_EndLink/Ally/AllyStateMachine.cs`
@@ -565,20 +513,20 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `Assets/_EndLink/Combat/Events/CombatEventsBus.cs`
 
 相关物体：
-
 - 队友根物体
   - `AllyBrain`
   - `AllyStateMachine`
   - `AllyCombatDriver`
 
 关键配置：
-
 - `assistAction`：队友助战动作配置资产
 - `faceTargetBeforeAttack`：助战前是否转向目标
 - `respondToHitLanded`：是否响应命中事件
 - `requiredSource`：可选事件来源过滤，通常可拖主角
 - `ignoreSelfEvents`：是否忽略自己发出的事件
-- `requireTarget`：是否要求事件必须带目标
+- `searchNearestEnemyWhenNoEventTarget`：事件目标为空时是否搜索最近敌人
+- `targetSearchRadius`：最近敌人搜索半径
+- `enemyLayerMask`：敌人搜索 LayerMask，通常勾选 Enemy
 - `logDecisions`：是否打印队友响应决策日志
 
 </details>
@@ -592,18 +540,18 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - `AllyStateMachine` 是队友专用有限状态机，不依赖玩家输入系统。
-- 当前包含 `Idle`、`Follow`、`Assist`、`Hit`、`Dead` 五个状态。
+- 当前包含 `Idle`、`Follow`、`AssistApproach`、`Assist`、`Hit`、`Dead` 六个状态。
 - `Idle` 表示没有跟随目标的待机状态。
 - `Follow` 在有跟随目标时每帧调用 `AllyFollowMotor.TickFollow(deltaTime)`，实际移动由跟随移动组件负责。
-- `Assist` 表示队友响应战斗事件后的助战状态，进入状态时调用 `AllyCombatDriver.ExecuteAssist(target)`。
+- `AssistApproach` 表示队友响应战斗事件后的助战接近状态，会调用 `AllyFollowMotor.TickMoveToPosition(...)` 跑向目标附近。
+- `Assist` 表示队友进入攻击距离后的助战攻击状态，会在目标有效且主控没有远离时持续攻击；目标拉开距离后回到 `AssistApproach` 重新接近。
+- 目标死亡、目标丢失、接近超时或主控距离过远时，助战流程会取消并回到 Follow / Idle。
 - `Hit` 表示队友受击硬直状态，可打断 Follow 和 Assist。
 - `Dead` 是终止状态，不再响应跟随、助战和受击请求。
 - `AllyBrain` 判断事件是否值得响应，`AllyStateMachine` 判断当前能否进入 Assist，`AllyCombatDriver` 只执行动作和 Hitbox。
 
 对应脚本：
-
 - `Assets/_EndLink/Ally/AllyStateMachine.cs`
 - `Assets/_EndLink/Ally/AllyStateId.cs`
 - `Assets/_EndLink/Ally/IAllyState.cs`
@@ -612,20 +560,23 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `Assets/_EndLink/Ally/AllyIdleState.cs`
 - `Assets/_EndLink/Ally/AllyFollowState.cs`
 - `Assets/_EndLink/Ally/AllyFollowMotor.cs`
+- `Assets/_EndLink/Ally/AllyAssistApproachState.cs`
 - `Assets/_EndLink/Ally/AllyAssistState.cs`
 - `Assets/_EndLink/Ally/AllyHitState.cs`
 - `Assets/_EndLink/Ally/AllyDeadState.cs`
 
 相关物体：
-
 - 队友根物体
   - `AllyStateMachine`
   - `AllyCombatDriver`
 
 关键配置：
-
 - `initialState`：初始状态
 - `followTarget`：跟随目标，通常后续会绑定主控角色
+- `assistAttackRange`：队友接近助战目标到该距离后开始攻击
+- `assistReengageRange`：持续助战时，目标离队友超过该距离会重新接近
+- `assistApproachTimeout`：接近目标超时后取消助战
+- `assistBreakOffDistance`：队友距离主控过远时取消助战，设置为 0 可关闭
 - `assistDuration`：助战状态最短持续时间
 - `hitDuration`：受击状态持续时间
 
@@ -640,11 +591,11 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - `AllyFollowMotor` 是队友跟随移动组件，不依赖 NavMesh。
 - 支持优先使用 `CharacterController.Move` 移动；如果队友没有 `CharacterController`，会回退为直接修改 `Transform.position`。
 - `AllyStateMachine` 负责保存跟随目标并同步给 `AllyFollowMotor`。
 - `AllyFollowState` 每帧调用 `TickFollow(deltaTime)`，因此 Assist、Hit、Dead 状态不会继续抢跟随移动。
+- 助战接近状态会调用 `TickMoveToPosition(position, arriveDistance, deltaTime)`，让队友临时移动到敌人附近而不修改主控跟随目标。
 - 队友会移动到主控的本地队形偏移范围，移动时面向移动方向，停下后的朝向由 `idleFacingMode` 决定。
 - 支持 `arrivalSmoothTime` 平滑加减速，降低接近队形点时的机械感。
 - 支持 `catchUpDistance` 和 `catchUpSpeedMultiplier`，队友落后较远时会加速追上。
@@ -655,20 +606,17 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 当前只处理平面 XZ 跟随和局部避让，后续如果需要复杂地形、障碍绕路，再接 NavMesh 或更完整的队伍槽位调度。
 
 对应脚本：
-
 - `Assets/_EndLink/Ally/AllyFollowMotor.cs`
 - `Assets/_EndLink/Ally/AllyFollowState.cs`
 - `Assets/_EndLink/Ally/AllyStateMachine.cs`
 
 相关物体：
-
 - 队友根物体
   - `AllyStateMachine`
   - `AllyFollowMotor`
   - 可选 `CharacterController`
 
 关键配置：
-
 - `followTarget`：跟随目标，通常拖固定主控角色
 - `followDistance`：当 `formationOffset` 为零时使用的默认后方距离
 - `stopDistance`：距离队形点小于该值时停止移动
@@ -697,7 +645,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - `PartyManager` 是固定三人小队的场景级管理入口。
 - 第一版只支持固定主控 + 2 个固定队友，不做主控切换、入队离队或复杂编队。
 - `PartyFormationSlot` 保存单个队友槽位，包含槽位名、队友状态机和队形偏移。
@@ -706,14 +653,12 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 后续队友 AI、连携规则或调试工具需要知道“谁是主控，谁是队友”时，可以从 `PartyManager` 查询。
 
 对应脚本：
-
 - `Assets/_EndLink/Party/PartyManager.cs`
 - `Assets/_EndLink/Party/PartyFormationSlot.cs`
 - `Assets/_EndLink/Ally/AllyFollowMotor.cs`
 - `Assets/_EndLink/Ally/AllyStateMachine.cs`
 
 相关物体：
-
 - 场景管理物体
   - `PartyManager`
 - 主控角色根物体
@@ -722,7 +667,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
   - 分别拖入 `allySlotA` / `allySlotB`
 
 关键配置：
-
 - `mainCharacter`：固定主控角色
 - `allySlotA`：第一个队友槽位
 - `allySlotB`：第二个队友槽位
@@ -740,7 +684,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - `PlayerCombatDriver` 不读取输入，不决定是否能进入攻击状态。
 - 状态机决定能否攻击，`PlayerCombatDriver` 只负责执行攻击表现和判定。
 - 支持通过 `CombatActionDefinition` 配置普攻的伤害、击退、`CombatTagDefinition` 标签、标签持续时间、冷却、Hitbox 和生成参数。
@@ -753,20 +696,17 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 成功执行攻击后会通过 `CombatEventsBus` 广播 `ActionStarted`。
 
 对应脚本：
-
 - `Assets/_EndLink/Combat/PlayerCombatDriver.cs`
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
 - `Assets/_EndLink/Combat/HitboxBase.cs`
 
 相关物体/资产：
-
 - 玩家根物体：挂载 `PlayerCombatDriver`
 - `CombatActionDefinition` 数据资产：可通过 `Create > EndLink > Combat > Combat Action Definition` 创建
 - `Assets/_EndLink/Combat/Hitbox_Base.prefab`
 - `Assets/_EndLink/Combat/Hitbox_MeleeWave.prefab`
 
 关键配置：
-
 - `basicAttackDefinition`：玩家普攻配置资产，配置后优先使用资产参数
 - `hitboxPrefab`：攻击生成的 Hitbox prefab
 - `spawnDistance`：生成在角色前方的距离
@@ -785,7 +725,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - `HitboxBase` 是大多数攻击判定的基础组件。
 - 使用 `OnTriggerEnter` 检测命中。
 - 只对 Layer 为 `Enemy` 的目标生效。
@@ -797,19 +736,16 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 命中后会通过 `CombatEventsBus` 广播 `HitLanded`。
 
 对应脚本：
-
 - `Assets/_EndLink/Combat/HitboxBase.cs`
 - `Assets/_EndLink/Combat/HitboxHitInfo.cs`
 - `Assets/_EndLink/Combat/IHitReceiver.cs`
 
 相关资产：
-
 - `Assets/_EndLink/Combat/Hitbox_Base.prefab`
 - `Assets/_EndLink/Combat/Hitbox_MeleeWave.prefab`
 - `Assets/_EndLink/Combat/Mat_Wave.mat`
 
 关键配置：
-
 - `damageAmount`：伤害值
 - `knockbackForce`：击退力
 - `combatTagToApply`：命中战斗标签资产
@@ -817,7 +753,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `onHit`：命中事件
 
 配置注意：
-
 - Hitbox 的 Collider 必须勾选 `Is Trigger`。
 - 为保证 `OnTriggerEnter` 稳定触发，Hitbox prefab 建议带 `Rigidbody`，设置 `Is Kinematic = true`、`Use Gravity = false`。
 - 敌人 Collider 所在物体必须设置为 `Enemy` Layer。
@@ -834,7 +769,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-
 - `EnemyDummy` 用于验证 Hitbox 命中链路。
 - 同时实现 `IHitReceiver` 和 `IDamageable`。
 - `ReceiveHit(HitboxHitInfo hitInfo)` 会转发到 `TakeDamage(int damage, CombatTagDefinition tag)`。
@@ -847,13 +781,11 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 支持 `showHealthInName` 把当前血量显示到 GameObject 名字上。
 
 对应脚本：
-
 - `Assets/_EndLink/Combat/EnemyDummy.cs`
 - `Assets/_EndLink/Combat/IDamageable.cs`
 - `Assets/_EndLink/Combat/IHitReceiver.cs`
 
 相关物体：
-
 - 木桩敌人
   - `EnemyDummy`
   - `MeshRenderer`
@@ -871,7 +803,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 当前约定：
-
 - 输入读取器只读输入，不做业务逻辑。
 - `PlayerStateMachine` 决定当前状态，负责 Idle、Move、Attack 等流程切换。
 - `PlayerController` 负责移动能力和朝向，不负责读取输入或判断是否允许移动。
@@ -887,7 +818,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `EnemyDummy` 是临时验证对象，后续正式敌人应复用 `IHitReceiver` / `IDamageable` 接口。
 
 后续需要调整：
-
 - 当前攻击仍是固定时间驱动，后续接动画后应改为动画事件或攻击窗口驱动。
 - 战斗事件当前只携带基础来源、目标和单个标签，后续如果连携规则需要更强表达，可扩展事件上下文或增加规则层数据结构。
 - 当前 Hitbox 使用即时 Instantiate/Destroy，后续攻击频繁后建议切换对象池。

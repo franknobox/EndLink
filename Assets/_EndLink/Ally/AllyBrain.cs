@@ -5,8 +5,7 @@ namespace EndLink.Ally
 {
     /// <summary>
     /// 队友大脑组件。
-    /// 负责监听 CombatEventsBus，并根据当前规则判断是否让队友响应。
-    /// 它不直接生成 Hitbox，也不直接执行动作；真正的状态切换交给 AllyStateMachine。
+    /// 当前负责监听战斗事件并决定是否请求助战；真正接近、攻击和回归由状态机与执行器完成。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(AllyCombatDriver))]
@@ -14,36 +13,46 @@ namespace EndLink.Ally
     public sealed class AllyBrain : MonoBehaviour
     {
         [Header("组件引用")]
-        [Tooltip("队友战斗执行器。为空时会自动从同一 GameObject 上获取。")]
+        [Tooltip("队友战斗执行器。为空时会自动从同一 GameObject 获取。")]
         [SerializeField]
         private AllyCombatDriver combatDriver;
 
-        [Tooltip("队友状态机。为空时会自动从同一 GameObject 上获取。")]
+        [Tooltip("队友状态机。为空时会自动从同一 GameObject 获取。")]
         [SerializeField]
         private AllyStateMachine stateMachine;
 
         [Header("响应规则")]
-        [Tooltip("是否响应 Hitbox 命中事件。当前木桩队友阶段推荐开启：主角命中木桩后，队友请求进入 Assist 状态。")]
+        [Tooltip("是否响应 Hitbox 命中事件。当前用于主控命中敌人后触发队友自动助战。")]
         [SerializeField]
         private bool respondToHitLanded = true;
 
-        [Tooltip("可选的事件来源过滤。拖入主角后，队友只响应主角造成的事件；为空时响应所有非自身来源。")]
+        [Tooltip("可选的事件来源过滤。拖入主角后，队友只响应主角造成的 HitLanded。")]
         [SerializeField]
         private GameObject requiredSource;
 
-        [Tooltip("是否忽略由自己发出的事件。建议保持开启，避免队友自己的命中再次触发自己出手。")]
+        [Tooltip("是否忽略由自己发出的事件，避免队友自己的命中再次触发自己助战。")]
         [SerializeField]
         private bool ignoreSelfEvents = true;
 
-        [Tooltip("是否要求事件必须带有目标。当前助战攻击需要明确目标，因此建议保持开启。")]
+        [Tooltip("事件目标为空时，是否尝试搜索最近敌人作为助战目标。")]
         [SerializeField]
-        private bool requireTarget = true;
+        private bool searchNearestEnemyWhenNoEventTarget = true;
+
+        [Tooltip("搜索最近敌人的半径。只在事件目标为空且允许搜索时使用。")]
+        [SerializeField, Min(0.1f)]
+        private float targetSearchRadius = 8f;
+
+        [Tooltip("最近敌人搜索使用的 LayerMask。建议设置为 Enemy。")]
+        [SerializeField]
+        private LayerMask enemyLayerMask;
 
         [Header("调试")]
         [Tooltip("响应事件、过滤事件和执行失败时是否打印 Debug.Log。")]
         [SerializeField]
         private bool logDecisions;
 
+        private const int TargetSearchCapacity = 16;
+        private readonly Collider[] _targetSearchResults = new Collider[TargetSearchCapacity];
         private Transform _currentTarget;
 
         /// <summary>当前绑定的队友战斗执行器。</summary>
@@ -106,8 +115,19 @@ namespace EndLink.Ally
             stateMachine = GetComponent<AllyStateMachine>();
         }
 
+        private void OnValidate()
+        {
+            targetSearchRadius = Mathf.Max(0.1f, targetSearchRadius);
+        }
+
         private void HandleCombatEvent(CombatEvent eventData)
         {
+            if (eventData.EventType == CombatEventType.Dead)
+            {
+                HandleTargetDead(eventData.Target);
+                return;
+            }
+
             if (!TryResolveResponseTarget(eventData, out Transform target))
             {
                 return;
@@ -117,8 +137,7 @@ namespace EndLink.Ally
 
             if (logDecisions)
             {
-                string targetName = target != null ? target.name : "None";
-                Debug.Log($"AllyBrain responding to {eventData.EventType}, target: {targetName}", this);
+                Debug.Log($"AllyBrain responding to {eventData.EventType}, target: {target.name}", this);
             }
 
             bool requested = StateMachine != null && StateMachine.RequestAssist(target);
@@ -127,6 +146,17 @@ namespace EndLink.Ally
             {
                 Debug.Log("AllyBrain decided to respond, but AllyStateMachine rejected the Assist request.", this);
             }
+        }
+
+        private void HandleTargetDead(GameObject deadTarget)
+        {
+            if (deadTarget == null || _currentTarget == null || deadTarget.transform != _currentTarget)
+            {
+                return;
+            }
+
+            StateMachine.CancelAssist(_currentTarget);
+            _currentTarget = null;
         }
 
         private bool TryResolveResponseTarget(CombatEvent eventData, out Transform target)
@@ -148,18 +178,73 @@ namespace EndLink.Ally
                 return false;
             }
 
-            if (eventData.Target == null)
+            if (eventData.Target != null && eventData.Target != gameObject)
             {
-                return !requireTarget;
+                target = eventData.Target.transform;
+                return target != null;
             }
 
-            if (eventData.Target == gameObject)
+            return searchNearestEnemyWhenNoEventTarget && TryFindNearestEnemy(out target);
+        }
+
+        private bool TryFindNearestEnemy(out Transform target)
+        {
+            target = null;
+
+            if (enemyLayerMask.value == 0)
             {
                 return false;
             }
 
-            target = eventData.Target.transform;
+            Vector3 origin = StateMachine != null && StateMachine.FollowTarget != null
+                ? StateMachine.FollowTarget.position
+                : transform.position;
+
+            int hitCount = Physics.OverlapSphereNonAlloc(
+                origin,
+                targetSearchRadius,
+                _targetSearchResults,
+                enemyLayerMask,
+                QueryTriggerInteraction.Ignore);
+
+            float bestSqrDistance = float.MaxValue;
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider hit = _targetSearchResults[i];
+                if (hit == null || hit.gameObject == gameObject)
+                {
+                    continue;
+                }
+
+                Transform candidateTarget = ResolveTargetTransform(hit);
+                if (candidateTarget == null)
+                {
+                    continue;
+                }
+
+                Vector3 toTarget = candidateTarget.position - origin;
+                toTarget.y = 0f;
+
+                float sqrDistance = toTarget.sqrMagnitude;
+                if (sqrDistance < bestSqrDistance)
+                {
+                    bestSqrDistance = sqrDistance;
+                    target = candidateTarget;
+                }
+            }
+
             return target != null;
+        }
+
+        private static Transform ResolveTargetTransform(Collider hit)
+        {
+            IHitReceiver receiver = hit.GetComponentInParent<IHitReceiver>();
+            if (receiver is Component receiverComponent)
+            {
+                return receiverComponent.transform;
+            }
+
+            return hit.transform;
         }
     }
 }

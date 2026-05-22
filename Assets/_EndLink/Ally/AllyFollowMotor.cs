@@ -60,7 +60,7 @@ namespace EndLink.Ally
 
         [Tooltip("距离队形点超过该值时直接瞬移归位。设置为 0 表示不启用瞬移归位。")]
         [SerializeField, Min(0f)]
-        private float teleportDistance = 12f;
+        private float teleportDistance = 15f;
 
         [Header("转向")]
         [Tooltip("队友转向速度，单位是角度/秒。移动时优先面向移动方向。")]
@@ -236,6 +236,49 @@ namespace EndLink.Ally
                 SmoothSpeedTo(0f, deltaTime);
                 ApplyAvoidanceOnly(avoidanceVector, deltaTime);
                 RotateAfterArrive(deltaTime);
+                return;
+            }
+
+            Vector3 moveDirection = toDesired / distance;
+            Vector3 finalMoveDirection = BlendAvoidance(moveDirection, avoidanceVector);
+            float targetSpeed = CalculateTargetSpeed(distance, arriveRadius);
+            float currentSpeed = SmoothSpeedTo(targetSpeed, deltaTime);
+            float step = Mathf.Min(currentSpeed * deltaTime, distance - arriveRadius);
+
+            if (step > 0f)
+            {
+                Move(finalMoveDirection * step);
+                RotateTowards(finalMoveDirection, deltaTime);
+            }
+        }
+
+        /// <summary>
+        /// 移动到指定世界坐标附近。
+        /// 用于助战接近、后续重新站位或行为树 Action，不修改跟随目标和队形偏移。
+        /// </summary>
+        public void TickMoveToPosition(Vector3 worldPosition, float arriveDistance, float deltaTime)
+        {
+            if (deltaTime <= 0f)
+            {
+                ResetSpeed();
+                return;
+            }
+
+            _desiredWorldPosition = worldPosition;
+            _desiredWorldPosition.y = transform.position.y;
+
+            Vector3 toDesired = _desiredWorldPosition - transform.position;
+            toDesired.y = 0f;
+
+            float distance = toDesired.magnitude;
+            Vector3 avoidanceVector = CalculateAvoidanceVector();
+            float arriveRadius = Mathf.Max(0f, arriveDistance);
+
+            if (distance <= arriveRadius || moveSpeed <= 0f)
+            {
+                SmoothSpeedTo(0f, deltaTime);
+                ApplyAvoidanceOnly(avoidanceVector, deltaTime);
+                RotateTowardsPosition(worldPosition, deltaTime);
                 return;
             }
 
@@ -470,6 +513,19 @@ namespace EndLink.Ally
             }
 
             RotateTowards(forward.normalized, deltaTime);
+        }
+
+        private void RotateTowardsPosition(Vector3 worldPosition, float deltaTime)
+        {
+            Vector3 toPosition = worldPosition - transform.position;
+            toPosition.y = 0f;
+
+            if (toPosition.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            RotateTowards(toPosition.normalized, deltaTime);
         }
 
         private void RotateTowards(Vector3 direction, float deltaTime)

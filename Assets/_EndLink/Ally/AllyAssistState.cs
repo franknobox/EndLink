@@ -1,7 +1,11 @@
+using UnityEngine;
+
 namespace EndLink.Ally
 {
     /// <summary>
-    /// 闃熷弸鍔╂垬鐘舵€併€?    /// 鐢ㄤ簬褰撳墠娴嬭瘯杩炴惡閾捐矾锛氱姸鎬佽繘鍏ユ椂鎵ц涓€娆″姪鎴樺姩浣滐紝绛夊緟鍔ㄤ綔绐楀彛缁撴潫鍚庡洖鍒?Follow 鎴?Idle銆?    /// </summary>
+    /// 队友助战攻击状态。
+    /// 目标有效且主控没有远离时会持续助战：动作窗口结束后等待冷却，冷却好了再次攻击。
+    /// </summary>
     public sealed class AllyAssistState : AllyStateBase
     {
         private float _elapsedTime;
@@ -15,11 +19,24 @@ namespace EndLink.Ally
         public override void Enter()
         {
             _elapsedTime = 0f;
-            Context.CombatDriver.ExecuteAssist(Context.CurrentAssistTarget);
+            TryExecuteAssistOrCancel();
         }
 
         public override void Tick(float deltaTime)
         {
+            Transform target = Context.CurrentAssistTarget;
+            if (target == null || !target.gameObject.activeInHierarchy || IsMainCharacterTooFar())
+            {
+                Context.StateMachine.CancelAssist(target);
+                return;
+            }
+
+            if (IsTargetOutOfRange(target))
+            {
+                Context.StateMachine.ChangeState(AllyStateId.AssistApproach);
+                return;
+            }
+
             _elapsedTime += deltaTime;
 
             if (_elapsedTime < Context.AssistDuration)
@@ -27,8 +44,44 @@ namespace EndLink.Ally
                 return;
             }
 
-            Context.StateMachine.ChangeState(Context.FollowTarget != null ? AllyStateId.Follow : AllyStateId.Idle);
+            if (!Context.CombatDriver.CanAssist)
+            {
+                return;
+            }
+
+            _elapsedTime = 0f;
+            TryExecuteAssistOrCancel();
+        }
+
+        private void TryExecuteAssistOrCancel()
+        {
+            bool executed = Context.CombatDriver.ExecuteAssist(Context.CurrentAssistTarget);
+            if (!executed)
+            {
+                Context.StateMachine.CancelAssist(Context.CurrentAssistTarget);
+            }
+        }
+
+        private bool IsTargetOutOfRange(Transform target)
+        {
+            float reengageRange = Mathf.Max(Context.AssistAttackRange, Context.AssistReengageRange);
+            Vector3 toTarget = target.position - Context.Transform.position;
+            toTarget.y = 0f;
+
+            return toTarget.sqrMagnitude > reengageRange * reengageRange;
+        }
+
+        private bool IsMainCharacterTooFar()
+        {
+            if (Context.FollowTarget == null || Context.AssistBreakOffDistance <= 0f)
+            {
+                return false;
+            }
+
+            Vector3 toMain = Context.FollowTarget.position - Context.Transform.position;
+            toMain.y = 0f;
+
+            return toMain.sqrMagnitude >= Context.AssistBreakOffDistance * Context.AssistBreakOffDistance;
         }
     }
 }
-
