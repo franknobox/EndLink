@@ -35,7 +35,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 至少一个正式敌人可以主动接近并攻击主控。
 - 主控和两个队友可以围绕该敌人触发持续助战。
 - 敌人死亡后能从目标系统和助战流程中稳定移除。
-- 仍保留 `EnemyDummy` 作为轻量命中测试对象。
 
 ### 5. 连携触发与四类 Action Base 版
 
@@ -43,18 +42,14 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 计划内容：
 - 连携触发规则初版：基于 `CombatEventsBus`、`CombatTagContainer` 和 `CombatTagDefinition`，定义最小可用的触发条件，例如指定标签命中、标签组合、目标处于可连携窗口等。
-- 连携反应规则初版：触发后能明确由谁响应、响应哪个目标、执行哪个 Action，并广播可观察事件，方便 `Combat Monitor` 调试。
-- 四类 Action Base 版：分别做出`Skill`、`LinkAttack`、`Ultimate` 的基础数据资产和最小执行路径。
-- 技能 Base：先做一个通用技能动作，不急着绑定正式键位，重点验证冷却、前摇、Hitbox 和标签效果。
-- 连携攻击 Base：由连携规则触发，不直接由玩家输入触发，优先让队友或主控执行一次可观察的连携 Hitbox。
-- 大招 Base：先做数据和状态入口，占位验证冷却、动作类型、事件广播和调试显示，不急着做演出。
+- 连携反应规则初版：触发后能明确由谁响应、响应哪个目标、执行哪个 Action，并广播可观察事件，方便调试。
+- 四类 Action Base 版：分别做出`Skill`、`LinkAttack`、`Ultimate` 的基础数据资产和最小执行路径，键位。
 
 阶段完成标准：
 - 至少能配置一条 `tagA + tagB => linkAction` 或等价的连携触发规则。
 - 主控攻击敌人后，队友或主控能根据规则执行一次 `LinkAttack`。
 - 四类 `CombatActionType` 都有可创建、可配置、可在调试链路中识别的 base 数据。
 - `Combat Monitor` 能看清 ActionStarted、HitLanded、Damaged、TagAdded、TagTransformed 等关键事件顺序。
-- 规则保持白模可验证，不提前做复杂 UI、演出镜头或 Boss 机制。
 
 ## 当前已完成内容
 
@@ -84,7 +79,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | [队友调试监视窗口](#feature-ally-monitor) | 已完成第一版 | 提供 Editor 窗口集中查看队友状态快照和队友行为日志，辅助排查助战、冷却、距离和目标问题。 |
 | [队友有限状态机](#feature-ally-state-machine) | 已完成助战大状态版 | 提供 Idle、Follow、Assist、Hit、Dead 五个外层状态，Assist 内部处理接近、攻击和后续行为树细节。 |
 | [队友跟随移动](#feature-ally-follow-motor) | 已完成手感增强版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持平滑减速、追赶、远距离归位和简易避让。 |
-| [固定三人小队管理](#feature-party-manager) | 已完成第一版 | 负责保存固定主控和 2 个队友槽位，统一分配队友跟随目标和队形偏移。 |
+| [固定三人小队管理](#feature-party-manager) | 已完成第一版 | 负责保存固定主控和 2 个队友槽位，统一分配队友跟随目标和队形偏移，并提供第一版小队战斗命令路由。 |
 | [敌人通用基底](#feature-enemy-foundation) | 已完成第一版 | 提供正式敌人身份入口、生命受击、死亡目标失效、目标有效性接口和大状态机骨架。 |
 | [通用 Hitbox 基类](#feature-hitbox) | 已完成第一版 | 负责 Trigger 命中检测、可配置目标 Layer 过滤、重复命中去重，并向目标传递伤害、击退和标签。 |
 | [木桩敌人](#feature-enemy-dummy) | 已完成第一版 | 用于验证 Hitbox 命中、扣血、死亡、受击/死亡事件和基础调试显示。 |
@@ -103,6 +98,10 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 玩家移动输入和相机输入分开读取，避免输入读取器承担移动或相机逻辑。
 - 移动输入读取 `Player/Move`。
 - 攻击输入读取 `Player/Attack`，由状态机消费后决定是否进入攻击状态。
+- 主控主动技能读取 `Player/PlayerSkill`，默认键位 Q。
+- 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`，默认键位 E / F。
+- 主控和队友连携技读取 `Player/PlayerLinkAttack`、`Player/AllySlotALinkAttack`、`Player/AllySlotBLinkAttack`，默认键位 1 / 2 / 3。
+- 全队极限技读取 `Player/PartyUltimate`，默认键位 V。
 - 相机旋转读取 `Player/Look`。
 - 鼠标滚轮缩放暂时通过 `Mouse.current.scroll` 读取，后续可迁移到独立 `Zoom` action。
 
@@ -705,17 +704,22 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `PartyFormationSlot` 保存单个队友槽位，包含槽位名、队友状态机和队形偏移。
 - 初始化时，`PartyManager` 会把 `mainCharacter` 设置为两个队友的跟随目标。
 - 初始化时，`PartyManager` 会把两个槽位的 `formationOffset` 写入各自队友的 `AllyFollowMotor`。
+- `PartyCombatRouter` 负责把 `PlayerInputReader` 中的战斗输入翻译成主控、队友 A、队友 B 或全队的命令请求。
+- `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害、标签或状态机切换，后续由 Player / Ally Driver 或连携系统订阅 `CommandRequested` 后执行。
+- `PartyCombatRouter` Inspector 中可以覆盖 Q/E/F 和 1/2/3 对应的技能与连携键位，V 键全队极限技暂时固定。
 - 后续队友 AI、连携规则或调试工具需要知道“谁是主控，谁是队友”时，可以从 `PartyManager` 查询。
 
 对应脚本：
 - `Assets/_EndLink/Party/PartyManager.cs`
 - `Assets/_EndLink/Party/PartyFormationSlot.cs`
+- `Assets/_EndLink/Party/PartyCombatRouter.cs`
 - `Assets/_EndLink/Ally/AllyFollowMotor.cs`
 - `Assets/_EndLink/Ally/AllyStateMachine.cs`
 
 相关物体：
 - 场景管理物体
   - `PartyManager`
+  - `PartyCombatRouter`
 - 主控角色根物体
   - 拖入 `mainCharacter`
 - 两个队友根物体
@@ -726,7 +730,10 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `allySlotA`：第一个队友槽位
 - `allySlotB`：第二个队友槽位
 - `formationOffset`：每个队友相对主控的本地队形偏移，例如左后 `(-1.5, 0, -2.5)`、右后 `(1.5, 0, -2.5)`
+- `playerSkillKey` / `allySlotASkillKey` / `allySlotBSkillKey`：主控和两个队友主动技能键位，默认 Q / E / F
+- `playerLinkAttackKey` / `allySlotALinkAttackKey` / `allySlotBLinkAttackKey`：主控和两个队友连携技键位，默认 1 / 2 / 3
 - `logInitialization`：是否打印小队初始化日志
+- `logCommands`：是否打印小队战斗命令路由日志
 
 </details>
 
