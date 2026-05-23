@@ -11,6 +11,7 @@ namespace EndLink.Ally
         Follow = 2,
         Assist = 3,
         Hit = 4,
-        Dead = 5
+        Dead = 5,
+        Action = 6
     }
 }

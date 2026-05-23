@@ -26,10 +26,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 计划内容：
 - 敌人通用基底：已建立正式敌人脚本结构和大状态机骨架，后续接入移动、战斗执行和行为树。
-- 敌人移动与转向：第一版可继续使用 CharacterController 或简单 Transform 移动，后续场景复杂后再评估 NavMesh。
-- 敌人攻击能力：使用 `CombatActionDefinition` 配置普通攻击，复用 Hitbox 与事件系统。
-- 敌人目标选择：优先锁定主控，也可以根据仇恨或最近角色选择目标，第一版保持简单。
-- 死亡与目标失效：死亡后不再被锁定、不再被队友持续助战、不再接收有效命中，保留必要死亡表现。
+- 敌人移动与转向/敌人攻击能力/敌人目标选择/死亡与目标失效，保留必要死亡表现。
 
 阶段完成标准：
 - 至少一个正式敌人可以主动接近并攻击主控。
@@ -43,12 +40,10 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 计划内容：
 - 连携触发规则初版：基于 `CombatEventsBus`、`CombatTagContainer` 和 `CombatTagDefinition`，定义最小可用的触发条件，例如指定标签命中、标签组合、目标处于可连携窗口等。
 - 连携反应规则初版：触发后能明确由谁响应、响应哪个目标、执行哪个 Action，并广播可观察事件，方便调试。
-- 连携技不能作为普通输入动作直接释放；1/2/3 只表示玩家请求使用某个连携槽位，必须由连携机制确认合法窗口后才能执行 `LinkAttack`。
 - 四类 Action Base 版：分别做出`Skill`、`LinkAttack`、`Ultimate` 的基础数据资产和最小执行路径，键位。
 
 阶段完成标准：
-- 至少能配置一条 `tagA + tagB => linkAction` 或等价的连携触发规则。
-- 主控攻击敌人后，队友或主控能根据规则执行一次 `LinkAttack`。
+- 主控攻击敌人后，队友或主控能根据配置的规则执行一次 `LinkAttack`。
 - 四类 `CombatActionType` 都有可创建、可配置、可在调试链路中识别的 base 数据。
 - `Combat Monitor` 能看清 ActionStarted、HitLanded、Damaged、TagAdded、TagTransformed 等关键事件顺序。
 
@@ -60,7 +55,9 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
-### Feature 总览
+### Feature 目录
+
+#### 3C
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
@@ -68,23 +65,33 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | [玩家 CharacterController 移动](#feature-player-movement) | 已完成第一版 | 负责玩家在 XZ 平面的平滑移动、加减速、重力贴地和面向移动方向的平滑转向。 |
 | [第三人称自由相机](#feature-third-person-camera) | 已完成第一版 | 负责越肩第三人称视角、自由旋转、上下角度限制、滚轮缩放和较开阔的战斗观察距离。 |
 | [玩家有限状态机](#feature-player-state-machine) | 已完成最小战斗骨架 | 负责 Idle、Move、Attack、Skill、Hit、Dead 的状态切换，由状态机决定什么时候允许移动、攻击、释放技能、受击和死亡。 |
-| [玩家生命值与受击接线](#feature-player-health) | 已完成第一版 | 负责玩家扣血、治疗、死亡事件，并把有效受伤和死亡转发到玩家状态机。 |
 | [玩家 Animator 桥接](#feature-player-animator) | 已完成第一版 | 负责把玩家状态、移动速度和状态进入触发器同步到 Animator 参数，不参与状态决策。 |
+| [当前架构边界](#feature-architecture-boundary) | 已建立初版约定 | 初步明确输入读取、玩家移动、相机控制、状态机、战斗驱动、命中检测之间的职责边界。 |
+
+#### 战斗
+
+| 功能名 | 当前状态 | 内容说明 |
+| --- | --- | --- |
+| [玩家生命值与受击接线](#feature-player-health) | 已完成第一版 | 负责玩家扣血、治疗、死亡事件，并把有效受伤和死亡转发到玩家状态机。 |
 | [玩家目标选择](#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按范围、角度和距离选择当前战斗目标，不控制镜头或 UI。 |
 | [战斗动作配置](#feature-combat-action) | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和大招的伤害、冷却、时序、Hitbox 和命中标签。 |
 | [战斗标签系统](#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和标签组合转化规则。 |
 | [战斗数据编辑工具](#feature-combat-data-tool) | 已完成第一版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则数据资产。 |
 | [战斗事件总栈](#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
 | [玩家战斗驱动](#feature-player-combat-driver) | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |
-| [队友助战基础组件](#feature-ally-assist) | 已完成持续助战第一版 | 提供队友事件响应大脑和队友战斗执行器，用于主控命中敌人后让队友自动接近目标并持续攻击。 |
-| [队友调试监视窗口](#feature-ally-monitor) | 已完成第一版 | 提供 Editor 窗口集中查看队友状态快照和队友行为日志，辅助排查助战、冷却、距离和目标问题。 |
-| [队友有限状态机](#feature-ally-state-machine) | 已完成助战大状态版 | 提供 Idle、Follow、Assist、Hit、Dead 五个外层状态，Assist 内部处理接近、攻击和后续行为树细节。 |
-| [队友跟随移动](#feature-ally-follow-motor) | 已完成手感增强版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持平滑减速、追赶、远距离归位和简易避让。 |
-| [固定三人小队管理](#feature-party-manager) | 已完成第一版 | 负责保存固定主控和 2 个队友槽位，统一分配队友跟随目标和队形偏移，并提供第一版小队战斗命令路由。 |
 | [敌人通用基底](#feature-enemy-foundation) | 已完成第一版 | 提供正式敌人身份入口、生命受击、死亡目标失效、目标有效性接口和大状态机骨架。 |
 | [通用 Hitbox 基类](#feature-hitbox) | 已完成第一版 | 负责 Trigger 命中检测、可配置目标 Layer 过滤、重复命中去重，并向目标传递伤害、击退和标签。 |
 | [木桩敌人](#feature-enemy-dummy) | 已完成第一版 | 用于验证 Hitbox 命中、扣血、死亡、受击/死亡事件和基础调试显示。 |
-| [当前架构边界](#feature-architecture-boundary) | 已建立初版约定 | 初步明确输入读取、玩家移动、相机控制、状态机、战斗驱动、命中检测之间的职责边界。 |
+
+#### 队伍
+
+| 功能名 | 当前状态 | 内容说明 |
+| --- | --- | --- |
+| [队友助战基础组件](#feature-ally-assist) | 已完成持续助战第一版 | 提供队友事件响应大脑和队友战斗执行器，用于主控命中敌人后让队友自动接近目标并持续攻击。 |
+| [队友调试监视窗口](#feature-ally-monitor) | 已完成第一版 | 提供 Editor 窗口集中查看队友状态快照和队友行为日志，辅助排查助战、冷却、距离和目标问题。 |
+| [队友有限状态机](#feature-ally-state-machine) | 已完成通用动作状态版 | 提供 Idle、Follow、Assist、Action、Hit、Dead 外层状态，Assist 处理自动助战，Action 承载主动技能等指令动作。 |
+| [队友跟随移动](#feature-ally-follow-motor) | 已完成手感增强版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持平滑减速、追赶、远距离归位和简易避让。 |
+| [固定三人小队管理](#feature-party-manager) | 已完成第一版 | 负责保存固定主控和 2 个队友槽位，统一分配队友跟随目标和队形偏移，并提供第一版小队战斗命令路由。 |
 
 <a id="feature-input-system"></a>
 
@@ -102,7 +109,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 主控和队友连携请求读取 `Player/PlayerLinkAttack`、`Player/AllySlotALinkAttack`、`Player/AllySlotBLinkAttack`，默认键位 1 / 2 / 3；这些输入不会绕过连携机制直接释放动作。
 - 全队极限技读取 `Player/PartyUltimate`，默认键位 V。
 - 相机旋转读取 `Player/Look`。
-- 鼠标滚轮缩放暂时通过 `Mouse.current.scroll` 读取，后续可迁移到独立 `Zoom` action。
+- 鼠标滚轮缩放通过 `Mouse.current.scroll` 读取。
 
 对应脚本：
 - `Assets/_EndLink/Control/InputSystem_Actions.cs`
@@ -132,7 +139,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 支持手动重力和贴地速度。
 - 移动时角色本地 Z 轴正方向会平滑转向移动方向。
 - 支持移动方向参考，拖入 `Main Camera` 后可实现相机相对移动。
-- 当前移动调用权已经交给 `PlayerStateMachine`，`PlayerController` 暴露 `TickMovement`，不再自行在 `Update` 中读取输入移动。
+- 移动调用由 `PlayerStateMachine` 驱动，`PlayerController` 通过 `TickMovement` 执行实际位移。
 
 对应脚本：
 - `Assets/_EndLink/Control/PlayerController.cs`
@@ -417,8 +424,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 标签添加、移除、过期和组合转化时会同步通过 `CombatEventsBus` 广播事件。
 - 标签添加和移除接口支持传入 `source`，事件总线可以表达“谁给谁挂载或移除了某个标签”。
 - 对外提供 `ICombatTagReadable` 和 `ICombatTagReceiver`，后续连携规则、AI、UI 和状态效果系统应优先依赖接口。
-- `CombatActionDefinition`、`HitboxBase` 和 `HitboxHitInfo` 已支持 `CombatTagDefinition` 标签通道。
-- 旧的 string tag 通道已移除，伤害链路统一使用 `CombatTagDefinition`。
+- `CombatActionDefinition`、`HitboxBase` 和 `HitboxHitInfo` 使用 `CombatTagDefinition` 作为标签数据。
 - 命中时如果目标实现 `ICombatTagReceiver`，`HitboxBase` 会把 `CombatTagDefinition` 添加到目标标签容器，并把 Hitbox owner 作为标签来源。
 
 对应脚本：
@@ -472,6 +478,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 <details>
 <summary>展开详情</summary>
+
 功能说明：
 - `CombatEventsBus` 是全局战斗事件广播入口。
 - `CombatEvent` 是一条战斗事件的数据结构，包含事件类型、来源、目标、动作配置、战斗标签、伤害、命中信息和时间戳。
@@ -479,7 +486,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `CombatEventLog` 是白模阶段用的 Console 日志监听器，默认不打印，必要时手动开启。
 - `CombatMonitorWindow` 是 Editor 战斗事件监视窗口，通过 `EndLink > Debug > Combat Monitor` 打开，订阅事件后以表格查看最近的战斗事件。
 - 事件总栈只广播事实，不保存状态，不决定连携规则，不直接驱动队友 AI。
-- 当前已接入 `PlayerCombatDriver` 的动作开始、`HitboxBase` 的命中、`PlayerHealth` / `EnemyDummy` 的受伤与死亡，以及 `CombatTagContainer` 的标签添加、移除、过期和组合转化。
+- 接入范围包括 `PlayerCombatDriver` 的动作开始、`HitboxBase` 的命中、`PlayerHealth` / `EnemyDummy` 的受伤与死亡，以及 `CombatTagContainer` 的标签添加、移除、过期和组合转化。
 
 对应脚本：
 - `Assets/_EndLink/Combat/Events/CombatEventType.cs`
@@ -527,10 +534,10 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `AllyCombatDriver` 是队友战斗执行器，职责类似 `PlayerCombatDriver`，但不读取输入，也不决定什么时候出手。
 - `AllyCombatDriver` 保存队友的自动助战、主动技能、连携技动作槽位，并根据 `CombatActionDefinition` 生成 Hitbox、写入伤害、击退、战斗标签和标签持续时间。
 - 队友进入助战流程只要求配置了 `Assist Action`；动作冷却只影响实际出手时间，冷却未结束时会在 Assist 内等待，而不是放弃助战。
-- `CombatActionDefinition.Effective Attack Range` 决定队友距离目标 Collider 表面多远开始攻击；旧动作资产未写入该字段时会回退到默认近战距离。
+- `CombatActionDefinition.Effective Attack Range` 决定队友距离目标 Collider 表面多远开始攻击。
 - `AllyCombatDriver` 执行助战时会朝目标方向生成判定，并广播 `ActionStarted` 事件。
 - `AllyTargetingUtility` 用目标 Collider 表面计算助战接近和攻击距离，避免大型敌人按中心点判断导致队友贴边却无法攻击。
-- 当前版本用于验证木桩队友参与连携的最短链路，后续可接入队友状态机、跟随 AI、站位和更完整的连携规则。
+- 当前版本用于验证木桩队友参与连携的最短链路。
 
 对应脚本：
 - `Assets/_EndLink/Ally/AllyBrain.cs`
@@ -591,20 +598,18 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 <details>
 <summary>展开详情</summary>
-
-
 功能说明：
 - `AllyStateMachine` 是队友专用有限状态机，不依赖玩家输入系统。
-- 当前包含 `Idle`、`Follow`、`Assist`、`Hit`、`Dead` 五个外层状态。
+- 当前包含 `Idle`、`Follow`、`Assist`、`Action`、`Hit`、`Dead` 六个外层状态。
 - `Idle` 表示没有跟随目标的待机状态。
 - `Follow` 在有跟随目标时每帧调用 `AllyFollowMotor.TickFollow(deltaTime)`，实际移动由跟随移动组件负责。
 - `Assist` 是队友助战大状态，内部先接近目标，进入攻击距离后持续攻击；目标拉开距离后在 Assist 内部回到接近阶段。
 - `Assist` 当前内部使用轻量 `Approach / Attack` 阶段，后续可以替换为行为树。
+- `Action` 是队友通用动作状态，当前用于 E/F 主动技能；进入时执行一次 `CombatActionDefinition`，动作窗口结束后回到 Assist 或 Follow / Idle。
 - 目标死亡、目标丢失或主控距离过远时，助战流程会取消并回到 Follow / Idle。
-- `Hit` 表示队友受击硬直状态，可打断 Follow 和 Assist。
+- `Hit` 表示队友受击硬直状态，可打断 Follow、Assist 和 Action。
 - `Dead` 是终止状态，不再响应跟随、助战和受击请求。
 - `AllyBrain` 判断事件是否值得响应，`AllyStateMachine` 判断当前能否进入 Assist，`AllyCombatDriver` 只执行动作和 Hitbox。
-
 对应脚本：
 - `Assets/_EndLink/Ally/AllyStateMachine.cs`
 - `Assets/_EndLink/Ally/AllyStateId.cs`
@@ -615,9 +620,9 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `Assets/_EndLink/Ally/AllyFollowState.cs`
 - `Assets/_EndLink/Ally/AllyFollowMotor.cs`
 - `Assets/_EndLink/Ally/AllyAssistState.cs`
+- `Assets/_EndLink/Ally/AllyActionState.cs`
 - `Assets/_EndLink/Ally/AllyHitState.cs`
 - `Assets/_EndLink/Ally/AllyDeadState.cs`
-
 相关物体：
 - 队友根物体
   - `AllyStateMachine`
@@ -645,7 +650,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 功能说明：
 - `AllyFollowMotor` 是队友跟随移动组件，不依赖 NavMesh。
-- 支持优先使用 `CharacterController.Move` 移动；如果队友没有 `CharacterController`，会回退为直接修改 `Transform.position`。
+- 支持使用 `CharacterController.Move` 移动；如果队友没有 `CharacterController`，则直接修改 `Transform.position`。
 - `AllyStateMachine` 负责保存跟随目标并同步给 `AllyFollowMotor`。
 - `AllyFollowState` 每帧调用 `TickFollow(deltaTime)`，因此 Assist、Hit、Dead 状态不会继续抢跟随移动。
 - 助战接近状态会调用 `TickMoveToPosition(position, arriveDistance, deltaTime)`，让队友临时移动到敌人附近而不修改主控跟随目标。
@@ -655,7 +660,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 支持 `teleportDistance`，队友极端远离队形点时会直接归位，避免长距离丢失。
 - 支持 `followSlotSoftness`，队友进入队形点周围软半径后就算到位，不强制踩死精确坐标。
 - 支持第一版简易避让：离主控太近时会被推开，配置 `avoidanceLayerMask` 后也能对其他队友做局部排斥。
-- `formationOffset` 现在由 `PartyManager` 的队友槽位统一配置，`AllyFollowMotor` Inspector 中不再单独显示该字段。
+- `formationOffset` 由 `PartyManager` 的队友槽位统一配置，并写入 `AllyFollowMotor`。
 - 当前只处理平面 XZ 跟随和局部避让，后续如果需要复杂地形、障碍绕路，再接 NavMesh 或更完整的队伍槽位调度。
 
 对应脚本：
@@ -680,7 +685,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `teleportDistance`：极端远离时的归位距离，设置为 0 可关闭
 - `rotationSpeed`：队友转向速度
 - `idleFacingMode`：停下后的朝向模式
-- `formationOffset`：不再在 `AllyFollowMotor` 上直接配置，改由 `PartyFormationSlot` 写入
+- `formationOffset`：由 `PartyFormationSlot` 写入 `AllyFollowMotor`
 - `avoidanceEnabled`：是否启用简易避让
 - `followTargetAvoidRadius`：离主控小于该半径时推离主控
 - `allyAvoidRadius`：离其他队友小于该半径时推开
@@ -705,7 +710,8 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 初始化时，`PartyManager` 会把两个槽位的 `formationOffset` 写入各自队友的 `AllyFollowMotor`。
 - `PartyCombatRouter` 负责把 `PlayerInputReader` 中的战斗输入翻译成主控、队友 A、队友 B 或全队的命令请求。
 - `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害、标签或状态机切换。
-- 当前第一版中，`Skill` 命令会由 `PartyCombatRouter` 立即转发给对应角色的 CombatDriver 执行 `SkillAction`，用于先打通 Q/E/F 主动技能验证链路。
+- 当前第一版中，主控 `Skill` 命令会由 `PartyCombatRouter` 立即转发给 `PlayerCombatDriver` 执行 `SkillAction`。
+- 队友 `Skill` 命令会由 `PartyCombatRouter` 转发给对应 `AllyStateMachine.RequestAction(...)`，进入 `Action` 状态后再由 `AllyCombatDriver` 执行 `SkillAction`。
 - `PartyCombatRouter` Inspector 中可以覆盖 Q/E/F 和 1/2/3 对应的技能与连携请求键位，V 键全队极限技暂时固定。
 - `LinkAttack` 命令只表示玩家请求使用连携槽位，不能被普通动作执行层直接当成可释放技能处理。
 - 后续队友 AI、连携规则或调试工具需要知道“谁是主控，谁是队友”时，可以从 `PartyManager` 查询。
@@ -754,7 +760,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `EnemyStateMachine` 管理 `Idle`、`Alert`、`Combat`、`Hit`、`Dead` 五个敌人大状态。
 - `Combat` 当前保持空转，后续作为行为树的外层挂载点，内部再承载追击、站位、攻击、技能等细节行为。
 - `Hit` 作为独立大状态处理受击打断，不放进 Combat 行为树，方便后续加入硬直、霸体、击倒等规则。
-- `EnemyDummy` 暂时保留为轻量命中测试对象，不强行迁移到正式敌人基底。
+- `EnemyDummy` 是轻量命中测试对象，用于快速验证 Hitbox、扣血、死亡和调试显示。
 
 对应脚本：
 - `Assets/_EndLink/Enemies/EnemyActor.cs`
@@ -809,7 +815,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `PlayerCombatDriver` 不读取输入，不决定是否能进入攻击状态。
 - 状态机决定能否攻击，`PlayerCombatDriver` 只负责执行攻击表现和判定。
 - 支持通过 `CombatActionDefinition` 配置普攻、主动技能、连携技的伤害、击退、`CombatTagDefinition` 标签、标签持续时间、冷却、Hitbox 和生成参数。
-- `PlayerCombatDriver` 不再保留默认 Hitbox 和默认攻击节奏，所有可执行动作都必须来自 `CombatActionDefinition`。
+- `PlayerCombatDriver` 执行的动作必须来自 `CombatActionDefinition`。
 - 当前执行内容是在角色正前方生成指定 Hitbox prefab。
 - 支持动作冷却，防止动作过快触发。
 - 支持通过动作资产中的 `Hitbox Spawn Distance` 和 `Hitbox Spawn Height` 调整 Hitbox 生成位置。
@@ -875,8 +881,8 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 配置注意：
 - Hitbox 的 Collider 必须勾选 `Is Trigger`。
 - 为保证 `OnTriggerEnter` 稳定触发，Hitbox prefab 建议带 `Rigidbody`，设置 `Is Kinematic = true`、`Use Gravity = false`。
-- 当前玩家和队友攻击用的 Hitbox 默认要求敌人 Collider 所在物体设置为 `Enemy` Layer；后续其他攻击类型可通过 `targetLayerMask` 改为 Player、Ally 或自定义 Layer。
-- `ProjectSettings/TagManager.asset` 中已经添加 `Enemy` Layer。
+- 当前玩家和队友攻击用的 Hitbox 默认要求敌人 Collider 所在物体设置为 `Enemy` Layer；其他攻击类型可通过 `targetLayerMask` 改为 Player、Ally 或自定义 Layer。
+- `ProjectSettings/TagManager.asset` 包含 `Enemy` Layer。
 
 </details>
 

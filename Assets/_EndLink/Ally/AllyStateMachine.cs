@@ -46,6 +46,11 @@ namespace EndLink.Ally
         [SerializeField, Min(0.01f)]
         private float assistDuration = 0.45f;
 
+        [Header("通用动作")]
+        [Tooltip("队友通用动作状态的最短持续时间。最终持续时间会取该值和当前 Action 总时长中的较大值。")]
+        [SerializeField, Min(0.01f)]
+        private float actionMinDuration = 0.45f;
+
         [Header("受击状态")]
         [Tooltip("队友受击硬直的基础持续时间。")]
         [SerializeField, Min(0.01f)]
@@ -61,6 +66,9 @@ namespace EndLink.Ally
         private AllyCombatDriver _combatDriver;
         private AllyFollowMotor _followMotor;
         private Transform _currentAssistTarget;
+        private CombatActionDefinition _currentAction;
+        private Transform _currentActionTarget;
+        private AllyStateId _returnStateAfterAction = AllyStateId.None;
 
         /// <summary>当前状态标识，方便 Inspector 和调试工具观察。</summary>
         public AllyStateId CurrentStateId => _currentState?.StateId ?? AllyStateId.None;
@@ -76,6 +84,12 @@ namespace EndLink.Ally
 
         /// <summary>当前助战目标。</summary>
         public Transform CurrentAssistTarget => _currentAssistTarget;
+
+        /// <summary>当前通用动作状态要执行的动作配置。</summary>
+        public CombatActionDefinition CurrentAction => _currentAction;
+
+        /// <summary>当前通用动作状态要面向和判定的目标。</summary>
+        public Transform CurrentActionTarget => _currentActionTarget;
 
         /// <summary>当前助战动作的极限有效攻击距离，来自 Assist Action。</summary>
         public float AssistEffectiveAttackRange
@@ -102,6 +116,15 @@ namespace EndLink.Ally
         /// <summary>队友受击状态持续时间。</summary>
         public float HitDuration => hitDuration;
 
+        /// <summary>当前通用动作状态持续时间。</summary>
+        public float CurrentActionDuration
+        {
+            get
+            {
+                return _currentAction != null ? Mathf.Max(actionMinDuration, _currentAction.TotalDuration) : actionMinDuration;
+            }
+        }
+
         /// <summary>当前助战攻击状态持续时间，至少覆盖动作配置中的前摇、有效时间和后摇。</summary>
         public float CurrentAssistDuration
         {
@@ -126,6 +149,7 @@ namespace EndLink.Ally
             RegisterState(new AllyIdleState(context));
             RegisterState(new AllyFollowState(context));
             RegisterState(new AllyAssistState(context));
+            RegisterState(new AllyActionState(context));
             RegisterState(new AllyHitState(context));
             RegisterState(new AllyDeadState(context));
         }
@@ -148,6 +172,7 @@ namespace EndLink.Ally
             assistReengageRange = Mathf.Max(0.01f, assistReengageRange);
             assistBreakOffDistance = Mathf.Max(0f, assistBreakOffDistance);
             assistDuration = Mathf.Max(0.01f, assistDuration);
+            actionMinDuration = Mathf.Max(0.01f, actionMinDuration);
             hitDuration = Mathf.Max(0.01f, hitDuration);
         }
 
@@ -198,6 +223,7 @@ namespace EndLink.Ally
 
             if (CurrentStateId == AllyStateId.Dead
                 || CurrentStateId == AllyStateId.Assist
+                || CurrentStateId == AllyStateId.Action
                 || CurrentStateId == AllyStateId.Hit)
             {
                 return;
@@ -220,6 +246,7 @@ namespace EndLink.Ally
 
             if (CurrentStateId == AllyStateId.Dead
                 || CurrentStateId == AllyStateId.Hit
+                || CurrentStateId == AllyStateId.Action
                 || CurrentStateId == AllyStateId.Assist)
             {
                 LogAssistRequestRejected($"state is {CurrentStateId}");
@@ -239,6 +266,49 @@ namespace EndLink.Ally
                 $"assist request accepted, target={GetTransformName(target)}");
             ChangeState(AllyStateId.Assist);
             return CurrentStateId == AllyStateId.Assist;
+        }
+
+        /// <summary>
+        /// 请求进入通用动作状态。
+        /// 用于队友主动技能、后续连携技或其他由外部命令触发的攻击动作。
+        /// </summary>
+        public bool RequestAction(CombatActionDefinition action, Transform target)
+        {
+            if (action == null)
+            {
+                LogActionRequestRejected("action is null");
+                return false;
+            }
+
+            if (CurrentStateId == AllyStateId.Dead
+                || CurrentStateId == AllyStateId.Hit
+                || CurrentStateId == AllyStateId.Action)
+            {
+                LogActionRequestRejected($"state is {CurrentStateId}");
+                return false;
+            }
+
+            _currentAction = action;
+            _currentActionTarget = target;
+            _returnStateAfterAction = CurrentStateId == AllyStateId.Assist ? AllyStateId.Assist : GetDefaultLocomotionState();
+
+            AllyDebugLog.Raise(
+                gameObject,
+                AllyDebugCategory.State,
+                $"action request accepted, action={action.ActionId}, target={GetTransformName(target)}, return={_returnStateAfterAction}");
+
+            ChangeState(AllyStateId.Action);
+            return CurrentStateId == AllyStateId.Action;
+        }
+
+        /// <summary>
+        /// 完成通用动作状态，并返回动作开始前约定的大状态。
+        /// </summary>
+        public void CompleteAction()
+        {
+            AllyStateId returnState = ResolveReturnStateAfterAction();
+            ClearCurrentAction();
+            ChangeState(returnState);
         }
 
         /// <summary>
@@ -287,6 +357,7 @@ namespace EndLink.Ally
             }
 
             _currentAssistTarget = null;
+            ClearCurrentAction();
             ChangeState(AllyStateId.Hit);
         }
 
@@ -297,6 +368,7 @@ namespace EndLink.Ally
         public void RequestDead()
         {
             _currentAssistTarget = null;
+            ClearCurrentAction();
             ChangeState(AllyStateId.Dead);
         }
 
@@ -316,6 +388,38 @@ namespace EndLink.Ally
                 gameObject,
                 AllyDebugCategory.State,
                 $"assist request rejected: {reason}");
+        }
+
+        private AllyStateId ResolveReturnStateAfterAction()
+        {
+            if (_returnStateAfterAction == AllyStateId.Assist
+                && _currentAssistTarget != null
+                && _currentAssistTarget.gameObject.activeInHierarchy)
+            {
+                return AllyStateId.Assist;
+            }
+
+            return GetDefaultLocomotionState();
+        }
+
+        private AllyStateId GetDefaultLocomotionState()
+        {
+            return followTarget != null ? AllyStateId.Follow : AllyStateId.Idle;
+        }
+
+        private void ClearCurrentAction()
+        {
+            _currentAction = null;
+            _currentActionTarget = null;
+            _returnStateAfterAction = AllyStateId.None;
+        }
+
+        private void LogActionRequestRejected(string reason)
+        {
+            AllyDebugLog.Raise(
+                gameObject,
+                AllyDebugCategory.State,
+                $"action request rejected: {reason}");
         }
     }
 }

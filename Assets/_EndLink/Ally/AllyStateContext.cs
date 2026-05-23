@@ -1,3 +1,4 @@
+using EndLink.Combat;
 using UnityEngine;
 
 namespace EndLink.Ally
@@ -37,6 +38,15 @@ namespace EndLink.Ally
 
         /// <summary>当前助战目标。</summary>
         public Transform CurrentAssistTarget => StateMachine.CurrentAssistTarget;
+
+        /// <summary>当前通用动作状态要执行的动作配置。</summary>
+        public CombatActionDefinition CurrentAction => StateMachine.CurrentAction;
+
+        /// <summary>当前通用动作状态要面向和判定的目标。</summary>
+        public Transform CurrentActionTarget => StateMachine.CurrentActionTarget;
+
+        /// <summary>当前通用动作状态持续时间。</summary>
+        public float ActionDuration => StateMachine.CurrentActionDuration;
 
         /// <summary>当前助战攻击状态持续时间。</summary>
         public float AssistDuration => StateMachine.CurrentAssistDuration;

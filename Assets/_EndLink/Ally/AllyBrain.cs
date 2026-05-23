@@ -291,6 +291,7 @@ namespace EndLink.Ally
             AllyStateId currentStateId = StateMachine.CurrentStateId;
             if (currentStateId == AllyStateId.Dead
                 || currentStateId == AllyStateId.Hit
+                || currentStateId == AllyStateId.Action
                 || currentStateId == AllyStateId.Assist)
             {
                 return $"state is {currentStateId}";

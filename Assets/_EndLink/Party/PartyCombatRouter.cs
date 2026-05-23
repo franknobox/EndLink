@@ -277,15 +277,22 @@ namespace EndLink.Party
 
         private void ExecuteAllySkill(GameObject actor)
         {
-            if (actor == null || !actor.TryGetComponent(out AllyCombatDriver combatDriver))
+            if (actor == null || !actor.TryGetComponent(out AllyStateMachine stateMachine))
+            {
+                LogCommand($"ignored ally Skill: AllyStateMachine not found on {GetObjectName(actor)}");
+                return;
+            }
+
+            AllyCombatDriver combatDriver = stateMachine.CombatDriver;
+            if (combatDriver == null)
             {
                 LogCommand($"ignored ally Skill: AllyCombatDriver not found on {GetObjectName(actor)}");
                 return;
             }
 
             Transform target = ResolveAllySkillTarget(actor);
-            bool executed = combatDriver.ExecuteAction(combatDriver.SkillAction, target);
-            LogCommand($"execute ally Skill result={executed}, actor={GetObjectName(actor)}, target={GetObjectName(target)}");
+            bool requested = stateMachine.RequestAction(combatDriver.SkillAction, target);
+            LogCommand($"request ally Skill action result={requested}, actor={GetObjectName(actor)}, target={GetObjectName(target)}");
         }
 
         private static Transform ResolveAllySkillTarget(GameObject actor)
