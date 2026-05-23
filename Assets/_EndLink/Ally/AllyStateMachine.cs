@@ -6,7 +6,8 @@ namespace EndLink.Ally
 {
     /// <summary>
     /// 队友有限状态机。
-    /// 当前负责 Idle、Follow、AssistApproach、Assist、Hit、Dead 的状态切换，不读取玩家输入。
+    /// 当前负责 Idle、Follow、Assist、Hit、Dead 的大状态切换，不读取玩家输入。
+    /// Assist 内部再处理接近、攻击和后续行为树细节。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(AllyCombatDriver))]
@@ -23,12 +24,12 @@ namespace EndLink.Ally
         [SerializeField]
         private Transform followTarget;
 
-        [Header("助战接近")]
-        [Tooltip("队友接近助战目标到该距离内时，切换到 Assist 状态执行攻击。")]
+        [Header("助战")]
+        [Tooltip("队友接近助战目标到该距离内时，Assist 内部切换到攻击阶段。")]
         [SerializeField, Min(0.01f)]
         private float assistAttackRange = 1.8f;
 
-        [Tooltip("持续助战时，目标离队友超过该距离会回到 AssistApproach 重新接近。建议略大于 assistAttackRange。")]
+        [Tooltip("持续助战时，目标离队友超过该距离会回到 Assist 内部接近阶段。建议略大于 assistAttackRange。")]
         [SerializeField, Min(0.01f)]
         private float assistReengageRange = 2.4f;
 
@@ -107,7 +108,6 @@ namespace EndLink.Ally
 
             RegisterState(new AllyIdleState(context));
             RegisterState(new AllyFollowState(context));
-            RegisterState(new AllyAssistApproachState(context));
             RegisterState(new AllyAssistState(context));
             RegisterState(new AllyHitState(context));
             RegisterState(new AllyDeadState(context));
@@ -174,7 +174,6 @@ namespace EndLink.Ally
             _followMotor.SetFollowTarget(target);
 
             if (CurrentStateId == AllyStateId.Dead
-                || CurrentStateId == AllyStateId.AssistApproach
                 || CurrentStateId == AllyStateId.Assist
                 || CurrentStateId == AllyStateId.Hit)
             {
@@ -186,14 +185,13 @@ namespace EndLink.Ally
 
         /// <summary>
         /// 请求进入助战流程。
-        /// 请求成功后先进入 AssistApproach，接近目标后再由状态机切到 Assist 执行攻击。
+        /// 请求成功后进入 Assist 大状态，由 Assist 内部处理接近和攻击阶段。
         /// </summary>
         public bool RequestAssist(Transform target)
         {
             if (target == null
                 || CurrentStateId == AllyStateId.Dead
                 || CurrentStateId == AllyStateId.Hit
-                || CurrentStateId == AllyStateId.AssistApproach
                 || CurrentStateId == AllyStateId.Assist)
             {
                 return false;
@@ -205,8 +203,8 @@ namespace EndLink.Ally
             }
 
             _currentAssistTarget = target;
-            ChangeState(AllyStateId.AssistApproach);
-            return CurrentStateId == AllyStateId.AssistApproach;
+            ChangeState(AllyStateId.Assist);
+            return CurrentStateId == AllyStateId.Assist;
         }
 
         /// <summary>
@@ -215,8 +213,7 @@ namespace EndLink.Ally
         /// </summary>
         public bool CancelAssist(Transform target = null)
         {
-            bool isAssistState = CurrentStateId == AllyStateId.AssistApproach || CurrentStateId == AllyStateId.Assist;
-            if (!isAssistState)
+            if (CurrentStateId != AllyStateId.Assist)
             {
                 return false;
             }
@@ -242,7 +239,7 @@ namespace EndLink.Ally
 
         /// <summary>
         /// 请求进入受击状态。
-        /// 受击可以打断 Follow、AssistApproach 和 Assist，但不能覆盖 Dead。
+        /// 受击可以打断 Follow 和 Assist，但不能覆盖 Dead。
         /// </summary>
         public void RequestHit()
         {

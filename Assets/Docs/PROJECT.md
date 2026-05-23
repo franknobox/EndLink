@@ -39,13 +39,24 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 敌人死亡后能从目标系统和助战流程中稳定移除。
 - 仍保留 `EnemyDummy` 作为轻量命中测试对象。
 
-### 5. 待定方向
+### 5. 连携触发与四类 Action Base 版
 
-后续根据前面阶段验证结果再定，可能包括：
-- 锁定目标系统与战斗镜头。
-- 连携 UI 和时机反馈。
-- Boss 机制。
-- 关卡小场景和战斗节奏验证。
+目标是在敌人基底可用于稳定测试后，做出第一版可验证的连携规则闭环：主控、队友、敌人、标签、事件和 Action 数据都能参与一次完整的“触发连携 -> 执行反应 -> 观察结果”流程。
+
+计划内容：
+- 连携触发规则初版：基于 `CombatEventsBus`、`CombatTagContainer` 和 `CombatTagDefinition`，定义最小可用的触发条件，例如指定标签命中、标签组合、目标处于可连携窗口等。
+- 连携反应规则初版：触发后能明确由谁响应、响应哪个目标、执行哪个 Action，并广播可观察事件，方便 `Combat Monitor` 调试。
+- 四类 Action Base 版：分别做出`Skill`、`LinkAttack`、`Ultimate` 的基础数据资产和最小执行路径。
+- 技能 Base：先做一个通用技能动作，不急着绑定正式键位，重点验证冷却、前摇、Hitbox 和标签效果。
+- 连携攻击 Base：由连携规则触发，不直接由玩家输入触发，优先让队友或主控执行一次可观察的连携 Hitbox。
+- 大招 Base：先做数据和状态入口，占位验证冷却、动作类型、事件广播和调试显示，不急着做演出。
+
+阶段完成标准：
+- 至少能配置一条 `tagA + tagB => linkAction` 或等价的连携触发规则。
+- 主控攻击敌人后，队友或主控能根据规则执行一次 `LinkAttack`。
+- 四类 `CombatActionType` 都有可创建、可配置、可在调试链路中识别的 base 数据。
+- `Combat Monitor` 能看清 ActionStarted、HitLanded、Damaged、TagAdded、TagTransformed 等关键事件顺序。
+- 规则保持白模可验证，不提前做复杂 UI、演出镜头或 Boss 机制。
 
 ## 当前已完成内容
 
@@ -72,7 +83,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | [战斗事件总栈](#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
 | [玩家战斗驱动](#feature-player-combat-driver) | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |
 | [队友助战基础组件](#feature-ally-assist) | 已完成持续助战第一版 | 提供队友事件响应大脑和队友战斗执行器，用于主控命中敌人后让队友自动接近目标并持续攻击。 |
-| [队友有限状态机](#feature-ally-state-machine) | 已完成助战接近版 | 提供 Idle、Follow、AssistApproach、Assist、Hit、Dead 六个状态，用于承接队友跟随、接近助战、攻击、受击和死亡流程。 |
+| [队友有限状态机](#feature-ally-state-machine) | 已完成助战大状态版 | 提供 Idle、Follow、Assist、Hit、Dead 五个外层状态，Assist 内部处理接近、攻击和后续行为树细节。 |
 | [队友跟随移动](#feature-ally-follow-motor) | 已完成手感增强版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持平滑减速、追赶、远距离归位和简易避让。 |
 | [固定三人小队管理](#feature-party-manager) | 已完成第一版 | 负责保存固定主控和 2 个队友槽位，统一分配队友跟随目标和队形偏移。 |
 | [敌人通用基底](#feature-enemy-foundation) | 已完成第一版 | 提供正式敌人身份入口、生命受击、死亡目标失效、目标有效性接口和大状态机骨架。 |
@@ -519,12 +530,14 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `AllyCombatDriver` 是队友战斗执行器，职责类似 `PlayerCombatDriver`，但不读取输入，也不决定什么时候出手。
 - `AllyCombatDriver` 根据 `CombatActionDefinition` 生成 Hitbox，并写入伤害、击退、战斗标签和标签持续时间。
 - `AllyCombatDriver` 执行助战时会朝目标方向生成判定，并广播 `ActionStarted` 事件。
+- `AllyTargetingUtility` 用目标 Collider 表面计算助战接近和攻击距离，避免大型敌人按中心点判断导致队友贴边却无法攻击。
 - 当前版本用于验证木桩队友参与连携的最短链路，后续可接入队友状态机、跟随 AI、站位和更完整的连携规则。
 
 对应脚本：
 - `Assets/_EndLink/Ally/AllyBrain.cs`
 - `Assets/_EndLink/Ally/AllyCombatDriver.cs`
 - `Assets/_EndLink/Ally/AllyStateMachine.cs`
+- `Assets/_EndLink/Ally/AllyTargetingUtility.cs`
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
 - `Assets/_EndLink/Combat/Events/CombatEventsBus.cs`
 
@@ -557,11 +570,11 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 功能说明：
 - `AllyStateMachine` 是队友专用有限状态机，不依赖玩家输入系统。
-- 当前包含 `Idle`、`Follow`、`AssistApproach`、`Assist`、`Hit`、`Dead` 六个状态。
+- 当前包含 `Idle`、`Follow`、`Assist`、`Hit`、`Dead` 五个外层状态。
 - `Idle` 表示没有跟随目标的待机状态。
 - `Follow` 在有跟随目标时每帧调用 `AllyFollowMotor.TickFollow(deltaTime)`，实际移动由跟随移动组件负责。
-- `AssistApproach` 表示队友响应战斗事件后的助战接近状态，会调用 `AllyFollowMotor.TickMoveToPosition(...)` 跑向目标附近。
-- `Assist` 表示队友进入攻击距离后的助战攻击状态，会在目标有效且主控没有远离时持续攻击；目标拉开距离后回到 `AssistApproach` 重新接近。
+- `Assist` 是队友助战大状态，内部先接近目标，进入攻击距离后持续攻击；目标拉开距离后在 Assist 内部回到接近阶段。
+- `Assist` 当前内部使用轻量 `Approach / Attack` 阶段，后续可以替换为行为树。
 - 目标死亡、目标丢失或主控距离过远时，助战流程会取消并回到 Follow / Idle。
 - `Hit` 表示队友受击硬直状态，可打断 Follow 和 Assist。
 - `Dead` 是终止状态，不再响应跟随、助战和受击请求。
@@ -576,7 +589,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `Assets/_EndLink/Ally/AllyIdleState.cs`
 - `Assets/_EndLink/Ally/AllyFollowState.cs`
 - `Assets/_EndLink/Ally/AllyFollowMotor.cs`
-- `Assets/_EndLink/Ally/AllyAssistApproachState.cs`
 - `Assets/_EndLink/Ally/AllyAssistState.cs`
 - `Assets/_EndLink/Ally/AllyHitState.cs`
 - `Assets/_EndLink/Ally/AllyDeadState.cs`

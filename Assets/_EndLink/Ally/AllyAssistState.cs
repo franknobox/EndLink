@@ -1,13 +1,26 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace EndLink.Ally
 {
     /// <summary>
-    /// 队友助战攻击状态。
-    /// 目标有效且主控没有远离时会持续助战：动作窗口结束后等待冷却，冷却好了再次攻击。
+    /// 队友助战内部阶段。
+    /// 这是 Assist 大状态内部的轻量二级状态，后续可以替换为行为树。
+    /// </summary>
+    public enum AllyAssistPhase
+    {
+        Approach = 0,
+        Attack = 1
+    }
+
+    /// <summary>
+    /// 队友助战大状态。
+    /// 内部先接近目标，进入攻击距离后持续执行助战；目标拉开时重新接近。
     /// </summary>
     public sealed class AllyAssistState : AllyStateBase
     {
+        private readonly List<Collider> _targetColliders = new();
+        private AllyAssistPhase _phase;
         private float _elapsedTime;
 
         public AllyAssistState(AllyStateContext context) : base(context)
@@ -18,8 +31,7 @@ namespace EndLink.Ally
 
         public override void Enter()
         {
-            _elapsedTime = 0f;
-            TryExecuteAssistOrCancel();
+            EnterApproachPhase();
         }
 
         public override void Tick(float deltaTime)
@@ -31,9 +43,38 @@ namespace EndLink.Ally
                 return;
             }
 
+            switch (_phase)
+            {
+                case AllyAssistPhase.Approach:
+                    TickApproach(target, deltaTime);
+                    return;
+                case AllyAssistPhase.Attack:
+                    TickAttack(target, deltaTime);
+                    return;
+            }
+        }
+
+        private void TickApproach(Transform target, float deltaTime)
+        {
+            if (IsTargetInAttackRange(target))
+            {
+                EnterAttackPhase();
+                return;
+            }
+
+            Vector3 approachPosition = AllyTargetingUtility.GetClosestPointOnTarget(
+                target,
+                Context.Transform.position,
+                _targetColliders);
+
+            Context.FollowMotor.TickMoveToPosition(approachPosition, Context.AssistAttackRange, deltaTime);
+        }
+
+        private void TickAttack(Transform target, float deltaTime)
+        {
             if (IsTargetOutOfRange(target))
             {
-                Context.StateMachine.ChangeState(AllyStateId.AssistApproach);
+                EnterApproachPhase();
                 return;
             }
 
@@ -53,6 +94,19 @@ namespace EndLink.Ally
             TryExecuteAssistOrCancel();
         }
 
+        private void EnterApproachPhase()
+        {
+            _phase = AllyAssistPhase.Approach;
+            _elapsedTime = 0f;
+        }
+
+        private void EnterAttackPhase()
+        {
+            _phase = AllyAssistPhase.Attack;
+            _elapsedTime = 0f;
+            TryExecuteAssistOrCancel();
+        }
+
         private void TryExecuteAssistOrCancel()
         {
             bool executed = Context.CombatDriver.ExecuteAssist(Context.CurrentAssistTarget);
@@ -62,13 +116,26 @@ namespace EndLink.Ally
             }
         }
 
+        private bool IsTargetInAttackRange(Transform target)
+        {
+            float sqrAttackRange = Context.AssistAttackRange * Context.AssistAttackRange;
+            float sqrDistanceToTarget = AllyTargetingUtility.GetHorizontalSqrDistanceToTarget(
+                target,
+                Context.Transform.position,
+                _targetColliders);
+
+            return sqrDistanceToTarget <= sqrAttackRange;
+        }
+
         private bool IsTargetOutOfRange(Transform target)
         {
             float reengageRange = Mathf.Max(Context.AssistAttackRange, Context.AssistReengageRange);
-            Vector3 toTarget = target.position - Context.Transform.position;
-            toTarget.y = 0f;
+            float sqrDistanceToTarget = AllyTargetingUtility.GetHorizontalSqrDistanceToTarget(
+                target,
+                Context.Transform.position,
+                _targetColliders);
 
-            return toTarget.sqrMagnitude > reengageRange * reengageRange;
+            return sqrDistanceToTarget > reengageRange * reengageRange;
         }
 
         private bool IsMainCharacterTooFar()
