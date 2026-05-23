@@ -27,3 +27,4 @@ MonoBehaviour:
   hitboxSpawnDistance: 1
   hitboxSpawnHeight: 1
   hitboxLifetime: 0.2
+  effectiveAttackRange: 1.2

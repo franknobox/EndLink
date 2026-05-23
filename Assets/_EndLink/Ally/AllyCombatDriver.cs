@@ -35,7 +35,13 @@ namespace EndLink.Ally
         /// <summary>当前队友助战动作配置。</summary>
         public CombatActionDefinition AssistAction => assistAction;
 
-        /// <summary>当前是否已经过了动作冷却，可以尝试执行助战。</summary>
+        /// <summary>是否已经配置助战动作。用于判断队友能否进入助战流程，不代表冷却已经结束。</summary>
+        public bool HasAssistAction => assistAction != null;
+
+        /// <summary>当前助战动作剩余冷却时间。</summary>
+        public float AssistCooldownRemaining => Mathf.Max(0f, _nextAssistTime - Time.time);
+
+        /// <summary>当前是否已经过了动作冷却，可以真正执行一次助战攻击。</summary>
         public bool CanAssist => assistAction != null && Time.time >= _nextAssistTime;
 
         /// <summary>
@@ -55,12 +61,17 @@ namespace EndLink.Ally
         {
             if (assistAction == null)
             {
+                AllyDebugLog.Raise(gameObject, AllyDebugCategory.Combat, "execute assist failed: missing assist action");
                 LogFailure("AllyCombatDriver 缺少 Assist Action，无法执行助战。");
                 return false;
             }
 
             if (!CanAssist)
             {
+                AllyDebugLog.Raise(
+                    gameObject,
+                    AllyDebugCategory.Combat,
+                    $"execute assist skipped: cooldown remaining={AssistCooldownRemaining:F2}");
                 return false;
             }
 
@@ -68,6 +79,10 @@ namespace EndLink.Ally
 
             if (hitboxPrefab == null)
             {
+                AllyDebugLog.Raise(
+                    gameObject,
+                    AllyDebugCategory.Combat,
+                    $"execute assist failed: action={assistAction.ActionId} missing hitbox prefab");
                 LogFailure("AllyCombatDriver 的 Assist Action 缺少 Hitbox Prefab。");
                 return false;
             }
@@ -95,10 +110,21 @@ namespace EndLink.Ally
                     assistAction.CombatTagToApply,
                     assistAction.CombatTagDuration);
             }
+            else
+            {
+                AllyDebugLog.Raise(
+                    gameObject,
+                    AllyDebugCategory.Combat,
+                    $"spawned hitbox has no HitboxBase, prefab={hitboxPrefab.name}");
+            }
 
             Destroy(hitboxInstance, assistAction.HitboxLifetime);
 
             _nextAssistTime = Time.time + assistAction.Cooldown;
+            AllyDebugLog.Raise(
+                gameObject,
+                AllyDebugCategory.Combat,
+                $"execute assist action={assistAction.ActionId}, target={GetTransformName(target)}, spawn={spawnPosition}, nextCd={assistAction.Cooldown:F2}");
             CombatEventsBus.RaiseActionStarted(
                 gameObject,
                 target != null ? target.gameObject : null,
@@ -136,6 +162,11 @@ namespace EndLink.Ally
             {
                 Debug.LogWarning(message, this);
             }
+        }
+
+        private static string GetTransformName(Transform target)
+        {
+            return target != null ? target.name : "None";
         }
     }
 }

@@ -16,6 +16,10 @@ namespace EndLink.Ally
         {
             if (Context.FollowTarget == null)
             {
+                AllyDebugLog.Raise(
+                    Context.Transform.gameObject,
+                    AllyDebugCategory.Follow,
+                    "follow target lost, switch to Idle");
                 Context.StateMachine.ChangeState(AllyStateId.Idle);
                 return;
             }

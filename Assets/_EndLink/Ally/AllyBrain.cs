@@ -140,11 +140,24 @@ namespace EndLink.Ally
                 Debug.Log($"AllyBrain responding to {eventData.EventType}, target: {target.name}", this);
             }
 
+            AllyDebugLog.Raise(
+                gameObject,
+                AllyDebugCategory.Brain,
+                $"responding to {eventData.EventType}, source={GetObjectName(eventData.Source)}, target={target.name}");
+
             bool requested = StateMachine != null && StateMachine.RequestAssist(target);
 
             if (!requested && logDecisions)
             {
                 Debug.Log($"AllyBrain assist rejected: {GetAssistRejectReason(target)}", this);
+            }
+
+            if (!requested)
+            {
+                AllyDebugLog.Raise(
+                    gameObject,
+                    AllyDebugCategory.Brain,
+                    $"assist request failed: {GetAssistRejectReason(target)}");
             }
         }
 
@@ -154,6 +167,11 @@ namespace EndLink.Ally
             {
                 return;
             }
+
+            AllyDebugLog.Raise(
+                gameObject,
+                AllyDebugCategory.Brain,
+                $"current target dead, cancel assist target={deadTarget.name}");
 
             StateMachine.CancelAssist(_currentTarget);
             _currentTarget = null;
@@ -170,11 +188,16 @@ namespace EndLink.Ally
 
             if (ignoreSelfEvents && eventData.Source == gameObject)
             {
+                AllyDebugLog.Raise(gameObject, AllyDebugCategory.Brain, "ignored self HitLanded event");
                 return false;
             }
 
             if (requiredSource != null && eventData.Source != requiredSource)
             {
+                AllyDebugLog.Raise(
+                    gameObject,
+                    AllyDebugCategory.Brain,
+                    $"ignored event source={GetObjectName(eventData.Source)}, required={requiredSource.name}");
                 return false;
             }
 
@@ -278,12 +301,17 @@ namespace EndLink.Ally
                 return "combat driver is missing";
             }
 
-            if (!CombatDriver.CanAssist)
+            if (!CombatDriver.HasAssistAction)
             {
-                return "combat driver cannot assist, usually cooldown or action configuration";
+                return "combat driver has no assist action";
             }
 
             return "unknown state machine rejection";
+        }
+
+        private static string GetObjectName(Object targetObject)
+        {
+            return targetObject != null ? targetObject.name : "None";
         }
     }
 }

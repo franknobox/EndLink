@@ -41,8 +41,14 @@ namespace EndLink.Ally
         /// <summary>当前助战攻击状态持续时间。</summary>
         public float AssistDuration => StateMachine.CurrentAssistDuration;
 
-        /// <summary>助战接近时进入攻击的距离。</summary>
-        public float AssistAttackRange => StateMachine.AssistAttackRange;
+        /// <summary>当前助战动作的极限有效攻击距离。</summary>
+        public float AssistEffectiveAttackRange => StateMachine.AssistEffectiveAttackRange;
+
+        /// <summary>助战接近时进入攻击阶段的距离，包含 AI 容差。</summary>
+        public float AssistAttackEnterDistance => StateMachine.AssistAttackEnterDistance;
+
+        /// <summary>助战接近目标时尝试停下的距离，通常略小于动作极限距离。</summary>
+        public float AssistApproachStopDistance => StateMachine.AssistApproachStopDistance;
 
         /// <summary>持续助战时重新接近目标的距离。</summary>
         public float AssistReengageRange => StateMachine.AssistReengageRange;

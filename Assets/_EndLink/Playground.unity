@@ -208,7 +208,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Ally.AllyStateMachine
   initialState: 1
   followTarget: {fileID: 509600059}
-  assistAttackRange: 1.8
+  assistAttackRangeTolerance: 0.2
+  assistApproachInnerOffset: 0.1
   assistReengageRange: 2.4
   assistBreakOffDistance: 12
   assistDuration: 0.45
@@ -300,7 +301,7 @@ GameObject:
   m_Icon: {fileID: 5132851093641282708, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &73738857
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1576,7 +1577,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Ally.AllyStateMachine
   initialState: 1
   followTarget: {fileID: 509600059}
-  assistAttackRange: 1.8
+  assistAttackRangeTolerance: 0.2
+  assistApproachInnerOffset: 0.1
   assistReengageRange: 2.4
   assistBreakOffDistance: 12
   assistDuration: 0.45
@@ -1846,7 +1848,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46602577ab7644b38772d7fc0398f34c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.EnemyDummy
-  maxHealth: 100
+  maxHealth: 200
   resetHealthOnEnable: 1
   hitColor: {r: 1, g: 0.55, b: 0.55, a: 1}
   hitFlashDuration: 0.15
@@ -1948,8 +1950,8 @@ Transform:
   m_GameObject: {fileID: 813602082}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -5.10944, y: 0.957, z: 3.539}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalPosition: {x: -10.17, y: 1, z: 4.8}
+  m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}

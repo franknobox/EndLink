@@ -22,6 +22,7 @@ namespace EndLink.Ally
         private readonly List<Collider> _targetColliders = new();
         private AllyAssistPhase _phase;
         private float _elapsedTime;
+        private bool _loggedCooldownWait;
 
         public AllyAssistState(AllyStateContext context) : base(context)
         {
@@ -67,13 +68,17 @@ namespace EndLink.Ally
                 Context.Transform.position,
                 _targetColliders);
 
-            Context.FollowMotor.TickMoveToPosition(approachPosition, Context.AssistAttackRange, deltaTime);
+            Context.FollowMotor.TickMoveToPosition(approachPosition, Context.AssistApproachStopDistance, deltaTime);
         }
 
         private void TickAttack(Transform target, float deltaTime)
         {
             if (IsTargetOutOfRange(target))
             {
+                AllyDebugLog.Raise(
+                    Context.Transform.gameObject,
+                    AllyDebugCategory.Assist,
+                    $"target out of range, return approach, target={target.name}, surfaceDist={GetSurfaceDistance(target):F2}, reengage={Context.AssistReengageRange:F2}");
                 EnterApproachPhase();
                 return;
             }
@@ -85,40 +90,71 @@ namespace EndLink.Ally
                 return;
             }
 
-            if (!Context.CombatDriver.CanAssist)
+            if (TryExecuteAssistWhenReadyOrCancel())
             {
-                return;
+                _elapsedTime = 0f;
             }
-
-            _elapsedTime = 0f;
-            TryExecuteAssistOrCancel();
         }
 
         private void EnterApproachPhase()
         {
             _phase = AllyAssistPhase.Approach;
             _elapsedTime = 0f;
+            _loggedCooldownWait = false;
+            AllyDebugLog.Raise(
+                Context.Transform.gameObject,
+                AllyDebugCategory.Assist,
+                $"phase=Approach, target={GetTransformName(Context.CurrentAssistTarget)}, enterDistance={Context.AssistAttackEnterDistance:F2}, stopDistance={Context.AssistApproachStopDistance:F2}");
         }
 
         private void EnterAttackPhase()
         {
             _phase = AllyAssistPhase.Attack;
             _elapsedTime = 0f;
-            TryExecuteAssistOrCancel();
+            _loggedCooldownWait = false;
+            AllyDebugLog.Raise(
+                Context.Transform.gameObject,
+                AllyDebugCategory.Assist,
+                $"phase=Attack, target={GetTransformName(Context.CurrentAssistTarget)}, surfaceDist={GetSurfaceDistance(Context.CurrentAssistTarget):F2}, enterDistance={Context.AssistAttackEnterDistance:F2}");
+            TryExecuteAssistWhenReadyOrCancel();
         }
 
-        private void TryExecuteAssistOrCancel()
+        private bool TryExecuteAssistWhenReadyOrCancel()
         {
+            if (!Context.CombatDriver.HasAssistAction)
+            {
+                Context.StateMachine.CancelAssist(Context.CurrentAssistTarget);
+                return false;
+            }
+
+            if (!Context.CombatDriver.CanAssist)
+            {
+                if (!_loggedCooldownWait)
+                {
+                    _loggedCooldownWait = true;
+                    AllyDebugLog.Raise(
+                        Context.Transform.gameObject,
+                        AllyDebugCategory.Assist,
+                        $"waiting cooldown, remaining={Context.CombatDriver.AssistCooldownRemaining:F2}");
+                }
+
+                return false;
+            }
+
             bool executed = Context.CombatDriver.ExecuteAssist(Context.CurrentAssistTarget);
             if (!executed)
             {
                 Context.StateMachine.CancelAssist(Context.CurrentAssistTarget);
             }
+
+            _loggedCooldownWait = false;
+            return executed;
         }
 
         private bool IsTargetInAttackRange(Transform target)
         {
-            float sqrAttackRange = Context.AssistAttackRange * Context.AssistAttackRange;
+            float attackEnterDistance = Context.AssistAttackEnterDistance;
+            float sqrAttackRange = attackEnterDistance * attackEnterDistance;
             float sqrDistanceToTarget = AllyTargetingUtility.GetHorizontalSqrDistanceToTarget(
                 target,
                 Context.Transform.position,
@@ -129,7 +165,7 @@ namespace EndLink.Ally
 
         private bool IsTargetOutOfRange(Transform target)
         {
-            float reengageRange = Mathf.Max(Context.AssistAttackRange, Context.AssistReengageRange);
+            float reengageRange = Mathf.Max(Context.AssistAttackEnterDistance, Context.AssistReengageRange);
             float sqrDistanceToTarget = AllyTargetingUtility.GetHorizontalSqrDistanceToTarget(
                 target,
                 Context.Transform.position,
@@ -149,6 +185,24 @@ namespace EndLink.Ally
             toMain.y = 0f;
 
             return toMain.sqrMagnitude >= Context.AssistBreakOffDistance * Context.AssistBreakOffDistance;
+        }
+
+        private float GetSurfaceDistance(Transform target)
+        {
+            if (target == null)
+            {
+                return 0f;
+            }
+
+            return Mathf.Sqrt(AllyTargetingUtility.GetHorizontalSqrDistanceToTarget(
+                target,
+                Context.Transform.position,
+                _targetColliders));
+        }
+
+        private static string GetTransformName(Transform target)
+        {
+            return target != null ? target.name : "None";
         }
     }
 }

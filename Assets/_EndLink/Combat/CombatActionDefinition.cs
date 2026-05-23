@@ -32,6 +32,12 @@ namespace EndLink.Combat
         menuName = "EndLink/Combat/Combat Action Definition")]
     public sealed class CombatActionDefinition : ScriptableObject
     {
+        /// <summary>
+        /// 旧版动作资产没有写入有效攻击距离时使用的默认值。
+        /// 当前近战波 Hitbox 默认生成在前方 1 米，1.2 米可以让 AI 停在能覆盖到目标表面的距离。
+        /// </summary>
+        public const float DefaultEffectiveAttackRange = 1.2f;
+
         [Header("基础信息")]
         [Tooltip("动作唯一标识。建议使用英文小写加下划线，例如 player_basic_attack_01。")]
         [SerializeField]
@@ -95,6 +101,11 @@ namespace EndLink.Combat
         [Tooltip("Hitbox 自动销毁时间。通常应接近或等于有效时间。")]
         [SerializeField, Min(0.01f)]
         private float hitboxLifetime = 0.2f;
+
+        [Header("AI 距离")]
+        [Tooltip("AI 判断这个动作可以命中的有效距离。队友会按自己到目标 Collider 表面的距离决定何时停步和出手；建议按 Hitbox 生成距离 + Hitbox 前向覆盖半径配置，并留少量余量。")]
+        [SerializeField, Min(0.01f)]
+        private float effectiveAttackRange = DefaultEffectiveAttackRange;
 
         /// <summary>
         /// 动作唯一标识。
@@ -172,8 +183,33 @@ namespace EndLink.Combat
         public float HitboxLifetime => hitboxLifetime;
 
         /// <summary>
+        /// AI 判断该动作可以命中的有效距离。
+        /// </summary>
+        public float EffectiveAttackRange => effectiveAttackRange > 0f
+            ? Mathf.Max(0.01f, effectiveAttackRange)
+            : DefaultEffectiveAttackRange;
+
+        /// <summary>
         /// 动作总时长，等于前摇、有效时间和后摇之和。
         /// </summary>
         public float TotalDuration => startupTime + activeTime + recoveryTime;
+
+        private void OnValidate()
+        {
+            damageAmount = Mathf.Max(0, damageAmount);
+            knockbackForce = Mathf.Max(0f, knockbackForce);
+            combatTagDuration = Mathf.Max(0f, combatTagDuration);
+            cooldown = Mathf.Max(0f, cooldown);
+            startupTime = Mathf.Max(0f, startupTime);
+            activeTime = Mathf.Max(0.01f, activeTime);
+            recoveryTime = Mathf.Max(0f, recoveryTime);
+            hitboxSpawnDistance = Mathf.Max(0f, hitboxSpawnDistance);
+            hitboxLifetime = Mathf.Max(0.01f, hitboxLifetime);
+
+            if (effectiveAttackRange <= 0f)
+            {
+                effectiveAttackRange = DefaultEffectiveAttackRange;
+            }
+        }
     }
 }

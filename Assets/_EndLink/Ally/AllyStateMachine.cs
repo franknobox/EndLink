@@ -25,11 +25,15 @@ namespace EndLink.Ally
         private Transform followTarget;
 
         [Header("助战")]
-        [Tooltip("队友接近助战目标到该距离内时，Assist 内部切换到攻击阶段。")]
-        [SerializeField, Min(0.01f)]
-        private float assistAttackRange = 1.8f;
+        [Tooltip("助战进入攻击阶段的距离容差。实际进入攻击距离 = Assist Action 的 Effective Attack Range + 该容差。用于避免队友被碰撞或避让卡在极限距离边缘。")]
+        [SerializeField, Min(0f)]
+        private float assistAttackRangeTolerance = 0.2f;
 
-        [Tooltip("持续助战时，目标离队友超过该距离会回到 Assist 内部接近阶段。建议略大于 assistAttackRange。")]
+        [Tooltip("助战接近目标时的内缩距离。队友不会故意停在动作极限距离，而是尝试比 Effective Attack Range 更靠近目标。")]
+        [SerializeField, Min(0f)]
+        private float assistApproachInnerOffset = 0.1f;
+
+        [Tooltip("持续助战时，目标离队友超过该距离会回到 Assist 内部接近阶段。建议明显大于动作 Effective Attack Range。")]
         [SerializeField, Min(0.01f)]
         private float assistReengageRange = 2.4f;
 
@@ -73,8 +77,21 @@ namespace EndLink.Ally
         /// <summary>当前助战目标。</summary>
         public Transform CurrentAssistTarget => _currentAssistTarget;
 
-        /// <summary>助战接近时进入攻击的距离。</summary>
-        public float AssistAttackRange => assistAttackRange;
+        /// <summary>当前助战动作的极限有效攻击距离，来自 Assist Action。</summary>
+        public float AssistEffectiveAttackRange
+        {
+            get
+            {
+                CombatActionDefinition action = _combatDriver != null ? _combatDriver.AssistAction : null;
+                return action != null ? action.EffectiveAttackRange : CombatActionDefinition.DefaultEffectiveAttackRange;
+            }
+        }
+
+        /// <summary>进入攻击阶段的距离，等于动作极限距离加 AI 容差。</summary>
+        public float AssistAttackEnterDistance => AssistEffectiveAttackRange + assistAttackRangeTolerance;
+
+        /// <summary>接近目标时尝试停下的距离，略小于动作极限距离。</summary>
+        public float AssistApproachStopDistance => Mathf.Max(0.01f, AssistEffectiveAttackRange - assistApproachInnerOffset);
 
         /// <summary>持续助战时重新接近目标的距离。</summary>
         public float AssistReengageRange => assistReengageRange;
@@ -126,8 +143,9 @@ namespace EndLink.Ally
 
         private void OnValidate()
         {
-            assistAttackRange = Mathf.Max(0.01f, assistAttackRange);
-            assistReengageRange = Mathf.Max(assistAttackRange, assistReengageRange);
+            assistAttackRangeTolerance = Mathf.Max(0f, assistAttackRangeTolerance);
+            assistApproachInnerOffset = Mathf.Max(0f, assistApproachInnerOffset);
+            assistReengageRange = Mathf.Max(0.01f, assistReengageRange);
             assistBreakOffDistance = Mathf.Max(0f, assistBreakOffDistance);
             assistDuration = Mathf.Max(0.01f, assistDuration);
             hitDuration = Mathf.Max(0.01f, hitDuration);
@@ -162,6 +180,11 @@ namespace EndLink.Ally
                     $"AllyState: {previousStateId} -> {nextStateId} | follow={GetTransformName(followTarget)} | assist={GetTransformName(_currentAssistTarget)}",
                     this);
             }
+
+            AllyDebugLog.Raise(
+                gameObject,
+                AllyDebugCategory.State,
+                $"state {previousStateId} -> {nextStateId}, follow={GetTransformName(followTarget)}, assist={GetTransformName(_currentAssistTarget)}");
         }
 
         /// <summary>
@@ -189,20 +212,31 @@ namespace EndLink.Ally
         /// </summary>
         public bool RequestAssist(Transform target)
         {
-            if (target == null
-                || CurrentStateId == AllyStateId.Dead
-                || CurrentStateId == AllyStateId.Hit
-                || CurrentStateId == AllyStateId.Assist)
+            if (target == null)
             {
+                LogAssistRequestRejected("target is null");
                 return false;
             }
 
-            if (_combatDriver == null || !_combatDriver.CanAssist)
+            if (CurrentStateId == AllyStateId.Dead
+                || CurrentStateId == AllyStateId.Hit
+                || CurrentStateId == AllyStateId.Assist)
             {
+                LogAssistRequestRejected($"state is {CurrentStateId}");
+                return false;
+            }
+
+            if (_combatDriver == null || !_combatDriver.HasAssistAction)
+            {
+                LogAssistRequestRejected("missing assist action");
                 return false;
             }
 
             _currentAssistTarget = target;
+            AllyDebugLog.Raise(
+                gameObject,
+                AllyDebugCategory.State,
+                $"assist request accepted, target={GetTransformName(target)}");
             ChangeState(AllyStateId.Assist);
             return CurrentStateId == AllyStateId.Assist;
         }
@@ -224,6 +258,10 @@ namespace EndLink.Ally
             }
 
             _currentAssistTarget = null;
+            AllyDebugLog.Raise(
+                gameObject,
+                AllyDebugCategory.State,
+                $"assist cancelled, target={GetTransformName(target)}, next={(followTarget != null ? AllyStateId.Follow : AllyStateId.Idle)}");
             ChangeState(followTarget != null ? AllyStateId.Follow : AllyStateId.Idle);
             return true;
         }
@@ -270,6 +308,14 @@ namespace EndLink.Ally
         private static string GetTransformName(Transform target)
         {
             return target != null ? target.name : "None";
+        }
+
+        private void LogAssistRequestRejected(string reason)
+        {
+            AllyDebugLog.Raise(
+                gameObject,
+                AllyDebugCategory.State,
+                $"assist request rejected: {reason}");
         }
     }
 }

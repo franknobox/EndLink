@@ -24,12 +24,10 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 ### 4. 敌人基础制作
 
-目标是从“木桩验证命中”推进到“可被连携战斗稳定测试的真实敌人基底”。敌人必须有完整的战斗生命周期、目标有效性、基础行为和调试反馈，否则主控与队友的连携链路很难判断是否正确。
-
 计划内容：
 - 敌人通用基底：已建立正式敌人脚本结构和大状态机骨架，后续接入移动、战斗执行和行为树。
 - 敌人移动与转向：第一版可继续使用 CharacterController 或简单 Transform 移动，后续场景复杂后再评估 NavMesh。
-- 敌人攻击能力：使用 `CombatActionDefinition` 配置普通攻击，复用 Hitbox 与事件系统，让玩家和队友能受到敌人攻击。
+- 敌人攻击能力：使用 `CombatActionDefinition` 配置普通攻击，复用 Hitbox 与事件系统。
 - 敌人目标选择：优先锁定主控，也可以根据仇恨或最近角色选择目标，第一版保持简单。
 - 死亡与目标失效：死亡后不再被锁定、不再被队友持续助战、不再接收有效命中，保留必要死亡表现。
 
@@ -83,6 +81,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | [战斗事件总栈](#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
 | [玩家战斗驱动](#feature-player-combat-driver) | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |
 | [队友助战基础组件](#feature-ally-assist) | 已完成持续助战第一版 | 提供队友事件响应大脑和队友战斗执行器，用于主控命中敌人后让队友自动接近目标并持续攻击。 |
+| [队友调试监视窗口](#feature-ally-monitor) | 已完成第一版 | 提供 Editor 窗口集中查看队友状态快照和队友行为日志，辅助排查助战、冷却、距离和目标问题。 |
 | [队友有限状态机](#feature-ally-state-machine) | 已完成助战大状态版 | 提供 Idle、Follow、Assist、Hit、Dead 五个外层状态，Assist 内部处理接近、攻击和后续行为树细节。 |
 | [队友跟随移动](#feature-ally-follow-motor) | 已完成手感增强版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持平滑减速、追赶、远距离归位和简易避让。 |
 | [固定三人小队管理](#feature-party-manager) | 已完成第一版 | 负责保存固定主控和 2 个队友槽位，统一分配队友跟随目标和队形偏移。 |
@@ -384,7 +383,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `CombatActionType` 描述动作性质，不描述释放者来源。
 - 当前动作类型包括 `BasicAttack`、`Skill`、`LinkAttack`、`Ultimate`。
 - 主控、队友和敌人后续可以共用同一套动作类型，释放者来源应由后续战斗事件数据携带。
-- 动作配置包含伤害、击退、`CombatTagDefinition` 命中标签、标签持续时间、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置和生命周期。
+- 动作配置包含伤害、击退、`CombatTagDefinition` 命中标签、标签持续时间、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置、生命周期和 AI 有效攻击距离。
 
 对应脚本：
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
@@ -529,6 +528,8 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `AllyBrain` 不直接生成 Hitbox，不写伤害数据，只把事件目标交给 `AllyStateMachine.RequestAssist(...)`。
 - `AllyCombatDriver` 是队友战斗执行器，职责类似 `PlayerCombatDriver`，但不读取输入，也不决定什么时候出手。
 - `AllyCombatDriver` 根据 `CombatActionDefinition` 生成 Hitbox，并写入伤害、击退、战斗标签和标签持续时间。
+- 队友进入助战流程只要求配置了 `Assist Action`；动作冷却只影响实际出手时间，冷却未结束时会在 Assist 内等待，而不是放弃助战。
+- `CombatActionDefinition.Effective Attack Range` 决定队友距离目标 Collider 表面多远开始攻击；旧动作资产未写入该字段时会回退到默认近战距离。
 - `AllyCombatDriver` 执行助战时会朝目标方向生成判定，并广播 `ActionStarted` 事件。
 - `AllyTargetingUtility` 用目标 Collider 表面计算助战接近和攻击距离，避免大型敌人按中心点判断导致队友贴边却无法攻击。
 - 当前版本用于验证木桩队友参与连携的最短链路，后续可接入队友状态机、跟随 AI、站位和更完整的连携规则。
@@ -557,6 +558,32 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `targetSearchRadius`：最近敌人搜索半径
 - `enemyLayerMask`：敌人搜索 LayerMask，通常勾选 Enemy
 - `logDecisions`：是否打印队友响应决策日志
+
+</details>
+
+<a id="feature-ally-monitor"></a>
+
+### Feature：队友调试监视窗口
+
+<details>
+<summary>展开详情</summary>
+功能说明：
+- `AllyDebugLog` 是队友专用调试事件流，运行时代码只负责上报状态切换、事件响应、助战阶段、冷却等待和攻击执行等关键行为。
+- `AllyMonitorWindow` 是 Editor 队友监视窗口，通过 `EndLink > Debug > Ally Monitor` 打开。
+- 窗口上半部分显示当前场景所有 `AllyStateMachine` 的状态快照，包括状态、跟随目标、助战目标、到目标 Collider 表面的距离、攻击距离、重接近距离、冷却和当前 Action。
+- 窗口下半部分显示队友行为日志，可以按队友对象和 `State / Brain / Assist / Combat / Follow` 分类过滤。
+- `Capture` 控制是否采集队友调试事件，`Console` 控制是否同时镜像到 Unity Console，默认建议只看窗口避免刷屏。
+
+对应脚本：
+- `Assets/_EndLink/Ally/AllyDebugLog.cs`
+- `Assets/_EndLink/Editor/AllyMonitorWindow.cs`
+- `Assets/_EndLink/Ally/AllyStateMachine.cs`
+- `Assets/_EndLink/Ally/AllyBrain.cs`
+- `Assets/_EndLink/Ally/AllyAssistState.cs`
+- `Assets/_EndLink/Ally/AllyCombatDriver.cs`
+
+相关 Editor 工具：
+- `EndLink > Debug > Ally Monitor`
 
 </details>
 
@@ -601,7 +628,8 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 关键配置：
 - `initialState`：初始状态
 - `followTarget`：跟随目标，通常后续会绑定主控角色
-- `assistAttackRange`：队友接近助战目标到该距离后开始攻击
+- `assistAttackRangeTolerance`：助战进入攻击阶段的距离容差，实际进入距离为 `Effective Attack Range + Tolerance`
+- `assistApproachInnerOffset`：助战接近目标时的内缩距离，让队友尝试站得比动作极限距离更近
 - `assistReengageRange`：持续助战时，目标离队友超过该距离会重新接近
 - `assistBreakOffDistance`：队友距离主控过远时取消助战，设置为 0 可关闭
 - `assistDuration`：助战状态最短持续时间
