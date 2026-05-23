@@ -642,6 +642,7 @@ GameObject:
   m_Component:
   - component: {fileID: 163565088}
   - component: {fileID: 163565087}
+  - component: {fileID: 163565089}
   m_Layer: 0
   m_Name: PartyManager
   m_TagString: Untagged
@@ -686,6 +687,27 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &163565089
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 163565086}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3ddaa90f4ef4240a4b768d3788aa654, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.Party.PartyCombatRouter
+  inputReader: {fileID: 509600057}
+  partyManager: {fileID: 163565087}
+  playerSkillKey: 31
+  allySlotASkillKey: 19
+  allySlotBSkillKey: 20
+  playerLinkAttackKey: 41
+  allySlotALinkAttackKey: 42
+  allySlotBLinkAttackKey: 43
+  logCommands: 1
 --- !u!1 &182952232
 GameObject:
   m_ObjectHideFlags: 0

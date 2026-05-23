@@ -1,4 +1,6 @@
 using System;
+using EndLink.Ally;
+using EndLink.Combat;
 using EndLink.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -224,7 +226,87 @@ namespace EndLink.Party
 
             PartyCombatCommand command = new(commandType, actorSlot, actor, Time.time);
             CommandRequested?.Invoke(command);
+            ExecuteImmediateCommand(command);
             LogCommand($"command={commandType}, slot={actorSlot}, actor={GetObjectName(actor)}");
+        }
+
+        private void ExecuteImmediateCommand(PartyCombatCommand command)
+        {
+            switch (command.CommandType)
+            {
+                case PartyCombatCommandType.Skill:
+                    ExecuteSkillCommand(command);
+                    break;
+                case PartyCombatCommandType.LinkAttack:
+                    LogCommand($"link request queued for future link system, slot={command.ActorSlot}");
+                    break;
+                case PartyCombatCommandType.Ultimate:
+                    LogCommand("ultimate request queued for future limit break system");
+                    break;
+            }
+        }
+
+        private void ExecuteSkillCommand(PartyCombatCommand command)
+        {
+            switch (command.ActorSlot)
+            {
+                case PartyCombatActorSlot.MainCharacter:
+                    ExecutePlayerSkill(command.Actor);
+                    break;
+                case PartyCombatActorSlot.AllySlotA:
+                case PartyCombatActorSlot.AllySlotB:
+                    ExecuteAllySkill(command.Actor);
+                    break;
+                default:
+                    LogCommand($"ignored Skill for {command.ActorSlot}: unsupported skill actor slot");
+                    break;
+            }
+        }
+
+        private void ExecutePlayerSkill(GameObject actor)
+        {
+            if (actor == null || !actor.TryGetComponent(out PlayerCombatDriver combatDriver))
+            {
+                LogCommand($"ignored player Skill: PlayerCombatDriver not found on {GetObjectName(actor)}");
+                return;
+            }
+
+            bool executed = combatDriver.ExecuteAction(combatDriver.SkillAction);
+            LogCommand($"execute player Skill result={executed}, actor={GetObjectName(actor)}");
+        }
+
+        private void ExecuteAllySkill(GameObject actor)
+        {
+            if (actor == null || !actor.TryGetComponent(out AllyCombatDriver combatDriver))
+            {
+                LogCommand($"ignored ally Skill: AllyCombatDriver not found on {GetObjectName(actor)}");
+                return;
+            }
+
+            Transform target = ResolveAllySkillTarget(actor);
+            bool executed = combatDriver.ExecuteAction(combatDriver.SkillAction, target);
+            LogCommand($"execute ally Skill result={executed}, actor={GetObjectName(actor)}, target={GetObjectName(target)}");
+        }
+
+        private static Transform ResolveAllySkillTarget(GameObject actor)
+        {
+            if (actor == null)
+            {
+                return null;
+            }
+
+            if (actor.TryGetComponent(out AllyStateMachine stateMachine)
+                && stateMachine.CurrentAssistTarget != null)
+            {
+                return stateMachine.CurrentAssistTarget;
+            }
+
+            if (actor.TryGetComponent(out AllyBrain brain) && brain.CurrentTarget != null)
+            {
+                return brain.CurrentTarget;
+            }
+
+            return null;
         }
 
         private GameObject ResolveActor(PartyCombatActorSlot actorSlot)

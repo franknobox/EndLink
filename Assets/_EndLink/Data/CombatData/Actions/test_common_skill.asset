@@ -23,7 +23,7 @@ MonoBehaviour:
   startupTime: 0.1
   activeTime: 0.2
   recoveryTime: 0.15
-  hitboxPrefab: {fileID: 881023007030624241, guid: cccdad27e4016f64abb0d04b5171204e, type: 3}
+  hitboxPrefab: {fileID: 881023007030624241, guid: aad01da9f0eb48340bbd3418a60e3b48, type: 3}
   hitboxSpawnDistance: 1
   hitboxSpawnHeight: 1
   hitboxLifetime: 0.2

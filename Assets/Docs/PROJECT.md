@@ -704,7 +704,8 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 初始化时，`PartyManager` 会把 `mainCharacter` 设置为两个队友的跟随目标。
 - 初始化时，`PartyManager` 会把两个槽位的 `formationOffset` 写入各自队友的 `AllyFollowMotor`。
 - `PartyCombatRouter` 负责把 `PlayerInputReader` 中的战斗输入翻译成主控、队友 A、队友 B 或全队的命令请求。
-- `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害、标签或状态机切换，后续由 Player / Ally Driver 或连携系统订阅 `CommandRequested` 后执行。
+- `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害、标签或状态机切换。
+- 当前第一版中，`Skill` 命令会由 `PartyCombatRouter` 立即转发给对应角色的 CombatDriver 执行 `SkillAction`，用于先打通 Q/E/F 主动技能验证链路。
 - `PartyCombatRouter` Inspector 中可以覆盖 Q/E/F 和 1/2/3 对应的技能与连携请求键位，V 键全队极限技暂时固定。
 - `LinkAttack` 命令只表示玩家请求使用连携槽位，不能被普通动作执行层直接当成可释放技能处理。
 - 后续队友 AI、连携规则或调试工具需要知道“谁是主控，谁是队友”时，可以从 `PartyManager` 查询。
