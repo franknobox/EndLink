@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5020b783917c4cc1bdadfbbd75cfb140, type: 3}
+  m_Name: test_common_skill
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.CombatActionDefinition
+  actionId: test_common_skill
+  displayName: test_common_skill
+  actionType: 1
+  damageAmount: 10
+  knockbackForce: 3
+  combatTagToApply: {fileID: 0}
+  combatTagDuration: 0
+  cooldown: 0.45
+  startupTime: 0.1
+  activeTime: 0.2
+  recoveryTime: 0.15
+  hitboxPrefab: {fileID: 881023007030624241, guid: cccdad27e4016f64abb0d04b5171204e, type: 3}
+  hitboxSpawnDistance: 1
+  hitboxSpawnHeight: 1
+  hitboxLifetime: 0.2
+  effectiveAttackRange: 1.2

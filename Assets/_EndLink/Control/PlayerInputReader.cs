@@ -119,7 +119,8 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 消费一次主控连携技输入，默认键位 1。
+        /// 消费一次主控连携请求输入，默认键位 1。
+        /// 这里只读取玩家意图，是否能释放必须由连携机制判断。
         /// </summary>
         public bool ConsumePlayerLinkAttackPressed()
         {
@@ -127,7 +128,8 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 消费一次队友 A 连携技输入，默认键位 2。
+        /// 消费一次队友 A 连携请求输入，默认键位 2。
+        /// 这里只读取玩家意图，是否能释放必须由连携机制判断。
         /// </summary>
         public bool ConsumeAllySlotALinkAttackPressed()
         {
@@ -135,7 +137,8 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 消费一次队友 B 连携技输入，默认键位 3。
+        /// 消费一次队友 B 连携请求输入，默认键位 3。
+        /// 这里只读取玩家意图，是否能释放必须由连携机制判断。
         /// </summary>
         public bool ConsumeAllySlotBLinkAttackPressed()
         {
@@ -151,7 +154,7 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 覆盖主控主动技能、队友主动技能和连携技的键盘绑定。
+        /// 覆盖主控主动技能、队友主动技能和连携请求的键盘绑定。
         /// 该方法只改运行时 InputAction 实例，不写回 inputactions 资产。
         /// </summary>
         public void ApplyPartyCombatKeyboardBindings(

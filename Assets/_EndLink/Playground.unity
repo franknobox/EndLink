@@ -173,8 +173,10 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6ebf8ed62fa446c491bdfb0a4fd73136, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.AllyCombatDriver
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.Ally.AllyCombatDriver
   assistAction: {fileID: 11400000, guid: 333519e5bab8ee1488b9061cf7710c60, type: 2}
+  skillAction: {fileID: 11400000, guid: bd19f0735bc84f84389cecf9cf0cd519, type: 2}
+  linkAction: {fileID: 11400000, guid: c64f9df7cb4f54546bcb993ce0b22096, type: 2}
   faceTargetBeforeAttack: 1
   fallbackForward: {x: 0, y: 0, z: 1}
   logExecutionFailures: 1
@@ -1537,12 +1539,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 30f73b806f6c4dd0aa06fb7d37700ef8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.PlayerCombatDriver
-  basicAttackDefinition: {fileID: 11400000, guid: 5aad972d3b43ae1408e5aeb62b6f8bd4, type: 2}
-  hitboxPrefab: {fileID: 5103679077457519376, guid: 8caf2470444b6d947a5acc2fd8d74882, type: 3}
-  spawnDistance: 1
-  spawnHeight: 1
-  hitboxLifetime: 0.2
-  attackCooldown: 0.45
+  basicAttackAction: {fileID: 11400000, guid: 5aad972d3b43ae1408e5aeb62b6f8bd4, type: 2}
+  skillAction: {fileID: 11400000, guid: bd19f0735bc84f84389cecf9cf0cd519, type: 2}
+  linkAction: {fileID: 11400000, guid: c64f9df7cb4f54546bcb993ce0b22096, type: 2}
 --- !u!1 &698380643
 GameObject:
   m_ObjectHideFlags: 0
@@ -1618,8 +1617,10 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6ebf8ed62fa446c491bdfb0a4fd73136, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.AllyCombatDriver
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.Ally.AllyCombatDriver
   assistAction: {fileID: 11400000, guid: 333519e5bab8ee1488b9061cf7710c60, type: 2}
+  skillAction: {fileID: 11400000, guid: bd19f0735bc84f84389cecf9cf0cd519, type: 2}
+  linkAction: {fileID: 11400000, guid: c64f9df7cb4f54546bcb993ce0b22096, type: 2}
   faceTargetBeforeAttack: 1
   fallbackForward: {x: 0, y: 0, z: 1}
   logExecutionFailures: 1

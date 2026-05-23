@@ -43,6 +43,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 计划内容：
 - 连携触发规则初版：基于 `CombatEventsBus`、`CombatTagContainer` 和 `CombatTagDefinition`，定义最小可用的触发条件，例如指定标签命中、标签组合、目标处于可连携窗口等。
 - 连携反应规则初版：触发后能明确由谁响应、响应哪个目标、执行哪个 Action，并广播可观察事件，方便调试。
+- 连携技不能作为普通输入动作直接释放；1/2/3 只表示玩家请求使用某个连携槽位，必须由连携机制确认合法窗口后才能执行 `LinkAttack`。
 - 四类 Action Base 版：分别做出`Skill`、`LinkAttack`、`Ultimate` 的基础数据资产和最小执行路径，键位。
 
 阶段完成标准：
@@ -91,8 +92,6 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 <details>
 <summary>展开详情</summary>
-
-
 功能说明：
 - 使用已生成的 `InputSystem_Actions` C# 包装类。
 - 玩家移动输入和相机输入分开读取，避免输入读取器承担移动或相机逻辑。
@@ -100,7 +99,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 攻击输入读取 `Player/Attack`，由状态机消费后决定是否进入攻击状态。
 - 主控主动技能读取 `Player/PlayerSkill`，默认键位 Q。
 - 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`，默认键位 E / F。
-- 主控和队友连携技读取 `Player/PlayerLinkAttack`、`Player/AllySlotALinkAttack`、`Player/AllySlotBLinkAttack`，默认键位 1 / 2 / 3。
+- 主控和队友连携请求读取 `Player/PlayerLinkAttack`、`Player/AllySlotALinkAttack`、`Player/AllySlotBLinkAttack`，默认键位 1 / 2 / 3；这些输入不会绕过连携机制直接释放动作。
 - 全队极限技读取 `Player/PartyUltimate`，默认键位 V。
 - 相机旋转读取 `Player/Look`。
 - 鼠标滚轮缩放暂时通过 `Mouse.current.scroll` 读取，后续可迁移到独立 `Zoom` action。
@@ -526,7 +525,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 目标死亡时，`AllyBrain` 会监听 `Dead` 事件并请求状态机取消当前助战。
 - `AllyBrain` 不直接生成 Hitbox，不写伤害数据，只把事件目标交给 `AllyStateMachine.RequestAssist(...)`。
 - `AllyCombatDriver` 是队友战斗执行器，职责类似 `PlayerCombatDriver`，但不读取输入，也不决定什么时候出手。
-- `AllyCombatDriver` 根据 `CombatActionDefinition` 生成 Hitbox，并写入伤害、击退、战斗标签和标签持续时间。
+- `AllyCombatDriver` 保存队友的自动助战、主动技能、连携技动作槽位，并根据 `CombatActionDefinition` 生成 Hitbox、写入伤害、击退、战斗标签和标签持续时间。
 - 队友进入助战流程只要求配置了 `Assist Action`；动作冷却只影响实际出手时间，冷却未结束时会在 Assist 内等待，而不是放弃助战。
 - `CombatActionDefinition.Effective Attack Range` 决定队友距离目标 Collider 表面多远开始攻击；旧动作资产未写入该字段时会回退到默认近战距离。
 - `AllyCombatDriver` 执行助战时会朝目标方向生成判定，并广播 `ActionStarted` 事件。
@@ -706,7 +705,8 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 初始化时，`PartyManager` 会把两个槽位的 `formationOffset` 写入各自队友的 `AllyFollowMotor`。
 - `PartyCombatRouter` 负责把 `PlayerInputReader` 中的战斗输入翻译成主控、队友 A、队友 B 或全队的命令请求。
 - `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害、标签或状态机切换，后续由 Player / Ally Driver 或连携系统订阅 `CommandRequested` 后执行。
-- `PartyCombatRouter` Inspector 中可以覆盖 Q/E/F 和 1/2/3 对应的技能与连携键位，V 键全队极限技暂时固定。
+- `PartyCombatRouter` Inspector 中可以覆盖 Q/E/F 和 1/2/3 对应的技能与连携请求键位，V 键全队极限技暂时固定。
+- `LinkAttack` 命令只表示玩家请求使用连携槽位，不能被普通动作执行层直接当成可释放技能处理。
 - 后续队友 AI、连携规则或调试工具需要知道“谁是主控，谁是队友”时，可以从 `PartyManager` 查询。
 
 对应脚本：
@@ -731,7 +731,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `allySlotB`：第二个队友槽位
 - `formationOffset`：每个队友相对主控的本地队形偏移，例如左后 `(-1.5, 0, -2.5)`、右后 `(1.5, 0, -2.5)`
 - `playerSkillKey` / `allySlotASkillKey` / `allySlotBSkillKey`：主控和两个队友主动技能键位，默认 Q / E / F
-- `playerLinkAttackKey` / `allySlotALinkAttackKey` / `allySlotBLinkAttackKey`：主控和两个队友连携技键位，默认 1 / 2 / 3
+- `playerLinkAttackKey` / `allySlotALinkAttackKey` / `allySlotBLinkAttackKey`：主控和两个队友连携请求键位，默认 1 / 2 / 3
 - `logInitialization`：是否打印小队初始化日志
 - `logCommands`：是否打印小队战斗命令路由日志
 
@@ -807,34 +807,28 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 功能说明：
 - `PlayerCombatDriver` 不读取输入，不决定是否能进入攻击状态。
 - 状态机决定能否攻击，`PlayerCombatDriver` 只负责执行攻击表现和判定。
-- 支持通过 `CombatActionDefinition` 配置普攻的伤害、击退、`CombatTagDefinition` 标签、标签持续时间、冷却、Hitbox 和生成参数。
-- 未配置 `CombatActionDefinition` 时，仍会回退使用组件上的兼容默认字段。
+- 支持通过 `CombatActionDefinition` 配置普攻、主动技能、连携技的伤害、击退、`CombatTagDefinition` 标签、标签持续时间、冷却、Hitbox 和生成参数。
+- `PlayerCombatDriver` 不再保留默认 Hitbox 和默认攻击节奏，所有可执行动作都必须来自 `CombatActionDefinition`。
 - 当前执行内容是在角色正前方生成指定 Hitbox prefab。
-- 支持攻击冷却，防止攻击过快触发。
-- 支持 `spawnDistance` 和 `spawnHeight` 调整 Hitbox 生成位置。
+- 支持动作冷却，防止动作过快触发。
+- 支持通过动作资产中的 `Hitbox Spawn Distance` 和 `Hitbox Spawn Height` 调整 Hitbox 生成位置。
 - 生成 Hitbox 后会调用 `HitboxBase.Initialize(gameObject)` 传入攻击者。
 - Hitbox 会在指定生命周期后自动销毁。
 - 成功执行攻击后会通过 `CombatEventsBus` 广播 `ActionStarted`。
-
 对应脚本：
 - `Assets/_EndLink/Combat/PlayerCombatDriver.cs`
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
 - `Assets/_EndLink/Combat/HitboxBase.cs`
-
 相关物体/资产：
 - 玩家根物体：挂载 `PlayerCombatDriver`
 - `CombatActionDefinition` 数据资产：可通过 `Create > EndLink > Combat > Combat Action Definition` 创建
 - `Assets/_EndLink/Combat/Hitbox_Base.prefab`
 - `Assets/_EndLink/Combat/Hitbox_MeleeWave.prefab`
-
 关键配置：
-- `basicAttackDefinition`：玩家普攻配置资产，配置后优先使用资产参数
-- `hitboxPrefab`：攻击生成的 Hitbox prefab
-- `spawnDistance`：生成在角色前方的距离
-- `spawnHeight`：生成高度偏移
-- `hitboxLifetime`：Hitbox 自动销毁时间
-- `attackCooldown`：攻击冷却时间
-
+- `Basic Attack Action`：玩家普攻动作资产，鼠标左键触发的 `Attack` 状态会执行它
+- `Skill Action`：玩家主动技能动作资产，后续由 `PartyCombatRouter` 的主角技能命令触发
+- `Link Action`：玩家连携技动作资产，后续只能由连携机制确认合法窗口后触发，不能作为普通输入动作直接释放
+- Hitbox、生成距离、高度、生命周期和冷却都从对应的 `CombatActionDefinition` 读取
 </details>
 
 <a id="feature-hitbox"></a>

@@ -15,7 +15,7 @@ namespace EndLink.Combat
         /// <summary>普通技能。通常由玩家输入或 AI 决策释放，有冷却、时序和特殊效果。</summary>
         Skill = 1,
 
-        /// <summary>连携攻击。通常由标签、事件或连携规则触发，不一定由玩家直接输入。</summary>
+        /// <summary>连携攻击。必须由标签、事件或连携规则打开合法窗口后释放，不能作为普通输入动作直接释放。</summary>
         LinkAttack = 2,
 
         /// <summary>大招。通常消耗高权重资源或满足特殊条件，后续可接演出和镜头。</summary>
@@ -193,6 +193,34 @@ namespace EndLink.Combat
         /// 动作总时长，等于前摇、有效时间和后摇之和。
         /// </summary>
         public float TotalDuration => startupTime + activeTime + recoveryTime;
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Editor 创建数据资产时使用的轻量初始化入口。
+        /// 运行时系统不应通过它修改动作数据。
+        /// </summary>
+        public void EditorInitialize(CombatActionType initialActionType)
+        {
+            EditorInitialize(initialActionType, string.Empty);
+        }
+
+        /// <summary>
+        /// Editor 创建数据资产时使用的轻量初始化入口。
+        /// 会把动作类型、ActionId 和显示名称初始化为创建窗口给出的资产名。
+        /// </summary>
+        public void EditorInitialize(CombatActionType initialActionType, string rawActionName)
+        {
+            actionType = initialActionType;
+
+            if (!string.IsNullOrWhiteSpace(rawActionName))
+            {
+                actionId = rawActionName.Trim();
+                displayName = rawActionName.Trim();
+            }
+
+            UnityEditor.EditorUtility.SetDirty(this);
+        }
+#endif
 
         private void OnValidate()
         {

@@ -16,6 +16,14 @@ namespace EndLink.Ally
         [SerializeField]
         private CombatActionDefinition assistAction;
 
+        [Tooltip("队友主动技能动作。后续由 PartyCombatRouter 的队友技能命令触发。")]
+        [SerializeField]
+        private CombatActionDefinition skillAction;
+
+        [Tooltip("队友连携技动作配置。不能被普通输入直接释放，必须由后续连携机制确认窗口后调用。")]
+        [SerializeField]
+        private CombatActionDefinition linkAction;
+
         [Header("瞄准")]
         [Tooltip("执行助战时是否先把队友水平转向目标。关闭后会始终使用队友当前 Z 轴正前方生成 Hitbox。")]
         [SerializeField]
@@ -30,19 +38,25 @@ namespace EndLink.Ally
         [SerializeField]
         private bool logExecutionFailures = true;
 
-        private float _nextAssistTime;
+        private float _nextActionTime;
 
         /// <summary>当前队友助战动作配置。</summary>
         public CombatActionDefinition AssistAction => assistAction;
+
+        /// <summary>队友主动技能动作。</summary>
+        public CombatActionDefinition SkillAction => skillAction;
+
+        /// <summary>队友连携技动作配置。实际释放必须由连携机制授权。</summary>
+        public CombatActionDefinition LinkAction => linkAction;
 
         /// <summary>是否已经配置助战动作。用于判断队友能否进入助战流程，不代表冷却已经结束。</summary>
         public bool HasAssistAction => assistAction != null;
 
         /// <summary>当前助战动作剩余冷却时间。</summary>
-        public float AssistCooldownRemaining => Mathf.Max(0f, _nextAssistTime - Time.time);
+        public float AssistCooldownRemaining => Mathf.Max(0f, _nextActionTime - Time.time);
 
         /// <summary>当前是否已经过了动作冷却，可以真正执行一次助战攻击。</summary>
-        public bool CanAssist => assistAction != null && Time.time >= _nextAssistTime;
+        public bool CanAssist => assistAction != null && Time.time >= _nextActionTime;
 
         /// <summary>
         /// 运行时替换助战动作。
@@ -59,31 +73,40 @@ namespace EndLink.Ally
         /// </summary>
         public bool ExecuteAssist(Transform target)
         {
-            if (assistAction == null)
+            return ExecuteAction(assistAction, target);
+        }
+
+        /// <summary>
+        /// 执行指定队友动作。
+        /// 调用者负责判断这个动作来自自动助战、玩家命令技能还是已被连携机制授权的连携技。
+        /// </summary>
+        public bool ExecuteAction(CombatActionDefinition actionDefinition, Transform target)
+        {
+            if (actionDefinition == null)
             {
-                AllyDebugLog.Raise(gameObject, AllyDebugCategory.Combat, "execute assist failed: missing assist action");
-                LogFailure("AllyCombatDriver 缺少 Assist Action，无法执行助战。");
+                AllyDebugLog.Raise(gameObject, AllyDebugCategory.Combat, "execute action failed: missing action definition");
+                LogFailure("AllyCombatDriver 缺少动作配置，无法执行动作。");
                 return false;
             }
 
-            if (!CanAssist)
+            if (Time.time < _nextActionTime)
             {
                 AllyDebugLog.Raise(
                     gameObject,
                     AllyDebugCategory.Combat,
-                    $"execute assist skipped: cooldown remaining={AssistCooldownRemaining:F2}");
+                    $"execute action skipped: cooldown remaining={AssistCooldownRemaining:F2}");
                 return false;
             }
 
-            GameObject hitboxPrefab = assistAction.HitboxPrefab;
+            GameObject hitboxPrefab = actionDefinition.HitboxPrefab;
 
             if (hitboxPrefab == null)
             {
                 AllyDebugLog.Raise(
                     gameObject,
                     AllyDebugCategory.Combat,
-                    $"execute assist failed: action={assistAction.ActionId} missing hitbox prefab");
-                LogFailure("AllyCombatDriver 的 Assist Action 缺少 Hitbox Prefab。");
+                    $"execute action failed: action={actionDefinition.ActionId} missing hitbox prefab");
+                LogFailure($"AllyCombatDriver 的动作 {actionDefinition.ActionId} 缺少 Hitbox Prefab。");
                 return false;
             }
 
@@ -95,8 +118,8 @@ namespace EndLink.Ally
             }
 
             Vector3 spawnPosition = transform.position
-                + forward * assistAction.HitboxSpawnDistance
-                + Vector3.up * assistAction.HitboxSpawnHeight;
+                + forward * actionDefinition.HitboxSpawnDistance
+                + Vector3.up * actionDefinition.HitboxSpawnHeight;
             Quaternion spawnRotation = Quaternion.LookRotation(forward, Vector3.up);
 
             GameObject hitboxInstance = Instantiate(hitboxPrefab, spawnPosition, spawnRotation);
@@ -105,10 +128,10 @@ namespace EndLink.Ally
             {
                 hitbox.Initialize(gameObject);
                 hitbox.Configure(
-                    assistAction.DamageAmount,
-                    assistAction.KnockbackForce,
-                    assistAction.CombatTagToApply,
-                    assistAction.CombatTagDuration);
+                    actionDefinition.DamageAmount,
+                    actionDefinition.KnockbackForce,
+                    actionDefinition.CombatTagToApply,
+                    actionDefinition.CombatTagDuration);
             }
             else
             {
@@ -118,17 +141,17 @@ namespace EndLink.Ally
                     $"spawned hitbox has no HitboxBase, prefab={hitboxPrefab.name}");
             }
 
-            Destroy(hitboxInstance, assistAction.HitboxLifetime);
+            Destroy(hitboxInstance, actionDefinition.HitboxLifetime);
 
-            _nextAssistTime = Time.time + assistAction.Cooldown;
+            _nextActionTime = Time.time + actionDefinition.Cooldown;
             AllyDebugLog.Raise(
                 gameObject,
                 AllyDebugCategory.Combat,
-                $"execute assist action={assistAction.ActionId}, target={GetTransformName(target)}, spawn={spawnPosition}, nextCd={assistAction.Cooldown:F2}");
+                $"execute action={actionDefinition.ActionId}, target={GetTransformName(target)}, spawn={spawnPosition}, nextCd={actionDefinition.Cooldown:F2}");
             CombatEventsBus.RaiseActionStarted(
                 gameObject,
                 target != null ? target.gameObject : null,
-                assistAction);
+                actionDefinition);
 
             return true;
         }

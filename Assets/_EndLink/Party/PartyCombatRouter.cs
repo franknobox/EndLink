@@ -12,6 +12,10 @@ namespace EndLink.Party
     public enum PartyCombatCommandType
     {
         Skill = 0,
+        /// <summary>
+        /// 连携技请求。
+        /// 这不是普通快捷键释放，后续必须由连携机制确认当前存在合法连携窗口后才能执行。
+        /// </summary>
         LinkAttack = 1,
         Ultimate = 2
     }
@@ -30,6 +34,7 @@ namespace EndLink.Party
     /// <summary>
     /// 一次玩家主动发出的战斗命令。
     /// 后续 Skill / Link / Ultimate 系统可以订阅 PartyCombatRouter.CommandRequested 来执行具体动作。
+    /// LinkAttack 类型只表示玩家请求使用连携槽位，不代表动作可以直接释放。
     /// </summary>
     public readonly struct PartyCombatCommand
     {
@@ -83,16 +88,16 @@ namespace EndLink.Party
         [SerializeField]
         private Key allySlotBSkillKey = Key.F;
 
-        [Header("连携技键位")]
-        [Tooltip("主控连携技键位。默认 1。")]
+        [Header("连携请求键位")]
+        [Tooltip("主控连携请求键位。默认 1。按下后只发出请求，必须由连携机制确认可释放。")]
         [SerializeField]
         private Key playerLinkAttackKey = Key.Digit1;
 
-        [Tooltip("队友 A 连携技键位。默认 2。")]
+        [Tooltip("队友 A 连携请求键位。默认 2。按下后只发出请求，必须由连携机制确认可释放。")]
         [SerializeField]
         private Key allySlotALinkAttackKey = Key.Digit2;
 
-        [Tooltip("队友 B 连携技键位。默认 3。")]
+        [Tooltip("队友 B 连携请求键位。默认 3。按下后只发出请求，必须由连携机制确认可释放。")]
         [SerializeField]
         private Key allySlotBLinkAttackKey = Key.Digit3;
 

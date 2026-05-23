@@ -23,6 +23,7 @@ namespace EndLink.Editor
         private int _selectedTab;
         private Vector2 _scrollPosition;
         private string _actionAssetName = "CombatAction_New";
+        private CombatActionType _actionType = CombatActionType.BasicAttack;
         private string _tagAssetName = "CombatTag_New";
         private string _combinationRuleAssetName = "CombatTagCombination_New";
 
@@ -91,12 +92,13 @@ namespace EndLink.Editor
             DrawFolderField("Folder", ActionsFolder);
             GUI.SetNextControlName("EndLink.CombatDataTool.ActionAssetName");
             _actionAssetName = EditorGUILayout.TextField("Action Asset Name", _actionAssetName);
+            _actionType = (CombatActionType)EditorGUILayout.EnumPopup("Action Type", _actionType);
 
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (GUILayout.Button("Create Action", GUILayout.Height(28f)))
                 {
-                    CreateAsset<CombatActionDefinition>(ActionsFolder, _actionAssetName, "CombatAction_New");
+                    CreateCombatActionAsset();
                 }
 
                 if (GUILayout.Button("Show Folder", GUILayout.Height(28f)))
@@ -212,6 +214,23 @@ namespace EndLink.Editor
             string assetName = SanitizeAssetName(rawAssetName, fallbackName);
             string assetPath = AssetDatabase.GenerateUniqueAssetPath($"{folder}/{assetName}.asset");
             T asset = CreateInstance<T>();
+
+            AssetDatabase.CreateAsset(asset, assetPath);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            Selection.activeObject = asset;
+            EditorGUIUtility.PingObject(asset);
+        }
+
+        private void CreateCombatActionAsset()
+        {
+            EnsureFolder(ActionsFolder);
+
+            string assetName = SanitizeAssetName(_actionAssetName, "CombatAction_New");
+            string assetPath = AssetDatabase.GenerateUniqueAssetPath($"{ActionsFolder}/{assetName}.asset");
+            CombatActionDefinition asset = CreateInstance<CombatActionDefinition>();
+            asset.EditorInitialize(_actionType, assetName);
 
             AssetDatabase.CreateAsset(asset, assetPath);
             AssetDatabase.SaveAssets();

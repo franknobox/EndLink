@@ -4,77 +4,38 @@ namespace EndLink.Combat
 {
     /// <summary>
     /// 玩家战斗驱动器。
-    /// 不读取输入、不决定状态是否能切换，只负责执行攻击表现和攻击判定。
-    /// 当前胶囊白模阶段的执行内容是：在角色正前方生成 Hitbox，并在短时间后销毁。
+    /// 只保存玩家可释放的动作槽位，并按照 CombatActionDefinition 执行动作表现和 Hitbox 判定。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class PlayerCombatDriver : MonoBehaviour
     {
-        [Header("动作配置")]
-        [Tooltip("玩家普攻配置。配置后会优先使用该资产里的伤害、冷却、Hitbox、生成位置和标签参数。")]
+        [Header("动作槽位")]
+        [Tooltip("玩家普攻动作。鼠标左键会由玩家状态机触发该动作。")]
         [SerializeField]
-        private CombatActionDefinition basicAttackDefinition;
+        private CombatActionDefinition basicAttackAction;
 
-        [Header("兼容默认 Hitbox")]
-        [Tooltip("攻击时生成的 Hitbox 预制体。通常拖入带有碰撞体/命中检测脚本的 Hitbox prefab。")]
+        [Tooltip("玩家主动技能动作。后续由 PartyCombatRouter 的 Q 命令触发。")]
         [SerializeField]
-        private GameObject hitboxPrefab;
+        private CombatActionDefinition skillAction;
 
-        [Tooltip("Hitbox 生成在角色正前方的距离。角色本地 Z 轴正方向视为前方。")]
-        [SerializeField, Min(0f)]
-        private float spawnDistance = 1f;
-
-        [Tooltip("Hitbox 生成高度偏移。用于把近战波从脚底抬到角色腰部或胸口高度。")]
+        [Tooltip("玩家连携技动作配置。不能被普通输入直接释放，必须由后续连携机制确认窗口后调用。")]
         [SerializeField]
-        private float spawnHeight = 1f;
-
-        [Tooltip("Hitbox 自动销毁时间。近战波胶囊阶段建议保持很短，例如 0.2 秒。")]
-        [SerializeField, Min(0.01f)]
-        private float hitboxLifetime = 0.2f;
-
-        [Header("兼容默认攻击节奏")]
-        [Tooltip("攻击冷却时间。冷却未结束时，状态机不会允许进入新的攻击状态。")]
-        [SerializeField, Min(0f)]
-        private float attackCooldown = 0.45f;
+        private CombatActionDefinition linkAction;
 
         private PlayerTargeting _targeting;
-        private float _nextAttackTime;
+        private float _nextActionTime;
 
-        /// <summary>
-        /// 当前是否已经结束冷却，可以发起下一次攻击。
-        /// </summary>
-        public bool CanAttack => Time.time >= _nextAttackTime;
+        /// <summary>玩家普攻动作。</summary>
+        public CombatActionDefinition BasicAttackAction => basicAttackAction;
 
-        /// <summary>
-        /// 当前使用的普攻配置资产。为空时使用本组件上的兼容默认字段。
-        /// </summary>
-        public CombatActionDefinition BasicAttackDefinition => basicAttackDefinition;
+        /// <summary>玩家主动技能动作。</summary>
+        public CombatActionDefinition SkillAction => skillAction;
 
-        /// <summary>
-        /// 当前是否已经配置普攻数据资产。
-        /// </summary>
-        public bool HasBasicAttackDefinition => basicAttackDefinition != null;
+        /// <summary>玩家连携技动作配置。实际释放必须由连携机制授权。</summary>
+        public CombatActionDefinition LinkAction => linkAction;
 
-        /// <summary>
-        /// 当前普攻冷却时间。优先来自 CombatActionDefinition，未配置时回退到组件字段。
-        /// </summary>
-        public float CurrentAttackCooldown => GetAttackCooldown();
-
-        /// <summary>
-        /// 设置普攻配置资产。主要用于运行时配置、调试工具或简单编译测试。
-        /// </summary>
-        public void SetBasicAttackDefinition(CombatActionDefinition definition)
-        {
-            basicAttackDefinition = definition;
-        }
-
-        /// <summary>
-        /// 设置 Hitbox 预制体。主要用于运行时配置或简单编译测试。
-        /// </summary>
-        public void SetHitboxPrefab(GameObject prefab)
-        {
-            hitboxPrefab = prefab;
-        }
+        /// <summary>当前是否可以释放下一次动作。</summary>
+        public bool CanAttack => Time.time >= _nextActionTime;
 
         private void Awake()
         {
@@ -82,52 +43,61 @@ namespace EndLink.Combat
         }
 
         /// <summary>
-        /// 执行一次攻击表现和攻击判定。
-        /// 调用者应先通过 CanAttack 判断冷却；这里仍保留防御性检查，避免外部误调用。
+        /// 执行普攻动作。
         /// </summary>
         public bool ExecuteAttack()
         {
-            CombatActionDefinition actionDefinition = basicAttackDefinition;
+            return ExecuteAction(basicAttackAction);
+        }
+
+        /// <summary>
+        /// 执行指定玩家动作。
+        /// 该方法不判断玩家状态机是否允许出手，只负责动作资源、冷却和 Hitbox 执行。
+        /// </summary>
+        public bool ExecuteAction(CombatActionDefinition actionDefinition)
+        {
+            if (actionDefinition == null)
+            {
+                Debug.LogWarning("PlayerCombatDriver 缺少动作配置，无法执行动作。", this);
+                return false;
+            }
 
             if (!CanAttack)
             {
                 return false;
             }
 
-            GameObject selectedHitboxPrefab = GetHitboxPrefab(actionDefinition);
-
-            if (selectedHitboxPrefab == null)
+            if (actionDefinition.HitboxPrefab == null)
             {
-                Debug.LogWarning("PlayerCombatDriver 缺少 Hitbox 预制体，无法生成攻击判定。", this);
+                Debug.LogWarning($"PlayerCombatDriver 的动作 {actionDefinition.ActionId} 缺少 Hitbox Prefab。", this);
                 return false;
             }
 
             Vector3 spawnPosition = transform.position
-                + transform.forward * GetHitboxSpawnDistance(actionDefinition)
-                + Vector3.up * GetHitboxSpawnHeight(actionDefinition);
+                + transform.forward * actionDefinition.HitboxSpawnDistance
+                + Vector3.up * actionDefinition.HitboxSpawnHeight;
             Quaternion spawnRotation = transform.rotation;
 
-            GameObject hitboxInstance = Instantiate(selectedHitboxPrefab, spawnPosition, spawnRotation);
+            GameObject hitboxInstance = Instantiate(actionDefinition.HitboxPrefab, spawnPosition, spawnRotation);
+            ConfigureHitbox(hitboxInstance, actionDefinition);
+            Destroy(hitboxInstance, actionDefinition.HitboxLifetime);
 
+            CombatEventsBus.RaiseActionStarted(gameObject, GetCurrentTargetObject(), actionDefinition);
+            _nextActionTime = Time.time + actionDefinition.Cooldown;
+            return true;
+        }
+
+        private void ConfigureHitbox(GameObject hitboxInstance, CombatActionDefinition actionDefinition)
+        {
             if (hitboxInstance.TryGetComponent(out HitboxBase hitbox))
             {
                 hitbox.Initialize(gameObject);
-
-                if (actionDefinition != null)
-                {
-                    hitbox.Configure(
-                        actionDefinition.DamageAmount,
-                        actionDefinition.KnockbackForce,
-                        actionDefinition.CombatTagToApply,
-                        actionDefinition.CombatTagDuration);
-                }
+                hitbox.Configure(
+                    actionDefinition.DamageAmount,
+                    actionDefinition.KnockbackForce,
+                    actionDefinition.CombatTagToApply,
+                    actionDefinition.CombatTagDuration);
             }
-
-            Destroy(hitboxInstance, GetHitboxLifetime(actionDefinition));
-            CombatEventsBus.RaiseActionStarted(gameObject, GetCurrentTargetObject(), actionDefinition);
-
-            _nextAttackTime = Time.time + GetAttackCooldown();
-            return true;
         }
 
         private GameObject GetCurrentTargetObject()
@@ -138,36 +108,6 @@ namespace EndLink.Combat
             }
 
             return _targeting.CurrentTarget != null ? _targeting.CurrentTarget.gameObject : null;
-        }
-
-        private float GetAttackCooldown()
-        {
-            return basicAttackDefinition != null ? basicAttackDefinition.Cooldown : attackCooldown;
-        }
-
-        private GameObject GetHitboxPrefab(CombatActionDefinition actionDefinition)
-        {
-            if (actionDefinition != null && actionDefinition.HitboxPrefab != null)
-            {
-                return actionDefinition.HitboxPrefab;
-            }
-
-            return hitboxPrefab;
-        }
-
-        private float GetHitboxSpawnDistance(CombatActionDefinition actionDefinition)
-        {
-            return actionDefinition != null ? actionDefinition.HitboxSpawnDistance : spawnDistance;
-        }
-
-        private float GetHitboxSpawnHeight(CombatActionDefinition actionDefinition)
-        {
-            return actionDefinition != null ? actionDefinition.HitboxSpawnHeight : spawnHeight;
-        }
-
-        private float GetHitboxLifetime(CombatActionDefinition actionDefinition)
-        {
-            return actionDefinition != null ? actionDefinition.HitboxLifetime : hitboxLifetime;
         }
     }
 }
