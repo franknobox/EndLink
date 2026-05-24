@@ -77,6 +77,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | [战斗动作配置](#feature-combat-action) | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和大招的伤害、冷却、时序、Hitbox 和命中标签。 |
 | [战斗标签系统](#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和标签组合转化规则。 |
 | [战斗数据编辑工具](#feature-combat-data-tool) | 已完成第一版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则数据资产。 |
+| [战斗 UI 槽位组件](#feature-combat-action-slot-ui) | 已完成最小版 | 提供小队命令槽位 UI，用于按主控/队友槽位读取当前动作、键位和冷却染色。 |
 | [战斗事件总栈](#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
 | [玩家战斗驱动](#feature-player-combat-driver) | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |
 | [敌人通用基底](#feature-enemy-foundation) | 已完成第一版 | 提供正式敌人身份入口、生命受击、死亡目标失效、目标有效性接口和大状态机骨架。 |
@@ -472,6 +473,39 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 </details>
 
+<a id="feature-combat-action-slot-ui"></a>
+
+### Feature：战斗 UI 槽位组件
+
+<details>
+<summary>展开详情</summary>
+功能说明：
+- `CombatActionSlotUI` 是小队战斗命令槽位的最小 UI 组件。
+- 槽位直接绑定 UI 键位槽，例如 `PlayerSkill`、`AllySlotASkill`、`AllySlotBSkill`。
+- 组件通过 `PartyManager` 解析当前角色，通过角色 CombatDriver 读取当前槽位动作和该动作自己的冷却。
+- 组件通过 `PartyManager.CombatRouter` 读取该槽位当前键位显示文本。
+- 组件不读取输入、不释放动作、不判断战斗规则。
+- 默认每帧自动刷新当前槽位动作的冷却染色，也支持外部通过 `SetCooldown(normalized)` 手动刷新。
+- `normalized > 0` 表示图标显示冷却染色，`normalized = 0` 表示恢复图标原色。
+- 冷却染色颜色可在 Inspector 中配置，默认半透明灰色，不做过渡插值。
+
+对应脚本：
+- `Assets/_EndLink/UI/CombatActionSlotUI.cs`
+
+相关物体：
+- 战斗 UI Canvas 下的技能、连携、大招等圆形动作槽位
+  - `CombatActionSlotUI`
+  - `Image` 图标
+
+关键配置：
+- `partyManager`：小队管理器，空时自动查找
+- `slot`：该 UI 对应的键位槽，例如 PlayerSkill、AllySlotASkill、AllySlotBSkill
+- `iconImage`：技能图标 Image，可拖子物体上的 Icon
+- `cooldownTintColor`：冷却染色颜色，默认半透明灰色
+- `autoRefreshCooldown`：是否每帧从对应角色槽位读取冷却
+
+</details>
+
 <a id="feature-combat-events-bus"></a>
 
 ### Feature：战斗事件总栈
@@ -534,6 +568,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `AllyCombatDriver` 是队友战斗执行器，职责类似 `PlayerCombatDriver`，但不读取输入，也不决定什么时候出手。
 - `AllyCombatDriver` 保存队友的自动助战、主动技能、连携技动作槽位，并根据 `CombatActionDefinition` 生成 Hitbox、写入伤害、击退、战斗标签和标签持续时间。
 - 队友进入助战流程只要求配置了 `Assist Action`；动作冷却只影响实际出手时间，冷却未结束时会在 Assist 内等待，而不是放弃助战。
+- `AllyCombatDriver` 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 或调试窗口读取。
 - `CombatActionDefinition.Effective Attack Range` 决定队友距离目标 Collider 表面多远开始攻击。
 - `AllyCombatDriver` 执行助战时会朝目标方向生成判定，并广播 `ActionStarted` 事件。
 - `AllyTargetingUtility` 用目标 Collider 表面计算助战接近和攻击距离，避免大型敌人按中心点判断导致队友贴边却无法攻击。
@@ -708,6 +743,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `PartyFormationSlot` 保存单个队友槽位，包含槽位名、队友状态机和队形偏移。
 - 初始化时，`PartyManager` 会把 `mainCharacter` 设置为两个队友的跟随目标。
 - 初始化时，`PartyManager` 会把两个槽位的 `formationOffset` 写入各自队友的 `AllyFollowMotor`。
+- `PartyManager` 持有 `PartyCombatRouter` 引用，供战斗 UI 和后续小队系统读取当前键位路由。
 - `PartyCombatRouter` 负责把 `PlayerInputReader` 中的战斗输入翻译成主控、队友 A、队友 B 或全队的命令请求。
 - `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害、标签或状态机切换。
 - 当前第一版中，主控 `Skill` 命令会由 `PartyCombatRouter` 立即转发给 `PlayerCombatDriver` 执行 `SkillAction`。
@@ -818,6 +854,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `PlayerCombatDriver` 执行的动作必须来自 `CombatActionDefinition`。
 - 当前执行内容是在角色正前方生成指定 Hitbox prefab。
 - 支持动作冷却，防止动作过快触发。
+- 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 区分普攻、技能和连携槽。
 - 支持通过动作资产中的 `Hitbox Spawn Distance` 和 `Hitbox Spawn Height` 调整 Hitbox 生成位置。
 - 生成 Hitbox 后会调用 `HitboxBase.Initialize(gameObject)` 传入攻击者。
 - Hitbox 会在指定生命周期后自动销毁。

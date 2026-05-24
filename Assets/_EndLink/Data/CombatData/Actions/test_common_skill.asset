@@ -19,7 +19,7 @@ MonoBehaviour:
   knockbackForce: 3
   combatTagToApply: {fileID: 0}
   combatTagDuration: 0
-  cooldown: 0.45
+  cooldown: 5
   startupTime: 0.1
   activeTime: 0.2
   recoveryTime: 0.15

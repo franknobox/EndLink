@@ -130,6 +130,7 @@ GameObject:
   - component: {fileID: 12931815}
   - component: {fileID: 12931817}
   - component: {fileID: 12931816}
+  - component: {fileID: 12931818}
   m_Layer: 5
   m_Name: SkillSlot_Q
   m_TagString: Untagged
@@ -215,6 +216,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 12931814}
   m_CullTransparentMesh: 1
+--- !u!114 &12931818
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 12931814}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90156dba99ed447f83f84c9dfda07fa5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.UI.CombatActionSlotUI
+  partyManager: {fileID: 163565087}
+  slot: 0
+  iconImage: {fileID: 2024264574}
+  cooldownTintColor: {r: 0.45, g: 0.45, b: 0.45, a: 0.65}
+  autoRefreshCooldown: 1
 --- !u!1 &45882475
 GameObject:
   m_ObjectHideFlags: 0
@@ -595,6 +613,7 @@ GameObject:
   - component: {fileID: 81105207}
   - component: {fileID: 81105209}
   - component: {fileID: 81105208}
+  - component: {fileID: 81105210}
   m_Layer: 5
   m_Name: SkillSlot_F
   m_TagString: Untagged
@@ -680,6 +699,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 81105206}
   m_CullTransparentMesh: 1
+--- !u!114 &81105210
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 81105206}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90156dba99ed447f83f84c9dfda07fa5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.UI.CombatActionSlotUI
+  partyManager: {fileID: 163565087}
+  slot: 2
+  iconImage: {fileID: 1505265702}
+  cooldownTintColor: {r: 0.45, g: 0.45, b: 0.45, a: 0.65}
+  autoRefreshCooldown: 1
 --- !u!1 &153162658
 GameObject:
   m_ObjectHideFlags: 0
@@ -864,6 +900,7 @@ MonoBehaviour:
     slotName: Ally
     allyStateMachine: {fileID: 698380644}
     formationOffset: {x: 1.5, y: 0, z: -2.5}
+  combatRouter: {fileID: 0}
   logInitialization: 0
 --- !u!4 &163565088
 Transform:
@@ -951,7 +988,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.7256429, g: 0.66559625, b: 0.83396226, a: 0.9019608}
+  m_Color: {r: 0.7254902, g: 0.6666667, b: 0.8352941, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1587,6 +1624,7 @@ GameObject:
   - component: {fileID: 400163906}
   - component: {fileID: 400163908}
   - component: {fileID: 400163907}
+  - component: {fileID: 400163909}
   m_Layer: 5
   m_Name: SkillSlot_E
   m_TagString: Untagged
@@ -1672,6 +1710,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 400163905}
   m_CullTransparentMesh: 1
+--- !u!114 &400163909
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400163905}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90156dba99ed447f83f84c9dfda07fa5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.UI.CombatActionSlotUI
+  partyManager: {fileID: 163565087}
+  slot: 1
+  iconImage: {fileID: 171857036}
+  cooldownTintColor: {r: 0.45, g: 0.45, b: 0.45, a: 0.65}
+  autoRefreshCooldown: 1
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -2853,13 +2908,13 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1207609011}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0}
+  m_Color: {r: 0.45, g: 0.45, b: 0.45, a: 0.65}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2871,7 +2926,7 @@ MonoBehaviour:
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
-  m_FillAmount: 1
+  m_FillAmount: 0
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
@@ -3786,7 +3841,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.7256429, g: 0.66559625, b: 0.83396226, a: 0.9019608}
+  m_Color: {r: 0.7254902, g: 0.6666667, b: 0.8352941, a: 0.9019608}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -3798,7 +3853,7 @@ MonoBehaviour:
   m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
-  m_FillAmount: 1
+  m_FillAmount: 0
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0

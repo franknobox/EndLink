@@ -24,6 +24,8 @@ namespace EndLink.Combat
 
         private PlayerTargeting _targeting;
         private float _nextActionTime;
+        private float _lastActionCooldown;
+        private CombatActionDefinition _lastCooldownAction;
 
         /// <summary>玩家普攻动作。</summary>
         public CombatActionDefinition BasicAttackAction => basicAttackAction;
@@ -36,6 +38,40 @@ namespace EndLink.Combat
 
         /// <summary>当前是否可以释放下一次动作。</summary>
         public bool CanAttack => Time.time >= _nextActionTime;
+
+        /// <summary>当前动作冷却剩余时间，单位秒。</summary>
+        public float ActionCooldownRemaining => Mathf.Max(0f, _nextActionTime - Time.time);
+
+        /// <summary>最近一次成功执行动作写入的冷却总时长，单位秒。</summary>
+        public float ActionCooldownDuration => _lastActionCooldown;
+
+        /// <summary>当前动作冷却归一化进度，1 表示刚进入冷却，0 表示冷却结束。</summary>
+        public float ActionCooldownNormalized
+        {
+            get
+            {
+                return _lastActionCooldown > 0f
+                    ? Mathf.Clamp01(ActionCooldownRemaining / _lastActionCooldown)
+                    : 0f;
+            }
+        }
+
+        /// <summary>当前是否处于动作冷却中。</summary>
+        public bool IsActionCoolingDown => ActionCooldownRemaining > 0f;
+
+        /// <summary>
+        /// 查询指定动作当前的冷却归一化进度。
+        /// 当前第一版玩家只有一个动作锁，但 UI 需要知道“这个槽位自己的动作”是否在冷却，避免普攻冷却染灰技能槽。
+        /// </summary>
+        public float GetActionCooldownNormalized(CombatActionDefinition actionDefinition)
+        {
+            if (actionDefinition == null || _lastCooldownAction != actionDefinition)
+            {
+                return 0f;
+            }
+
+            return ActionCooldownNormalized;
+        }
 
         private void Awake()
         {
@@ -83,7 +119,9 @@ namespace EndLink.Combat
             Destroy(hitboxInstance, actionDefinition.HitboxLifetime);
 
             CombatEventsBus.RaiseActionStarted(gameObject, GetCurrentTargetObject(), actionDefinition);
-            _nextActionTime = Time.time + actionDefinition.Cooldown;
+            _lastCooldownAction = actionDefinition;
+            _lastActionCooldown = actionDefinition.Cooldown;
+            _nextActionTime = Time.time + _lastActionCooldown;
             return true;
         }
 

@@ -39,6 +39,8 @@ namespace EndLink.Ally
         private bool logExecutionFailures = true;
 
         private float _nextActionTime;
+        private float _lastActionCooldown;
+        private CombatActionDefinition _lastCooldownAction;
 
         /// <summary>当前队友助战动作配置。</summary>
         public CombatActionDefinition AssistAction => assistAction;
@@ -53,7 +55,41 @@ namespace EndLink.Ally
         public bool HasAssistAction => assistAction != null;
 
         /// <summary>当前助战动作剩余冷却时间。</summary>
-        public float AssistCooldownRemaining => Mathf.Max(0f, _nextActionTime - Time.time);
+        public float AssistCooldownRemaining => ActionCooldownRemaining;
+
+        /// <summary>当前动作冷却剩余时间，单位秒。</summary>
+        public float ActionCooldownRemaining => Mathf.Max(0f, _nextActionTime - Time.time);
+
+        /// <summary>最近一次成功执行动作写入的冷却总时长，单位秒。</summary>
+        public float ActionCooldownDuration => _lastActionCooldown;
+
+        /// <summary>当前动作冷却归一化进度，1 表示刚进入冷却，0 表示冷却结束。</summary>
+        public float ActionCooldownNormalized
+        {
+            get
+            {
+                return _lastActionCooldown > 0f
+                    ? Mathf.Clamp01(ActionCooldownRemaining / _lastActionCooldown)
+                    : 0f;
+            }
+        }
+
+        /// <summary>当前是否处于动作冷却中。</summary>
+        public bool IsActionCoolingDown => ActionCooldownRemaining > 0f;
+
+        /// <summary>
+        /// 查询指定动作当前的冷却归一化进度。
+        /// 当前第一版队友只有一个动作锁，但 UI 需要知道“这个槽位自己的动作”是否在冷却，避免助战动作染灰主动技能槽。
+        /// </summary>
+        public float GetActionCooldownNormalized(CombatActionDefinition actionDefinition)
+        {
+            if (actionDefinition == null || _lastCooldownAction != actionDefinition)
+            {
+                return 0f;
+            }
+
+            return ActionCooldownNormalized;
+        }
 
         /// <summary>当前是否已经过了动作冷却，可以真正执行一次助战攻击。</summary>
         public bool CanAssist => assistAction != null && Time.time >= _nextActionTime;
@@ -143,7 +179,9 @@ namespace EndLink.Ally
 
             Destroy(hitboxInstance, actionDefinition.HitboxLifetime);
 
-            _nextActionTime = Time.time + actionDefinition.Cooldown;
+            _lastCooldownAction = actionDefinition;
+            _lastActionCooldown = actionDefinition.Cooldown;
+            _nextActionTime = Time.time + _lastActionCooldown;
             AllyDebugLog.Raise(
                 gameObject,
                 AllyDebugCategory.Combat,

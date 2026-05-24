@@ -201,6 +201,42 @@ namespace EndLink.Party
                 allySlotBLinkAttackKey);
         }
 
+        /// <summary>
+        /// 获取指定战斗命令槽位当前使用的键位。
+        /// 主要供 UI 和调试工具读取，实际输入仍由 PlayerInputReader 负责。
+        /// </summary>
+        public Key GetKeyForCommand(PartyCombatCommandType commandType, PartyCombatActorSlot actorSlot)
+        {
+            return commandType switch
+            {
+                PartyCombatCommandType.Skill => actorSlot switch
+                {
+                    PartyCombatActorSlot.MainCharacter => playerSkillKey,
+                    PartyCombatActorSlot.AllySlotA => allySlotASkillKey,
+                    PartyCombatActorSlot.AllySlotB => allySlotBSkillKey,
+                    _ => Key.None
+                },
+                PartyCombatCommandType.LinkAttack => actorSlot switch
+                {
+                    PartyCombatActorSlot.MainCharacter => playerLinkAttackKey,
+                    PartyCombatActorSlot.AllySlotA => allySlotALinkAttackKey,
+                    PartyCombatActorSlot.AllySlotB => allySlotBLinkAttackKey,
+                    _ => Key.None
+                },
+                PartyCombatCommandType.Ultimate => actorSlot == PartyCombatActorSlot.Party ? Key.V : Key.None,
+                _ => Key.None
+            };
+        }
+
+        /// <summary>
+        /// 获取指定战斗命令槽位当前使用的键位显示文本。
+        /// </summary>
+        public string GetKeyLabelForCommand(PartyCombatCommandType commandType, PartyCombatActorSlot actorSlot)
+        {
+            Key key = GetKeyForCommand(commandType, actorSlot);
+            return key == Key.None ? string.Empty : KeyToDisplayLabel(key);
+        }
+
         private void CacheReferences()
         {
             if (inputReader == null)
@@ -357,6 +393,24 @@ namespace EndLink.Party
         private static string GetObjectName(UnityEngine.Object target)
         {
             return target != null ? target.name : "None";
+        }
+
+        private static string KeyToDisplayLabel(Key key)
+        {
+            return key switch
+            {
+                Key.Digit0 => "0",
+                Key.Digit1 => "1",
+                Key.Digit2 => "2",
+                Key.Digit3 => "3",
+                Key.Digit4 => "4",
+                Key.Digit5 => "5",
+                Key.Digit6 => "6",
+                Key.Digit7 => "7",
+                Key.Digit8 => "8",
+                Key.Digit9 => "9",
+                _ => key.ToString().ToUpperInvariant()
+            };
         }
     }
 }

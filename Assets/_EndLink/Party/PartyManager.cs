@@ -25,6 +25,11 @@ namespace EndLink.Party
         [SerializeField]
         private PartyFormationSlot allySlotB = new();
 
+        [Header("战斗路由")]
+        [Tooltip("小队战斗命令路由器。UI 和后续小队战斗系统通过这里读取当前键位路由。为空时会在场景中自动查找。")]
+        [SerializeField]
+        private PartyCombatRouter combatRouter;
+
         [Header("调试")]
         [Tooltip("初始化小队时打印主控和队友槽位信息。")]
         [SerializeField]
@@ -38,6 +43,30 @@ namespace EndLink.Party
 
         /// <summary>第二个队友槽位。</summary>
         public PartyFormationSlot AllySlotB => allySlotB;
+
+        /// <summary>小队战斗命令路由器。</summary>
+        public PartyCombatRouter CombatRouter
+        {
+            get
+            {
+                if (combatRouter == null)
+                {
+                    CacheReferences();
+                }
+
+                return combatRouter;
+            }
+        }
+
+        private void Awake()
+        {
+            CacheReferences();
+        }
+
+        private void Reset()
+        {
+            CacheReferences();
+        }
 
         private void Start()
         {
@@ -96,6 +125,14 @@ namespace EndLink.Party
             if (slot != null && slot.HasAlly)
             {
                 results.Add(slot.AllyStateMachine);
+            }
+        }
+
+        private void CacheReferences()
+        {
+            if (combatRouter == null)
+            {
+                combatRouter = FindFirstObjectByType<PartyCombatRouter>();
             }
         }
     }
