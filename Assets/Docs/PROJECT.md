@@ -684,9 +684,10 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-- `AllyFollowMotor` 是队友跟随移动组件，不依赖 NavMesh。
+- `AllyFollowMotor` 是队友跟随移动执行组件，不依赖 NavMesh。
 - 支持使用 `CharacterController.Move` 移动；如果队友没有 `CharacterController`，则直接修改 `Transform.position`。
 - `AllyStateMachine` 负责保存跟随目标并同步给 `AllyFollowMotor`。
+- `PartyManager` 通过 `PartyFollowSettings` 统一配置两个队友的跟随参数，并在初始化时写入各自的 `AllyFollowMotor`。
 - `AllyFollowState` 每帧调用 `TickFollow(deltaTime)`，因此 Assist、Hit、Dead 状态不会继续抢跟随移动。
 - 助战接近状态会调用 `TickMoveToPosition(position, arriveDistance, deltaTime)`，让队友临时移动到敌人附近而不修改主控跟随目标。
 - 队友会移动到主控的本地队形偏移范围，移动时面向移动方向，停下后的朝向由 `idleFacingMode` 决定。
@@ -694,6 +695,8 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 支持 `catchUpDistance` 和 `catchUpSpeedMultiplier`，队友落后较远时会加速追上。
 - 支持 `teleportDistance`，队友极端远离队形点时会直接归位，避免长距离丢失。
 - 支持 `followSlotSoftness`，队友进入队形点周围软半径后就算到位，不强制踩死精确坐标。
+- 支持 `followDeadZoneRadius`，每个队友站定后会以自己的站位作为死区中心；主控仍在该半径内移动时不会触发该队友重新跟随，也不会跟随主控转向；走出半径后才更新队形点和朝向。
+- `AllyFollowMotor` 会常驻绘制跟随死区 Gizmo，运行时以该队友当前死区中心为圆心，非运行时以队友自身为圆心；选中队友时 Gizmo 会更明显。
 - 支持第一版简易避让：离主控太近时会被推开，配置 `avoidanceLayerMask` 后也能对其他队友做局部排斥。
 - `formationOffset` 由 `PartyManager` 的队友槽位统一配置，并写入 `AllyFollowMotor`。
 - 当前只处理平面 XZ 跟随和局部避让，后续如果需要复杂地形、障碍绕路，再接 NavMesh 或更完整的队伍槽位调度。
@@ -702,30 +705,33 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `Assets/_EndLink/Ally/AllyFollowMotor.cs`
 - `Assets/_EndLink/Ally/AllyFollowState.cs`
 - `Assets/_EndLink/Ally/AllyStateMachine.cs`
+- `Assets/_EndLink/Party/PartyFollowSettings.cs`
+- `Assets/_EndLink/Party/PartyManager.cs`
 
 相关物体：
 - 队友根物体
   - `AllyStateMachine`
   - `AllyFollowMotor`
   - 可选 `CharacterController`
+- 小队管理物体
+  - `PartyManager`
 
 关键配置：
-- `followTarget`：跟随目标，通常拖固定主控角色
-- `followDistance`：当 `formationOffset` 为零时使用的默认后方距离
-- `stopDistance`：距离队形点小于该值时停止移动
-- `followSlotSoftness`：队形点软半径，范围内算到位
-- `moveSpeed`：队友跟随移动速度
-- `arrivalSmoothTime`：接近队形点时的速度阻尼时间
-- `catchUpDistance` / `catchUpSpeedMultiplier`：追赶距离和追赶速度倍率
-- `teleportDistance`：极端远离时的归位距离，设置为 0 可关闭
-- `rotationSpeed`：队友转向速度
-- `idleFacingMode`：停下后的朝向模式
+- `PartyManager.followSettings.stopDistance`：距离队形点小于该值时停止移动
+- `PartyManager.followSettings.followSlotSoftness`：队形点软半径，范围内算到位
+- `PartyManager.followSettings.followDeadZoneRadius`：跟随死区半径，默认 5，主控在该队友站位附近移动时队友保持原地和原朝向
+- `PartyManager.followSettings.moveSpeed`：队友跟随移动速度
+- `PartyManager.followSettings.arrivalSmoothTime`：接近队形点时的速度阻尼时间
+- `PartyManager.followSettings.catchUpDistance` / `catchUpSpeedMultiplier`：追赶距离和追赶速度倍率
+- `PartyManager.followSettings.teleportDistance`：极端远离时的归位距离，设置为 0 可关闭
+- `PartyManager.followSettings.rotationSpeed`：队友转向速度
+- `PartyManager.followSettings.idleFacingMode`：停下后的朝向模式
 - `formationOffset`：由 `PartyFormationSlot` 写入 `AllyFollowMotor`
-- `avoidanceEnabled`：是否启用简易避让
-- `followTargetAvoidRadius`：离主控小于该半径时推离主控
-- `allyAvoidRadius`：离其他队友小于该半径时推开
-- `avoidanceStrength`：避让方向混合强度
-- `avoidanceLayerMask`：参与队友间避让检测的 Layer，建议给队友角色单独设置 Layer 后在这里勾选
+- `PartyManager.followSettings.avoidanceEnabled`：是否启用简易避让
+- `PartyManager.followSettings.followTargetAvoidRadius`：离主控小于该半径时推离主控
+- `PartyManager.followSettings.allyAvoidRadius`：离其他队友小于该半径时推开
+- `PartyManager.followSettings.avoidanceStrength`：避让方向混合强度
+- `PartyManager.followSettings.avoidanceLayerMask`：参与队友间避让检测的 Layer，建议给队友角色单独设置 Layer 后在这里勾选
 
 </details>
 
@@ -743,6 +749,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `PartyFormationSlot` 保存单个队友槽位，包含槽位名、队友状态机和队形偏移。
 - 初始化时，`PartyManager` 会把 `mainCharacter` 设置为两个队友的跟随目标。
 - 初始化时，`PartyManager` 会把两个槽位的 `formationOffset` 写入各自队友的 `AllyFollowMotor`。
+- 初始化时，`PartyManager` 会把统一的 `PartyFollowSettings` 写入两个队友的 `AllyFollowMotor`。
 - `PartyManager` 持有 `PartyCombatRouter` 引用，供战斗 UI 和后续小队系统读取当前键位路由。
 - `PartyCombatRouter` 负责把 `PlayerInputReader` 中的战斗输入翻译成主控、队友 A、队友 B 或全队的命令请求。
 - `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害、标签或状态机切换。
@@ -755,6 +762,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 对应脚本：
 - `Assets/_EndLink/Party/PartyManager.cs`
 - `Assets/_EndLink/Party/PartyFormationSlot.cs`
+- `Assets/_EndLink/Party/PartyFollowSettings.cs`
 - `Assets/_EndLink/Party/PartyCombatRouter.cs`
 - `Assets/_EndLink/Ally/AllyFollowMotor.cs`
 - `Assets/_EndLink/Ally/AllyStateMachine.cs`
@@ -772,7 +780,8 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `mainCharacter`：固定主控角色
 - `allySlotA`：第一个队友槽位
 - `allySlotB`：第二个队友槽位
-- `formationOffset`：每个队友相对主控的本地队形偏移，例如左后 `(-1.5, 0, -2.5)`、右后 `(1.5, 0, -2.5)`
+- `followSettings`：两个队友共用的跟随移动参数
+- `formationOffset`：每个队友相对主控的本地队形偏移，例如左后 `(-2, 0, -2.5)`、右后 `(2, 0, -2.5)`
 - `playerSkillKey` / `allySlotASkillKey` / `allySlotBSkillKey`：主控和两个队友主动技能键位，默认 Q / E / F
 - `playerLinkAttackKey` / `allySlotALinkAttackKey` / `allySlotBLinkAttackKey`：主控和两个队友连携请求键位，默认 1 / 2 / 3
 - `logInitialization`：是否打印小队初始化日志

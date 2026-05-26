@@ -61,6 +61,7 @@ namespace EndLink.Combat
         private string _originalName;
         private int _currentHealth;
         private bool _isDead;
+        private bool _componentsCached;
 
         /// <summary>最大生命值。</summary>
         public int MaxHealth => maxHealth;
@@ -79,10 +80,7 @@ namespace EndLink.Combat
 
         private void Awake()
         {
-            _meshRenderer = GetComponent<MeshRenderer>();
-            _propertyBlock = new MaterialPropertyBlock();
-            _originalColor = GetOriginalBaseColor();
-            _originalName = gameObject.name;
+            CacheComponents();
             ResetHealth();
         }
 
@@ -152,6 +150,8 @@ namespace EndLink.Combat
         /// </summary>
         public void ResetHealth()
         {
+            CacheComponents();
+
             _currentHealth = maxHealth;
             _isDead = false;
 
@@ -163,6 +163,20 @@ namespace EndLink.Combat
 
             SetBaseColor(_originalColor);
             UpdateDebugDisplay();
+        }
+
+        private void CacheComponents()
+        {
+            if (_componentsCached)
+            {
+                return;
+            }
+
+            _meshRenderer = GetComponent<MeshRenderer>();
+            _propertyBlock = new MaterialPropertyBlock();
+            _originalColor = GetOriginalBaseColor();
+            _originalName = gameObject.name;
+            _componentsCached = true;
         }
 
         private IEnumerator FlashHitColor()
@@ -227,7 +241,7 @@ namespace EndLink.Combat
 
         private Color GetOriginalBaseColor()
         {
-            Material sharedMaterial = _meshRenderer.sharedMaterial;
+            Material sharedMaterial = _meshRenderer != null ? _meshRenderer.sharedMaterial : null;
 
             if (sharedMaterial != null && sharedMaterial.HasProperty(BaseColorId))
             {
@@ -239,6 +253,12 @@ namespace EndLink.Combat
 
         private void SetBaseColor(Color color)
         {
+            if (_meshRenderer == null)
+            {
+                return;
+            }
+
+            _propertyBlock ??= new MaterialPropertyBlock();
             _meshRenderer.GetPropertyBlock(_propertyBlock);
             _propertyBlock.SetColor(BaseColorId, color);
             _meshRenderer.SetPropertyBlock(_propertyBlock);

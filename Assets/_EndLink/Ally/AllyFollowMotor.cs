@@ -1,3 +1,4 @@
+using EndLink.Party;
 using UnityEngine;
 
 namespace EndLink.Ally
@@ -28,91 +29,75 @@ namespace EndLink.Ally
         [SerializeField, HideInInspector]
         private Transform followTarget;
 
-        [Header("距离")]
-        [Tooltip("没有队伍槽位偏移时使用的默认后方跟随距离。正常情况下由 PartyManager 写入槽位偏移。")]
-        [SerializeField, Min(0.01f)]
-        private float followDistance = 2.5f;
-
-        [Tooltip("距离目标队形点小于该值时停止移动，用于避免到点后微小抖动。")]
-        [SerializeField, Min(0f)]
+        [SerializeField, HideInInspector]
         private float stopDistance = 0.15f;
 
-        [Tooltip("队形点软半径。进入这个范围就算到位，不会强制踩死一个精确点。")]
-        [SerializeField, Min(0f)]
+        [SerializeField, HideInInspector]
         private float followSlotSoftness = 0.75f;
 
-        [Header("移动")]
-        [Tooltip("队友朝队形点移动的基础最大速度，单位是米/秒。")]
-        [SerializeField, Min(0f)]
+        [SerializeField, HideInInspector]
+        private float followDeadZoneRadius = 5f;
+
+        [SerializeField, HideInInspector]
         private float moveSpeed = 4f;
 
-        [Tooltip("接近目标点时的速度阻尼时间。值越小越跟手，值越大越柔和。")]
-        [SerializeField, Min(0.001f)]
+        [SerializeField, HideInInspector]
         private float arrivalSmoothTime = 0.12f;
 
-        [Tooltip("距离队形点超过该值时进入追赶模式。设置为 0 表示不启用追赶加速。")]
-        [SerializeField, Min(0f)]
+        [SerializeField, HideInInspector]
         private float catchUpDistance = 5f;
 
-        [Tooltip("追赶模式下的速度倍率。只有距离超过 catchUpDistance 时生效。")]
-        [SerializeField, Min(1f)]
+        [SerializeField, HideInInspector]
         private float catchUpSpeedMultiplier = 1.75f;
 
-        [Tooltip("距离队形点超过该值时直接瞬移归位。设置为 0 表示不启用瞬移归位。")]
-        [SerializeField, Min(0f)]
+        [SerializeField, HideInInspector]
         private float teleportDistance = 15f;
 
-        [Header("转向")]
-        [Tooltip("队友转向速度，单位是角度/秒。移动时优先面向移动方向。")]
-        [SerializeField, Min(0f)]
+        [SerializeField, HideInInspector]
         private float rotationSpeed = 540f;
 
-        [Tooltip("停止跟随后如何处理朝向。Keep Current Rotation 可以避免队友站定后一直盯着主控。")]
-        [SerializeField]
+        [SerializeField, HideInInspector]
         private AllyIdleFacingMode idleFacingMode = AllyIdleFacingMode.FaceFollowTargetForward;
 
         [SerializeField, HideInInspector]
-        private Vector3 formationOffset = new Vector3(1.5f, 0f, -2.5f);
+        private Vector3 formationOffset = new Vector3(2f, 0f, -2.5f);
 
-        [Header("简易避让")]
-        [Tooltip("是否启用第一版角色间简易避让。只做局部排斥，不做 NavMesh 寻路。")]
-        [SerializeField]
+        [SerializeField, HideInInspector]
         private bool avoidanceEnabled = true;
 
-        [Tooltip("队友离跟随目标小于该半径时，会被轻微推离主控。")]
-        [SerializeField, Min(0f)]
+        [SerializeField, HideInInspector]
         private float followTargetAvoidRadius = 1.15f;
 
-        [Tooltip("队友离其他队友小于该半径时，会被轻微推开。需要配置 avoidanceLayerMask 才能检测到其他队友。")]
-        [SerializeField, Min(0f)]
+        [SerializeField, HideInInspector]
         private float allyAvoidRadius = 1f;
 
-        [Tooltip("避让修正强度。值越大，队友越倾向于绕开主控和其他队友。")]
-        [SerializeField, Min(0f)]
+        [SerializeField, HideInInspector]
         private float avoidanceStrength = 1.25f;
 
-        [Tooltip("参与队友间避让检测的 Layer。建议给队友角色设置单独 Layer 后在这里勾选。主控避让不依赖该 Layer。")]
-        [SerializeField]
+        [SerializeField, HideInInspector]
         private LayerMask avoidanceLayerMask;
 
         private const int AvoidanceOverlapCapacity = 8;
+        private const int DeadZoneGizmoSegments = 64;
         private CharacterController _characterController;
         private readonly Collider[] _avoidanceOverlaps = new Collider[AvoidanceOverlapCapacity];
         private Vector3 _desiredWorldPosition;
+        private Vector3 _followDeadZoneAnchorPosition;
         private float _currentSpeed;
         private float _speedVelocity;
+        private bool _isRepositioning;
 
         /// <summary>当前跟随目标。</summary>
         public Transform FollowTarget => followTarget;
-
-        /// <summary>默认跟随距离。</summary>
-        public float FollowDistance => followDistance;
 
         /// <summary>停止移动距离。</summary>
         public float StopDistance => stopDistance;
 
         /// <summary>队形点软半径。</summary>
         public float FollowSlotSoftness => followSlotSoftness;
+
+        /// <summary>跟随死区半径。</summary>
+        public float FollowDeadZoneRadius => followDeadZoneRadius;
 
         /// <summary>基础移动速度。</summary>
         public float MoveSpeed => moveSpeed;
@@ -160,19 +145,20 @@ namespace EndLink.Ally
         {
             _characterController = GetComponent<CharacterController>();
             _desiredWorldPosition = transform.position;
+            _followDeadZoneAnchorPosition = transform.position;
         }
 
         private void Reset()
         {
             _characterController = GetComponent<CharacterController>();
-            formationOffset = new Vector3(1.5f, 0f, -followDistance);
+            formationOffset = new Vector3(2f, 0f, -2.5f);
         }
 
         private void OnValidate()
         {
-            followDistance = Mathf.Max(0.01f, followDistance);
             stopDistance = Mathf.Max(0f, stopDistance);
             followSlotSoftness = Mathf.Max(0f, followSlotSoftness);
+            followDeadZoneRadius = Mathf.Max(0f, followDeadZoneRadius);
             moveSpeed = Mathf.Max(0f, moveSpeed);
             arrivalSmoothTime = Mathf.Max(0.001f, arrivalSmoothTime);
             catchUpDistance = Mathf.Max(0f, catchUpDistance);
@@ -184,6 +170,16 @@ namespace EndLink.Ally
             avoidanceStrength = Mathf.Max(0f, avoidanceStrength);
         }
 
+        private void OnDrawGizmos()
+        {
+            DrawDeadZoneGizmo(0.28f);
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            DrawDeadZoneGizmo(0.75f);
+        }
+
         /// <summary>
         /// 设置跟随目标。
         /// 由队伍管理器或 AllyStateMachine 调用，组件本身不关心目标来自哪里。
@@ -191,6 +187,8 @@ namespace EndLink.Ally
         public void SetFollowTarget(Transform target)
         {
             followTarget = target;
+            ResetFollowDeadZoneAnchor();
+            RequestReposition();
             ResetSpeed();
         }
 
@@ -201,6 +199,35 @@ namespace EndLink.Ally
         public void SetFormationOffset(Vector3 offset)
         {
             formationOffset = offset;
+            RequestReposition();
+        }
+
+        /// <summary>
+        /// 应用小队统一跟随参数。
+        /// PartyManager 调用它完成统一调参；本组件仍只负责使用这些参数执行实际移动。
+        /// </summary>
+        public void ApplySettings(PartyFollowSettings settings)
+        {
+            if (settings == null)
+            {
+                return;
+            }
+
+            stopDistance = Mathf.Max(0f, settings.StopDistance);
+            followSlotSoftness = Mathf.Max(0f, settings.FollowSlotSoftness);
+            followDeadZoneRadius = Mathf.Max(0f, settings.FollowDeadZoneRadius);
+            moveSpeed = Mathf.Max(0f, settings.MoveSpeed);
+            arrivalSmoothTime = Mathf.Max(0.001f, settings.ArrivalSmoothTime);
+            catchUpDistance = Mathf.Max(0f, settings.CatchUpDistance);
+            catchUpSpeedMultiplier = Mathf.Max(1f, settings.CatchUpSpeedMultiplier);
+            teleportDistance = Mathf.Max(0f, settings.TeleportDistance);
+            rotationSpeed = Mathf.Max(0f, settings.RotationSpeed);
+            idleFacingMode = settings.IdleFacingMode;
+            avoidanceEnabled = settings.AvoidanceEnabled;
+            followTargetAvoidRadius = Mathf.Max(0f, settings.FollowTargetAvoidRadius);
+            allyAvoidRadius = Mathf.Max(0f, settings.AllyAvoidRadius);
+            avoidanceStrength = Mathf.Max(0f, settings.AvoidanceStrength);
+            avoidanceLayerMask = settings.AvoidanceLayerMask;
         }
 
         /// <summary>
@@ -215,6 +242,16 @@ namespace EndLink.Ally
                 return;
             }
 
+            if (ShouldHoldFollowDeadZone())
+            {
+                _desiredWorldPosition = _followDeadZoneAnchorPosition;
+                SmoothSpeedTo(0f, deltaTime);
+                ApplyAvoidanceOnly(CalculateAvoidanceVector(), deltaTime, false);
+                _followDeadZoneAnchorPosition = transform.position;
+                return;
+            }
+
+            _isRepositioning = true;
             _desiredWorldPosition = CalculateDesiredWorldPosition();
 
             Vector3 toDesired = _desiredWorldPosition - transform.position;
@@ -225,6 +262,7 @@ namespace EndLink.Ally
             if (ShouldTeleport(distance))
             {
                 TeleportToDesiredPosition();
+                ResetFollowDeadZoneAnchor();
                 RotateAfterArrive(deltaTime);
                 return;
             }
@@ -235,6 +273,7 @@ namespace EndLink.Ally
             {
                 SmoothSpeedTo(0f, deltaTime);
                 ApplyAvoidanceOnly(avoidanceVector, deltaTime);
+                ResetFollowDeadZoneAnchor();
                 RotateAfterArrive(deltaTime);
                 return;
             }
@@ -299,10 +338,10 @@ namespace EndLink.Ally
         {
             Vector3 offset = formationOffset;
 
-            // 如果没有配置队形偏移，则默认站到主控后方 followDistance 的位置。
+            // 如果没有配置队形偏移，则使用默认右后方站位，避免零向量导致队友贴到主控身上。
             if (offset.sqrMagnitude <= 0.0001f)
             {
-                offset = Vector3.back * followDistance;
+                offset = new Vector3(2f, 0f, -2.5f);
             }
 
             Vector3 worldOffset = followTarget.TransformDirection(offset);
@@ -316,6 +355,31 @@ namespace EndLink.Ally
         private bool ShouldTeleport(float distance)
         {
             return teleportDistance > 0f && distance >= teleportDistance;
+        }
+
+        private bool ShouldHoldFollowDeadZone()
+        {
+            if (_isRepositioning || followDeadZoneRadius <= 0f || followTarget == null)
+            {
+                return false;
+            }
+
+            // 死区判断以队友自己的当前站位为中心；主控仍在该半径内时，这个队友保持原地。
+            Vector3 toTarget = followTarget.position - _followDeadZoneAnchorPosition;
+            toTarget.y = 0f;
+            return toTarget.sqrMagnitude <= followDeadZoneRadius * followDeadZoneRadius;
+        }
+
+        private void ResetFollowDeadZoneAnchor()
+        {
+            _followDeadZoneAnchorPosition = transform.position;
+            _followDeadZoneAnchorPosition.y = transform.position.y;
+            _isRepositioning = false;
+        }
+
+        private void RequestReposition()
+        {
+            _isRepositioning = true;
         }
 
         private void TeleportToDesiredPosition()
@@ -450,7 +514,7 @@ namespace EndLink.Ally
             return blended.sqrMagnitude > 0.0001f ? blended.normalized : moveDirection;
         }
 
-        private void ApplyAvoidanceOnly(Vector3 avoidanceVector, float deltaTime)
+        private void ApplyAvoidanceOnly(Vector3 avoidanceVector, float deltaTime, bool rotateTowardsAvoidance = true)
         {
             if (avoidanceVector.sqrMagnitude <= 0.0001f || moveSpeed <= 0f)
             {
@@ -460,7 +524,11 @@ namespace EndLink.Ally
             Vector3 direction = avoidanceVector.normalized;
             float step = moveSpeed * avoidanceStrength * deltaTime;
             Move(direction * step);
-            RotateTowards(direction, deltaTime);
+
+            if (rotateTowardsAvoidance)
+            {
+                RotateTowards(direction, deltaTime);
+            }
         }
 
         private void Move(Vector3 displacement)
@@ -540,6 +608,58 @@ namespace EndLink.Ally
                 transform.rotation,
                 targetRotation,
                 rotationSpeed * deltaTime);
+        }
+
+        private Vector3 ResolveDeadZoneGizmoCenter()
+        {
+            Vector3 center;
+
+            if (Application.isPlaying)
+            {
+                center = _followDeadZoneAnchorPosition;
+            }
+            else
+            {
+                center = transform.position;
+            }
+
+            center.y = transform.position.y;
+            return center;
+        }
+
+        private void DrawDeadZoneGizmo(float alpha)
+        {
+            if (followDeadZoneRadius <= 0f)
+            {
+                return;
+            }
+
+            Color previousColor = Gizmos.color;
+            Gizmos.color = new Color(0.2f, 0.8f, 1f, alpha);
+
+            Vector3 center = ResolveDeadZoneGizmoCenter();
+            DrawHorizontalCircle(center, followDeadZoneRadius, DeadZoneGizmoSegments);
+            Gizmos.DrawLine(center, center + Vector3.forward * followDeadZoneRadius);
+
+            Gizmos.color = previousColor;
+        }
+
+        private static void DrawHorizontalCircle(Vector3 center, float radius, int segmentCount)
+        {
+            float angleStep = Mathf.PI * 2f / segmentCount;
+            Vector3 previousPoint = center + new Vector3(radius, 0f, 0f);
+
+            for (int i = 1; i <= segmentCount; i++)
+            {
+                float angle = angleStep * i;
+                Vector3 nextPoint = center + new Vector3(
+                    Mathf.Cos(angle) * radius,
+                    0f,
+                    Mathf.Sin(angle) * radius);
+
+                Gizmos.DrawLine(previousPoint, nextPoint);
+                previousPoint = nextPoint;
+            }
         }
     }
 }

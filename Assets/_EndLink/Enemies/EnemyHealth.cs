@@ -76,6 +76,7 @@ namespace EndLink.Enemies
         private int _ownedColliderCount;
         private bool _isDead;
         private bool _isTargetable = true;
+        private bool _componentsCached;
 
         /// <summary>最大生命值。</summary>
         public int MaxHealth => maxHealth;
@@ -144,6 +145,8 @@ namespace EndLink.Enemies
         /// </summary>
         public void ResetHealth()
         {
+            CacheComponents();
+
             _currentHealth = maxHealth;
             _isDead = false;
             _isTargetable = true;
@@ -161,6 +164,11 @@ namespace EndLink.Enemies
 
         private void CacheComponents()
         {
+            if (_componentsCached)
+            {
+                return;
+            }
+
             if (feedbackRenderer == null)
             {
                 feedbackRenderer = GetComponentInChildren<MeshRenderer>();
@@ -171,6 +179,7 @@ namespace EndLink.Enemies
             _originalName = gameObject.name;
             _ownedColliders = GetComponentsInChildren<Collider>(false);
             _ownedColliderCount = _ownedColliders.Length;
+            _componentsCached = true;
         }
 
         private void ApplyDamage(int damage, CombatTagDefinition tag, GameObject source)
@@ -320,6 +329,7 @@ namespace EndLink.Enemies
                 return;
             }
 
+            _propertyBlock ??= new MaterialPropertyBlock();
             feedbackRenderer.GetPropertyBlock(_propertyBlock);
             _propertyBlock.SetColor(BaseColorId, color);
             feedbackRenderer.SetPropertyBlock(_propertyBlock);

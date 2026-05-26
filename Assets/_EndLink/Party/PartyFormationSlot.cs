@@ -21,7 +21,7 @@ namespace EndLink.Party
 
         [Tooltip("该队友相对主控角色的本地队形偏移。X 是左右，Z 是前后。")]
         [SerializeField]
-        private Vector3 formationOffset = new Vector3(-1.5f, 0f, -2.5f);
+        private Vector3 formationOffset = new Vector3(-2f, 0f, -2.5f);
 
         /// <summary>槽位名称。</summary>
         public string SlotName => slotName;

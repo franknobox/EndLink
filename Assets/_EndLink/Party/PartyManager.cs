@@ -17,13 +17,18 @@ namespace EndLink.Party
         private Transform mainCharacter;
 
         [Header("队友槽位")]
-        [Tooltip("第一个队友槽位，推荐偏移为左后方，例如 (-1.5, 0, -2.5)。")]
+        [Tooltip("第一个队友槽位，推荐偏移为左后方，例如 (-2, 0, -2.5)。")]
         [SerializeField]
         private PartyFormationSlot allySlotA = new();
 
-        [Tooltip("第二个队友槽位，推荐偏移为右后方，例如 (1.5, 0, -2.5)。")]
+        [Tooltip("第二个队友槽位，推荐偏移为右后方，例如 (2, 0, -2.5)。")]
         [SerializeField]
         private PartyFormationSlot allySlotB = new();
+
+        [Header("队友跟随参数")]
+        [Tooltip("两个固定队友共用的跟随移动参数。PartyManager 会在初始化小队时写入各自的 AllyFollowMotor。")]
+        [SerializeField]
+        private PartyFollowSettings followSettings = new();
 
         [Header("战斗路由")]
         [Tooltip("小队战斗命令路由器。UI 和后续小队战斗系统通过这里读取当前键位路由。为空时会在场景中自动查找。")]
@@ -44,6 +49,9 @@ namespace EndLink.Party
         /// <summary>第二个队友槽位。</summary>
         public PartyFormationSlot AllySlotB => allySlotB;
 
+        /// <summary>两个固定队友共用的跟随移动参数。</summary>
+        public PartyFollowSettings FollowSettings => followSettings;
+
         /// <summary>小队战斗命令路由器。</summary>
         public PartyCombatRouter CombatRouter
         {
@@ -61,11 +69,25 @@ namespace EndLink.Party
         private void Awake()
         {
             CacheReferences();
+            EnsureFollowSettings();
+            followSettings.Normalize();
         }
 
         private void Reset()
         {
             CacheReferences();
+            EnsureFollowSettings();
+        }
+
+        private void OnValidate()
+        {
+            EnsureFollowSettings();
+            followSettings.Normalize();
+
+            if (Application.isPlaying)
+            {
+                ApplyFollowSettingsToAllies();
+            }
         }
 
         private void Start()
@@ -85,6 +107,8 @@ namespace EndLink.Party
                 return;
             }
 
+            EnsureFollowSettings();
+            followSettings.Normalize();
             ApplySlot(allySlotA);
             ApplySlot(allySlotB);
         }
@@ -110,6 +134,7 @@ namespace EndLink.Party
                 return;
             }
 
+            ApplyFollowSettings(slot);
             slot.Apply(mainCharacter);
 
             if (logInitialization)
@@ -117,6 +142,26 @@ namespace EndLink.Party
                 Debug.Log(
                     $"初始化队友槽位：{slot.SlotName} -> {slot.AllyStateMachine.name}, offset={slot.FormationOffset}",
                     this);
+            }
+        }
+
+        private void ApplyFollowSettingsToAllies()
+        {
+            ApplyFollowSettings(allySlotA);
+            ApplyFollowSettings(allySlotB);
+        }
+
+        private void ApplyFollowSettings(PartyFormationSlot slot)
+        {
+            if (slot == null || !slot.HasAlly)
+            {
+                return;
+            }
+
+            AllyFollowMotor followMotor = slot.AllyStateMachine.FollowMotor;
+            if (followMotor != null)
+            {
+                followMotor.ApplySettings(followSettings);
             }
         }
 
@@ -134,6 +179,11 @@ namespace EndLink.Party
             {
                 combatRouter = FindFirstObjectByType<PartyCombatRouter>();
             }
+        }
+
+        private void EnsureFollowSettings()
+        {
+            followSettings ??= new PartyFollowSettings();
         }
     }
 }
