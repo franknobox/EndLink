@@ -17,7 +17,9 @@ namespace EndLink.Core
         public Vector2 MoveInput { get; private set; }
 
         private InputSystem_Actions _inputActions;
-        private InputSystem_Actions.PlayerActions _playerActions;
+        private InputActionMap _playerActionMap;
+        private InputAction _moveAction;
+        private InputAction _attackAction;
         private InputAction _playerSkillAction;
         private InputAction _allySlotASkillAction;
         private InputAction _allySlotBSkillAction;
@@ -25,6 +27,7 @@ namespace EndLink.Core
         private InputAction _allySlotALinkAttackAction;
         private InputAction _allySlotBLinkAttackAction;
         private InputAction _partyUltimateAction;
+        private bool _initialized;
         private bool _attackPressed;
         private bool _playerSkillPressed;
         private bool _allySlotASkillPressed;
@@ -36,45 +39,36 @@ namespace EndLink.Core
 
         private void Awake()
         {
-            _inputActions = new InputSystem_Actions();
-            _playerActions = _inputActions.Player;
-            _playerSkillAction = _inputActions.asset.FindAction("Player/PlayerSkill", true);
-            _allySlotASkillAction = _inputActions.asset.FindAction("Player/AllySlotASkill", true);
-            _allySlotBSkillAction = _inputActions.asset.FindAction("Player/AllySlotBSkill", true);
-            _playerLinkAttackAction = _inputActions.asset.FindAction("Player/PlayerLinkAttack", true);
-            _allySlotALinkAttackAction = _inputActions.asset.FindAction("Player/AllySlotALinkAttack", true);
-            _allySlotBLinkAttackAction = _inputActions.asset.FindAction("Player/AllySlotBLinkAttack", true);
-            _partyUltimateAction = _inputActions.asset.FindAction("Player/PartyUltimate", true);
-
-            _playerActions.Move.performed += OnMoveChanged;
-            _playerActions.Move.canceled += OnMoveCanceled;
-            _playerActions.Attack.performed += OnAttackPerformed;
-            _playerSkillAction.performed += OnPlayerSkillPerformed;
-            _allySlotASkillAction.performed += OnAllySlotASkillPerformed;
-            _allySlotBSkillAction.performed += OnAllySlotBSkillPerformed;
-            _playerLinkAttackAction.performed += OnPlayerLinkAttackPerformed;
-            _allySlotALinkAttackAction.performed += OnAllySlotALinkAttackPerformed;
-            _allySlotBLinkAttackAction.performed += OnAllySlotBLinkAttackPerformed;
-            _partyUltimateAction.performed += OnPartyUltimatePerformed;
+            EnsureInitialized();
         }
 
         private void OnEnable()
         {
-            _playerActions.Enable();
+            EnsureInitialized();
+            _playerActionMap.Enable();
         }
 
         private void OnDisable()
         {
             MoveInput = Vector2.zero;
             ResetPressedInputs();
-            _playerActions.Disable();
+
+            if (_initialized)
+            {
+                DisableInputActions();
+            }
         }
 
         private void OnDestroy()
         {
-            _playerActions.Move.performed -= OnMoveChanged;
-            _playerActions.Move.canceled -= OnMoveCanceled;
-            _playerActions.Attack.performed -= OnAttackPerformed;
+            if (!_initialized)
+            {
+                return;
+            }
+
+            _moveAction.performed -= OnMoveChanged;
+            _moveAction.canceled -= OnMoveCanceled;
+            _attackAction.performed -= OnAttackPerformed;
             _playerSkillAction.performed -= OnPlayerSkillPerformed;
             _allySlotASkillAction.performed -= OnAllySlotASkillPerformed;
             _allySlotBSkillAction.performed -= OnAllySlotBSkillPerformed;
@@ -83,6 +77,7 @@ namespace EndLink.Core
             _allySlotBLinkAttackAction.performed -= OnAllySlotBLinkAttackPerformed;
             _partyUltimateAction.performed -= OnPartyUltimatePerformed;
             _inputActions.Dispose();
+            _initialized = false;
         }
 
         /// <summary>
@@ -165,6 +160,7 @@ namespace EndLink.Core
             Key allySlotALinkAttackKey,
             Key allySlotBLinkAttackKey)
         {
+            EnsureInitialized();
             ApplyKeyboardBindingOverride(_playerSkillAction, playerSkillKey);
             ApplyKeyboardBindingOverride(_allySlotASkillAction, allySlotASkillKey);
             ApplyKeyboardBindingOverride(_allySlotBSkillAction, allySlotBSkillKey);
@@ -255,6 +251,48 @@ namespace EndLink.Core
             _allySlotALinkAttackPressed = false;
             _allySlotBLinkAttackPressed = false;
             _partyUltimatePressed = false;
+        }
+
+        private void EnsureInitialized()
+        {
+            if (_initialized)
+            {
+                return;
+            }
+
+            _inputActions = new InputSystem_Actions();
+            _playerActionMap = _inputActions.asset.FindActionMap("Player", true);
+            _moveAction = _inputActions.asset.FindAction("Player/Move", true);
+            _attackAction = _inputActions.asset.FindAction("Player/Attack", true);
+            _playerSkillAction = _inputActions.asset.FindAction("Player/PlayerSkill", true);
+            _allySlotASkillAction = _inputActions.asset.FindAction("Player/AllySlotASkill", true);
+            _allySlotBSkillAction = _inputActions.asset.FindAction("Player/AllySlotBSkill", true);
+            _playerLinkAttackAction = _inputActions.asset.FindAction("Player/PlayerLinkAttack", true);
+            _allySlotALinkAttackAction = _inputActions.asset.FindAction("Player/AllySlotALinkAttack", true);
+            _allySlotBLinkAttackAction = _inputActions.asset.FindAction("Player/AllySlotBLinkAttack", true);
+            _partyUltimateAction = _inputActions.asset.FindAction("Player/PartyUltimate", true);
+
+            _moveAction.performed += OnMoveChanged;
+            _moveAction.canceled += OnMoveCanceled;
+            _attackAction.performed += OnAttackPerformed;
+            _playerSkillAction.performed += OnPlayerSkillPerformed;
+            _allySlotASkillAction.performed += OnAllySlotASkillPerformed;
+            _allySlotBSkillAction.performed += OnAllySlotBSkillPerformed;
+            _playerLinkAttackAction.performed += OnPlayerLinkAttackPerformed;
+            _allySlotALinkAttackAction.performed += OnAllySlotALinkAttackPerformed;
+            _allySlotBLinkAttackAction.performed += OnAllySlotBLinkAttackPerformed;
+            _partyUltimateAction.performed += OnPartyUltimatePerformed;
+            _initialized = true;
+        }
+
+        private void DisableInputActions()
+        {
+            if (_inputActions == null)
+            {
+                return;
+            }
+
+            _inputActions.asset?.Disable();
         }
 
         private static void ApplyKeyboardBindingOverride(InputAction action, Key key)

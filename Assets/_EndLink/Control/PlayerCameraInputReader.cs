@@ -35,35 +35,43 @@ namespace EndLink.Core
         public bool IsPointerLookInput { get; private set; }
 
         private InputSystem_Actions _inputActions;
-        private InputSystem_Actions.PlayerActions _playerActions;
+        private InputActionMap _playerActionMap;
+        private InputAction _lookAction;
+        private bool _initialized;
 
         private void Awake()
         {
-            // 继续复用 Unity 根据 InputSystem_Actions.inputactions 生成的默认包装类。
-            _inputActions = new InputSystem_Actions();
-            _playerActions = _inputActions.Player;
-
-            _playerActions.Look.performed += OnLookChanged;
-            _playerActions.Look.canceled += OnLookCanceled;
+            EnsureInitialized();
         }
 
         private void OnEnable()
         {
-            _playerActions.Enable();
+            EnsureInitialized();
+            _playerActionMap.Enable();
         }
 
         private void OnDisable()
         {
             LookInput = Vector2.zero;
             ZoomInput = 0f;
-            _playerActions.Disable();
+
+            if (_initialized)
+            {
+                DisableInputActions();
+            }
         }
 
         private void OnDestroy()
         {
-            _playerActions.Look.performed -= OnLookChanged;
-            _playerActions.Look.canceled -= OnLookCanceled;
+            if (!_initialized)
+            {
+                return;
+            }
+
+            _lookAction.performed -= OnLookChanged;
+            _lookAction.canceled -= OnLookCanceled;
             _inputActions.Dispose();
+            _initialized = false;
         }
 
         private void Update()
@@ -91,6 +99,33 @@ namespace EndLink.Core
         private void OnLookCanceled(InputAction.CallbackContext context)
         {
             LookInput = Vector2.zero;
+        }
+
+        private void EnsureInitialized()
+        {
+            if (_initialized)
+            {
+                return;
+            }
+
+            // 继续复用 Unity 根据 InputSystem_Actions.inputactions 生成的默认包装类。
+            _inputActions = new InputSystem_Actions();
+            _playerActionMap = _inputActions.asset.FindActionMap("Player", true);
+            _lookAction = _inputActions.asset.FindAction("Player/Look", true);
+
+            _lookAction.performed += OnLookChanged;
+            _lookAction.canceled += OnLookCanceled;
+            _initialized = true;
+        }
+
+        private void DisableInputActions()
+        {
+            if (_inputActions == null)
+            {
+                return;
+            }
+
+            _inputActions.asset?.Disable();
         }
     }
 }
