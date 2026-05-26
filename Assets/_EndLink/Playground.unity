@@ -243,9 +243,9 @@ GameObject:
   m_Component:
   - component: {fileID: 45882478}
   - component: {fileID: 45882479}
-  - component: {fileID: 45882480}
   - component: {fileID: 45882477}
   - component: {fileID: 45882476}
+  - component: {fileID: 45882480}
   m_Layer: 9
   m_Name: Ally_01
   m_TagString: Untagged
@@ -345,9 +345,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Ally.AllyFollowMotor
   followTarget: {fileID: 509600059}
-  followDistance: 2
   stopDistance: 0.15
   followSlotSoftness: 0.75
+  followDeadZoneRadius: 2.5
   moveSpeed: 4
   arrivalSmoothTime: 0.12
   catchUpDistance: 5
@@ -895,11 +895,29 @@ MonoBehaviour:
   allySlotA:
     slotName: Ally
     allyStateMachine: {fileID: 45882479}
-    formationOffset: {x: -1.5, y: 0, z: -2.5}
+    formationOffset: {x: -2, y: 0, z: -2.5}
   allySlotB:
     slotName: Ally
     allyStateMachine: {fileID: 698380644}
-    formationOffset: {x: 1.5, y: 0, z: -2.5}
+    formationOffset: {x: 2, y: 0, z: -2.5}
+  followSettings:
+    stopDistance: 0.15
+    followSlotSoftness: 0.75
+    followDeadZoneRadius: 5
+    moveSpeed: 4
+    arrivalSmoothTime: 0.12
+    catchUpDistance: 5
+    catchUpSpeedMultiplier: 1.75
+    teleportDistance: 15
+    rotationSpeed: 540
+    idleFacingMode: 2
+    avoidanceEnabled: 1
+    followTargetAvoidRadius: 1.15
+    allyAvoidRadius: 1
+    avoidanceStrength: 1.25
+    avoidanceLayerMask:
+      serializedVersion: 2
+      m_Bits: 512
   combatRouter: {fileID: 0}
   logInitialization: 0
 --- !u!4 &163565088
@@ -1993,9 +2011,9 @@ GameObject:
   m_Component:
   - component: {fileID: 698380648}
   - component: {fileID: 698380644}
-  - component: {fileID: 698380647}
   - component: {fileID: 698380646}
   - component: {fileID: 698380645}
+  - component: {fileID: 698380647}
   m_Layer: 9
   m_Name: Ally_02
   m_TagString: Untagged
@@ -2079,9 +2097,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Ally.AllyFollowMotor
   followTarget: {fileID: 509600059}
-  followDistance: 2
   stopDistance: 0.15
   followSlotSoftness: 0.75
+  followDeadZoneRadius: 2.5
   moveSpeed: 4
   arrivalSmoothTime: 0.12
   catchUpDistance: 5
@@ -2090,7 +2108,7 @@ MonoBehaviour:
   rotationSpeed: 540
   idleFacingMode: 2
   formationOffset: {x: -1.5, y: 0, z: -2.5}
-  avoidanceEnabled: 1
+  avoidanceEnabled: 0
   followTargetAvoidRadius: 1.15
   allyAvoidRadius: 1
   avoidanceStrength: 1.25
