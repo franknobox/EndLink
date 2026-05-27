@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using EndLink.Combat;
 using UnityEngine;
 
@@ -5,98 +6,97 @@ namespace EndLink.Ally
 {
     /// <summary>
     /// 队友战斗执行器。
-    /// 只负责按照 CombatActionDefinition 执行一次助战动作：朝向目标、生成 Hitbox、写入伤害/标签数据、广播动作开始事件。
-    /// 它不监听输入、不订阅事件、不决定什么时候出手；这些决策由 AllyBrain 或后续更完整的 AI 层负责。
+    /// 只负责按 CombatActionDefinition 执行动作表现和 Hitbox 判定，不监听输入、不订阅事件、不决定何时出手。
+    /// 自动助战、主动技能、连携技共享执行逻辑，但各自按动作资产独立计算冷却。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class AllyCombatDriver : MonoBehaviour
     {
         [Header("动作配置")]
-        [Tooltip("队友助战使用的动作配置。当前胶囊白模阶段建议先配置成 LinkAttack 或 BasicAttack，用于验证队友能响应事件并生成 Hitbox。")]
+        [Tooltip("队友自动助战使用的动作配置。当前用于主控命中敌人后，队友自动接近并持续攻击。")]
         [SerializeField]
         private CombatActionDefinition assistAction;
 
-        [Tooltip("队友主动技能动作。后续由 PartyCombatRouter 的队友技能命令触发。")]
+        [Tooltip("队友主动技能动作。由 PartyCombatRouter 的队友技能命令触发。")]
         [SerializeField]
         private CombatActionDefinition skillAction;
 
-        [Tooltip("队友连携技动作配置。不能被普通输入直接释放，必须由后续连携机制确认窗口后调用。")]
+        [Tooltip("队友连携技动作配置。实际释放必须由后续连携机制授权。")]
         [SerializeField]
         private CombatActionDefinition linkAction;
 
         [Header("瞄准")]
-        [Tooltip("执行助战时是否先把队友水平转向目标。关闭后会始终使用队友当前 Z 轴正前方生成 Hitbox。")]
+        [Tooltip("执行动作时是否先把队友水平转向目标。关闭后会使用队友当前 Z 轴正前方生成 Hitbox。")]
         [SerializeField]
         private bool faceTargetBeforeAttack = true;
 
-        [Tooltip("目标距离过近导致方向不稳定时使用的备用前方方向。通常保持默认即可。")]
+        [Tooltip("目标距离过近导致方向不稳定时使用的备用前方方向。")]
         [SerializeField]
         private Vector3 fallbackForward = Vector3.forward;
 
         [Header("调试")]
-        [Tooltip("配置缺失、冷却未结束等导致执行失败时是否打印 Debug.LogWarning。")]
+        [Tooltip("配置缺失等执行失败情况是否打印 Debug.LogWarning。")]
         [SerializeField]
         private bool logExecutionFailures = true;
 
-        private float _nextActionTime;
-        private float _lastActionCooldown;
-        private CombatActionDefinition _lastCooldownAction;
+        private readonly ActionCooldownTracker<CombatActionDefinition> _cooldowns = new();
+        private CombatActionDefinition _lastExecutedAction;
 
-        /// <summary>当前队友助战动作配置。</summary>
+        /// <summary>队友自动助战动作配置。</summary>
         public CombatActionDefinition AssistAction => assistAction;
 
-        /// <summary>队友主动技能动作。</summary>
+        /// <summary>队友主动技能动作配置。</summary>
         public CombatActionDefinition SkillAction => skillAction;
 
-        /// <summary>队友连携技动作配置。实际释放必须由连携机制授权。</summary>
+        /// <summary>队友连携技动作配置。</summary>
         public CombatActionDefinition LinkAction => linkAction;
 
-        /// <summary>是否已经配置助战动作。用于判断队友能否进入助战流程，不代表冷却已经结束。</summary>
+        /// <summary>是否已经配置自动助战动作。</summary>
         public bool HasAssistAction => assistAction != null;
 
-        /// <summary>当前助战动作剩余冷却时间。</summary>
-        public float AssistCooldownRemaining => ActionCooldownRemaining;
+        /// <summary>当前助战动作自己的冷却剩余时间，单位秒。</summary>
+        public float AssistCooldownRemaining => GetActionCooldownRemaining(assistAction);
 
-        /// <summary>当前动作冷却剩余时间，单位秒。</summary>
-        public float ActionCooldownRemaining => Mathf.Max(0f, _nextActionTime - Time.time);
+        /// <summary>最近一次成功执行动作的冷却剩余时间，单位秒。主要用于调试窗口。</summary>
+        public float ActionCooldownRemaining => GetActionCooldownRemaining(_lastExecutedAction);
 
-        /// <summary>最近一次成功执行动作写入的冷却总时长，单位秒。</summary>
-        public float ActionCooldownDuration => _lastActionCooldown;
+        /// <summary>最近一次成功执行动作的冷却总时长，单位秒。主要用于调试窗口。</summary>
+        public float ActionCooldownDuration => _lastExecutedAction != null ? Mathf.Max(0f, _lastExecutedAction.Cooldown) : 0f;
 
-        /// <summary>当前动作冷却归一化进度，1 表示刚进入冷却，0 表示冷却结束。</summary>
+        /// <summary>最近一次成功执行动作的归一化冷却，1 表示刚进入冷却，0 表示冷却结束。</summary>
         public float ActionCooldownNormalized
         {
             get
             {
-                return _lastActionCooldown > 0f
-                    ? Mathf.Clamp01(ActionCooldownRemaining / _lastActionCooldown)
+                return ActionCooldownDuration > 0f
+                    ? Mathf.Clamp01(ActionCooldownRemaining / ActionCooldownDuration)
                     : 0f;
             }
         }
 
-        /// <summary>当前是否处于动作冷却中。</summary>
+        /// <summary>最近一次成功执行动作是否还在冷却中。</summary>
         public bool IsActionCoolingDown => ActionCooldownRemaining > 0f;
 
         /// <summary>
         /// 查询指定动作当前的冷却归一化进度。
-        /// 当前第一版队友只有一个动作锁，但 UI 需要知道“这个槽位自己的动作”是否在冷却，避免助战动作染灰主动技能槽。
+        /// UI 使用这个接口读取队友主动技能槽，避免自动助战动作把主动技能 UI 染灰。
         /// </summary>
         public float GetActionCooldownNormalized(CombatActionDefinition actionDefinition)
         {
-            if (actionDefinition == null || _lastCooldownAction != actionDefinition)
+            if (actionDefinition == null)
             {
                 return 0f;
             }
 
-            return ActionCooldownNormalized;
+            float cooldown = Mathf.Max(0f, actionDefinition.Cooldown);
+            return cooldown > 0f ? Mathf.Clamp01(GetActionCooldownRemaining(actionDefinition) / cooldown) : 0f;
         }
 
-        /// <summary>当前是否已经过了动作冷却，可以真正执行一次助战攻击。</summary>
-        public bool CanAssist => assistAction != null && Time.time >= _nextActionTime;
+        /// <summary>当前是否已经过了助战动作自己的冷却，可以执行一次助战攻击。</summary>
+        public bool CanAssist => assistAction != null && _cooldowns.IsReady(assistAction, Time.time);
 
         /// <summary>
-        /// 运行时替换助战动作。
-        /// 主要用于调试、后续队伍配置系统，或简单 PlayMode 测试。
+        /// 运行时替换助战动作。主要用于调试、队伍配置系统或简单 PlayMode 测试。
         /// </summary>
         public void SetAssistAction(CombatActionDefinition action)
         {
@@ -104,8 +104,7 @@ namespace EndLink.Ally
         }
 
         /// <summary>
-        /// 执行一次助战动作。
-        /// 调用者负责判断是否应该出手；这里仅做执行所需的冷却和资源防御检查。
+        /// 执行一次自动助战动作。调用者负责判断现在是否应该出手。
         /// </summary>
         public bool ExecuteAssist(Transform target)
         {
@@ -114,7 +113,7 @@ namespace EndLink.Ally
 
         /// <summary>
         /// 执行指定队友动作。
-        /// 调用者负责判断这个动作来自自动助战、玩家命令技能还是已被连携机制授权的连携技。
+        /// 调用者负责判断动作来自自动助战、玩家命令技能，还是连携机制授权的连携攻击。
         /// </summary>
         public bool ExecuteAction(CombatActionDefinition actionDefinition, Transform target)
         {
@@ -125,12 +124,12 @@ namespace EndLink.Ally
                 return false;
             }
 
-            if (Time.time < _nextActionTime)
+            if (!_cooldowns.IsReady(actionDefinition, Time.time))
             {
                 AllyDebugLog.Raise(
                     gameObject,
                     AllyDebugCategory.Combat,
-                    $"execute action skipped: cooldown remaining={AssistCooldownRemaining:F2}");
+                    $"execute action skipped: action={actionDefinition.ActionId}, cooldown remaining={GetActionCooldownRemaining(actionDefinition):F2}");
                 return false;
             }
 
@@ -177,19 +176,25 @@ namespace EndLink.Ally
                     $"spawned hitbox has no HitboxBase, prefab={hitboxPrefab.name}");
             }
 
-            _lastCooldownAction = actionDefinition;
-            _lastActionCooldown = actionDefinition.Cooldown;
-            _nextActionTime = Time.time + _lastActionCooldown;
+            _lastExecutedAction = actionDefinition;
+            _cooldowns.StartCooldown(actionDefinition, Time.time, actionDefinition.Cooldown);
+
             AllyDebugLog.Raise(
                 gameObject,
                 AllyDebugCategory.Combat,
                 $"execute action={actionDefinition.ActionId}, target={GetTransformName(target)}, spawn={spawnPosition}, nextCd={actionDefinition.Cooldown:F2}");
+
             CombatEventsBus.RaiseActionStarted(
                 gameObject,
                 target != null ? target.gameObject : null,
                 actionDefinition);
 
             return true;
+        }
+
+        private float GetActionCooldownRemaining(CombatActionDefinition actionDefinition)
+        {
+            return _cooldowns.GetRemaining(actionDefinition, Time.time);
         }
 
         private Vector3 ResolveAttackForward(Transform target)
@@ -226,6 +231,43 @@ namespace EndLink.Ally
         private static string GetTransformName(Transform target)
         {
             return target != null ? target.name : "None";
+        }
+
+        /// <summary>
+        /// 按动作资产分别记录冷却结束时间。
+        /// 泛型用于轻量测试，运行时实际使用 CombatActionDefinition 作为 key。
+        /// </summary>
+        public sealed class ActionCooldownTracker<TAction>
+            where TAction : class
+        {
+            private readonly Dictionary<TAction, float> _nextReadyTimes = new();
+
+            public bool IsReady(TAction action, float currentTime)
+            {
+                return GetRemaining(action, currentTime) <= 0f;
+            }
+
+            public float GetRemaining(TAction action, float currentTime)
+            {
+                if (action == null)
+                {
+                    return 0f;
+                }
+
+                return _nextReadyTimes.TryGetValue(action, out float nextReadyTime)
+                    ? Mathf.Max(0f, nextReadyTime - currentTime)
+                    : 0f;
+            }
+
+            public void StartCooldown(TAction action, float currentTime, float cooldown)
+            {
+                if (action == null)
+                {
+                    return;
+                }
+
+                _nextReadyTimes[action] = currentTime + Mathf.Max(0f, cooldown);
+            }
         }
     }
 }

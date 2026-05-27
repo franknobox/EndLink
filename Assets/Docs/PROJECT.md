@@ -49,7 +49,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 ### 当前情况概览
 
-项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/StateMachine`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party` 和 `Assets/_EndLink/Enemies`。控制与状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、玩家生命值与受击接线、玩家 Animator 桥接、基础攻击驱动、通用 Hitbox、远程直线 Hitbox、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友状态机骨架、队友跟随移动第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架和木桩敌人的第一版基础设施。
+项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/StateMachine`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party` 和 `Assets/_EndLink/Enemies`。控制与状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、玩家生命值与受击接线、玩家 Animator 桥接、基础攻击驱动、基础 Hitbox 配置、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友状态机骨架、队友跟随移动第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架和木桩敌人的第一版基础设施。
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
@@ -79,8 +79,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | [战斗事件总栈](#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
 | [玩家战斗驱动](#feature-player-combat-driver) | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |
 | [敌人通用基底](#feature-enemy-foundation) | 已完成第一版 | 提供正式敌人身份入口、生命受击、死亡目标失效、目标有效性接口和大状态机骨架。 |
-| [通用 Hitbox 基类](#feature-hitbox) | 已完成第一版 | 负责 Trigger 命中检测、可配置目标 Layer 过滤、重复命中去重，并向目标传递伤害、击退和标签。 |
-| [远程直线 Hitbox](#feature-hitbox-projectile) | 已完成测试版 | 提供沿自身 Z 轴正方向飞行的远程命中盒，用于测试远程技能、锁定目标和小队助战响应。 |
+| [基础 Hitbox 配置](#feature-hitbox) | 已完成第一版 | 提供通用 Hitbox 基类和远程直线 Hitbox，用于配置近战判定、远程飞行判定、目标过滤、生命周期、伤害、击退和标签。 |
 | [木桩敌人](#feature-enemy-dummy) | 已完成第一版 | 用于验证 Hitbox 命中、扣血、死亡、受击/死亡事件和基础调试显示。 |
 
 #### 队伍
@@ -569,6 +568,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `AllyCombatDriver` 是队友战斗执行器，职责类似 `PlayerCombatDriver`，但不读取输入，也不决定什么时候出手。
 - `AllyCombatDriver` 保存队友的自动助战、主动技能、连携技动作槽位，并根据 `CombatActionDefinition` 生成 Hitbox、写入伤害、击退、战斗标签和标签持续时间。
 - 队友进入助战流程只要求配置了 `Assist Action`；动作冷却只影响实际出手时间，冷却未结束时会在 Assist 内等待，而不是放弃助战。
+- `AllyCombatDriver` 按 `CombatActionDefinition` 分别记录冷却，自动助战动作不会占用主动技能冷却，主动技能也不会重置助战动作冷却。
 - `AllyCombatDriver` 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 或调试窗口读取。
 - `CombatActionDefinition.Effective Attack Range` 决定队友距离目标 Collider 表面多远开始攻击。
 - `AllyCombatDriver` 执行助战时会朝目标方向生成判定，并广播 `ActionStarted` 事件。
@@ -890,7 +890,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 <a id="feature-hitbox"></a>
 
-### Feature：通用 Hitbox 基类
+### Feature：基础 Hitbox 配置
 
 <details>
 <summary>展开详情</summary>
@@ -901,6 +901,9 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 使用 `OnTriggerEnter` 检测命中。
 - 通过 `targetLayerMask` 过滤可命中的目标 Layer，默认回填 `Enemy` Layer。
 - 子类可以覆盖目标 Layer 判断，用于后续阵营、友伤或特殊目标规则。
+- `HitboxProjectile` 继承 `HitboxBase`，用于沿自身 Z 轴正方向飞行的远程判定。
+- `HitboxProjectile` 支持最大飞行距离和命中后销毁，时间生命周期使用 `HitboxBase.lifetime`。
+- `destroyOnHit` 关闭后可以临时作为穿透型远程 Hitbox 使用。
 - 使用 `HashSet<Collider>` 记录已经命中过的 Collider，避免同一个 Hitbox 重复命中同一目标。
 - 如果目标实现 `ICombatTarget` 且 `IsTargetable == false`，Hitbox 会跳过该目标。
 - 命中后查找目标父级上的 `IHitReceiver`。
@@ -930,41 +933,15 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `combatTagDuration`：命中战斗标签持续时间，小于等于 0 表示永久标签
 - `lifetime`：Hitbox 自动销毁时间，小于等于 0 表示不按时间销毁
 - `onHit`：命中事件
+- `HitboxProjectile.speed`：远程 Hitbox 飞行速度，单位米/秒
+- `HitboxProjectile.maxDistance`：远程 Hitbox 最大飞行距离，小于等于 0 表示不按距离销毁
+- `HitboxProjectile.destroyOnHit`：远程 Hitbox 命中后是否立即销毁
 
 配置注意：
 - Hitbox 的 Collider 必须勾选 `Is Trigger`。
 - 为保证 `OnTriggerEnter` 稳定触发，Hitbox prefab 建议带 `Rigidbody`，设置 `Is Kinematic = true`、`Use Gravity = false`。
 - 当前玩家和队友攻击用的 Hitbox 默认要求敌人 Collider 所在物体设置为 `Enemy` Layer；其他攻击类型可通过 `targetLayerMask` 改为 Player、Ally 或自定义 Layer。
 - `ProjectSettings/TagManager.asset` 包含 `Enemy` Layer。
-
-</details>
-
-<a id="feature-hitbox-projectile"></a>
-
-### Feature：远程直线 Hitbox
-
-<details>
-<summary>展开详情</summary>
-
-功能说明：
-- `HitboxProjectile` 继承 `HitboxBase`，复用现有命中检测、伤害、击退、标签、命中去重、生命周期和事件播报。
-- Projectile 沿自身 Z 轴正方向匀速移动，适合先验证远程技能、剑气、飞弹和锁定目标后的出招方向。
-- 支持最大飞行距离和命中后销毁；时间生命周期使用 `HitboxBase.lifetime`。
-- `destroyOnHit` 关闭后可以临时作为穿透型远程 Hitbox 使用。
-
-对应脚本：
-- `Assets/_EndLink/Combat/HitboxProjectile.cs`
-- `Assets/_EndLink/Combat/HitboxBase.cs`
-
-相关资产：
-- 远程 Hitbox prefab：手动创建，挂载 `HitboxProjectile`，再配置到对应 `CombatActionDefinition.hitboxPrefab`
-- 远程技能动作资产：手动创建 `CombatActionDefinition`，动作资产只负责选择 prefab 和生成位置
-
-关键配置：
-- `speed`：飞行速度，单位米/秒
-- `maxDistance`：最大飞行距离，小于等于 0 表示不按距离销毁
-- `lifetime`：来自 `HitboxBase` 的时间生命周期，小于等于 0 表示不按时间销毁
-- `destroyOnHit`：命中后是否立即销毁
 </details>
 
 <a id="feature-enemy-dummy"></a>
