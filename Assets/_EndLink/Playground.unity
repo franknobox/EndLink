@@ -349,6 +349,7 @@ MonoBehaviour:
   followSlotSoftness: 0.75
   followDeadZoneRadius: 2.5
   moveSpeed: 4
+  sprintSyncSpeedMultiplier: 1.5
   arrivalSmoothTime: 0.12
   catchUpDistance: 5
   catchUpSpeedMultiplier: 1.75
@@ -905,6 +906,7 @@ MonoBehaviour:
     followSlotSoftness: 0.75
     followDeadZoneRadius: 5
     moveSpeed: 4
+    sprintSyncSpeedMultiplier: 1.5
     arrivalSmoothTime: 0.12
     catchUpDistance: 5
     catchUpSpeedMultiplier: 1.75
@@ -1906,6 +1908,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Core.PlayerController
   moveSpeed: 5
+  sprintSpeed: 7.5
   accelerationSmoothTime: 0.12
   decelerationSmoothTime: 0.08
   rotationSharpness: 14
@@ -1999,7 +2002,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.PlayerCombatDriver
   basicAttackAction: {fileID: 11400000, guid: 5aad972d3b43ae1408e5aeb62b6f8bd4, type: 2}
-  skillAction: {fileID: 11400000, guid: bd19f0735bc84f84389cecf9cf0cd519, type: 2}
+  skillAction: {fileID: 11400000, guid: c41052575e1541f1940a105596abc2e9, type: 2}
   linkAction: {fileID: 11400000, guid: c64f9df7cb4f54546bcb993ce0b22096, type: 2}
 --- !u!1 &698380643
 GameObject:
@@ -2101,6 +2104,7 @@ MonoBehaviour:
   followSlotSoftness: 0.75
   followDeadZoneRadius: 2.5
   moveSpeed: 4
+  sprintSyncSpeedMultiplier: 1.5
   arrivalSmoothTime: 0.12
   catchUpDistance: 5
   catchUpSpeedMultiplier: 1.75

@@ -14,8 +14,13 @@ namespace EndLink.Core
         private const float MoveInputDeadZoneSqr = 0.0001f;
 
         [Header("移动参数")]
+        [Tooltip("普通移动速度，单位米/秒。")]
         [SerializeField, Min(0f)]
         private float moveSpeed = 5f;
+
+        [Tooltip("按住冲刺键时的移动速度，单位米/秒。")]
+        [SerializeField, Min(0f)]
+        private float sprintSpeed = 7.5f;
 
         [SerializeField, Min(0.01f)]
         private float accelerationSmoothTime = 0.12f;
@@ -50,6 +55,10 @@ namespace EndLink.Core
 
         // CharacterController 不自带重力，需要手动累计垂直速度。
         private float _verticalVelocity;
+        private bool _isSprinting;
+
+        /// <summary>当前帧玩家是否正在冲刺移动。</summary>
+        public bool IsSprinting => _isSprinting;
 
         /// <summary>
         /// 移动方向参考。
@@ -101,8 +110,20 @@ namespace EndLink.Core
         /// </summary>
         public void TickMovement(Vector2 moveInput, float deltaTime)
         {
+            TickMovement(moveInput, false, deltaTime);
+        }
+
+        /// <summary>
+        /// 根据状态机传入的移动输入和冲刺修饰执行一帧移动。
+        /// 冲刺只是移动速度修饰，不单独改变玩家状态。
+        /// </summary>
+        public void TickMovement(Vector2 moveInput, bool sprintRequested, float deltaTime)
+        {
             Vector3 desiredMoveDirection = GetDesiredMoveDirection(moveInput);
-            Vector3 targetPlanarVelocity = desiredMoveDirection * (moveSpeed * Mathf.Clamp01(moveInput.magnitude));
+            _isSprinting = sprintRequested && desiredMoveDirection.sqrMagnitude > MoveInputDeadZoneSqr;
+
+            float targetSpeed = _isSprinting ? sprintSpeed : moveSpeed;
+            Vector3 targetPlanarVelocity = desiredMoveDirection * (targetSpeed * Mathf.Clamp01(moveInput.magnitude));
 
             SmoothPlanarVelocity(targetPlanarVelocity, deltaTime);
             UpdateVerticalVelocity(deltaTime);

@@ -32,7 +32,7 @@ namespace EndLink.Core
                 return;
             }
 
-            Context.Controller.TickMovement(Context.InputReader.MoveInput, deltaTime);
+            Context.Controller.TickMovement(Context.InputReader.MoveInput, Context.InputReader.SprintHeld, deltaTime);
         }
     }
 }

@@ -49,7 +49,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 ### 当前情况概览
 
-项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/StateMachine`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party` 和 `Assets/_EndLink/Enemies`。控制与状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、玩家生命值与受击接线、玩家 Animator 桥接、基础攻击驱动、通用 Hitbox、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友状态机骨架、队友跟随移动第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架和木桩敌人的第一版基础设施。
+项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/StateMachine`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party` 和 `Assets/_EndLink/Enemies`。控制与状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、玩家生命值与受击接线、玩家 Animator 桥接、基础攻击驱动、通用 Hitbox、远程直线 Hitbox、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友状态机骨架、队友跟随移动第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架和木桩敌人的第一版基础设施。
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
@@ -80,6 +80,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | [玩家战斗驱动](#feature-player-combat-driver) | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |
 | [敌人通用基底](#feature-enemy-foundation) | 已完成第一版 | 提供正式敌人身份入口、生命受击、死亡目标失效、目标有效性接口和大状态机骨架。 |
 | [通用 Hitbox 基类](#feature-hitbox) | 已完成第一版 | 负责 Trigger 命中检测、可配置目标 Layer 过滤、重复命中去重，并向目标传递伤害、击退和标签。 |
+| [远程直线 Hitbox](#feature-hitbox-projectile) | 已完成测试版 | 提供沿自身 Z 轴正方向飞行的远程命中盒，用于测试远程技能、锁定目标和小队助战响应。 |
 | [木桩敌人](#feature-enemy-dummy) | 已完成第一版 | 用于验证 Hitbox 命中、扣血、死亡、受击/死亡事件和基础调试显示。 |
 
 #### 队伍
@@ -138,6 +139,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 支持手动重力和贴地速度。
 - 移动时角色本地 Z 轴正方向会平滑转向移动方向。
 - 支持移动方向参考，拖入 `Main Camera` 后可实现相机相对移动。
+- 支持按住 `Left Shift` 冲刺；当前冲刺作为移动速度修饰，不单独进入状态机大状态。
 - 移动调用由 `PlayerStateMachine` 驱动，`PlayerController` 通过 `TickMovement` 执行实际位移。
 
 对应脚本：
@@ -153,6 +155,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 关键配置：
 - `moveSpeed`：移动速度
+- `sprintSpeed`：按住冲刺键时的移动速度
 - `accelerationSmoothTime`：加速阻尼
 - `decelerationSmoothTime`：减速阻尼
 - `rotationSharpness`：转向响应
@@ -690,6 +693,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 助战接近状态会调用 `TickMoveToPosition(position, arriveDistance, deltaTime)`，让队友临时移动到敌人附近而不修改主控跟随目标。
 - 队友会移动到主控的本地队形偏移范围，移动时面向移动方向，停下后的朝向由 `idleFacingMode` 决定。
 - 支持 `arrivalSmoothTime` 平滑加减速，降低接近队形点时的机械感。
+- 支持主控冲刺同步：主控在 Move 状态按住冲刺时，队友 Follow 状态下的跟随速度会乘以 `sprintSyncSpeedMultiplier`。
 - 支持 `catchUpDistance` 和 `catchUpSpeedMultiplier`，队友落后较远时会加速追上。
 - 支持 `teleportDistance`，队友极端远离队形点时会直接归位，避免长距离丢失。
 - 支持 `followSlotSoftness`，队友进入队形点周围软半径后就算到位，不强制踩死精确坐标。
@@ -719,6 +723,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `PartyManager.followSettings.followSlotSoftness`：队形点软半径，范围内算到位
 - `PartyManager.followSettings.followDeadZoneRadius`：跟随死区半径，默认 5，主控在该队友站位附近移动时队友保持原地和原朝向
 - `PartyManager.followSettings.moveSpeed`：队友跟随移动速度
+- `PartyManager.followSettings.sprintSyncSpeedMultiplier`：主控冲刺时队友 Follow 移动速度倍率
 - `PartyManager.followSettings.arrivalSmoothTime`：接近队形点时的速度阻尼时间
 - `PartyManager.followSettings.catchUpDistance` / `catchUpSpeedMultiplier`：追赶距离和追赶速度倍率
 - `PartyManager.followSettings.teleportDistance`：极端远离时的归位距离，设置为 0 可关闭
@@ -875,11 +880,12 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `CombatActionDefinition` 数据资产：可通过 `Create > EndLink > Combat > Combat Action Definition` 创建
 - `Assets/_EndLink/Combat/Hitbox_Base.prefab`
 - `Assets/_EndLink/Combat/Hitbox_MeleeWave.prefab`
+- 远程 Hitbox prefab 和远程技能动作资产由项目配置手动创建。
 关键配置：
 - `Basic Attack Action`：玩家普攻动作资产，鼠标左键触发的 `Attack` 状态会执行它
 - `Skill Action`：玩家主动技能动作资产，后续由 `PartyCombatRouter` 的主角技能命令触发
 - `Link Action`：玩家连携技动作资产，后续只能由连携机制确认合法窗口后触发，不能作为普通输入动作直接释放
-- Hitbox、生成距离、高度、生命周期和冷却都从对应的 `CombatActionDefinition` 读取
+- Hitbox prefab、生成距离、高度和冷却从对应的 `CombatActionDefinition` 读取；Hitbox 生命周期由 Hitbox prefab 自己配置。
 </details>
 
 <a id="feature-hitbox"></a>
@@ -905,6 +911,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 对应脚本：
 - `Assets/_EndLink/Combat/HitboxBase.cs`
+- `Assets/_EndLink/Combat/HitboxProjectile.cs`
 - `Assets/_EndLink/Combat/HitboxHitInfo.cs`
 - `Assets/_EndLink/Combat/IHitReceiver.cs`
 - `Assets/_EndLink/Combat/ICombatTarget.cs`
@@ -912,6 +919,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 相关资产：
 - `Assets/_EndLink/Combat/Hitbox_Base.prefab`
 - `Assets/_EndLink/Combat/Hitbox_MeleeWave.prefab`
+- 远程 Hitbox prefab 可手动创建，并挂载 `HitboxProjectile`。
 - `Assets/_EndLink/Combat/Mat_Wave.mat`
 
 关键配置：
@@ -920,6 +928,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `knockbackForce`：击退力
 - `combatTagToApply`：命中战斗标签资产
 - `combatTagDuration`：命中战斗标签持续时间，小于等于 0 表示永久标签
+- `lifetime`：Hitbox 自动销毁时间，小于等于 0 表示不按时间销毁
 - `onHit`：命中事件
 
 配置注意：
@@ -928,6 +937,34 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 当前玩家和队友攻击用的 Hitbox 默认要求敌人 Collider 所在物体设置为 `Enemy` Layer；其他攻击类型可通过 `targetLayerMask` 改为 Player、Ally 或自定义 Layer。
 - `ProjectSettings/TagManager.asset` 包含 `Enemy` Layer。
 
+</details>
+
+<a id="feature-hitbox-projectile"></a>
+
+### Feature：远程直线 Hitbox
+
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- `HitboxProjectile` 继承 `HitboxBase`，复用现有命中检测、伤害、击退、标签、命中去重、生命周期和事件播报。
+- Projectile 沿自身 Z 轴正方向匀速移动，适合先验证远程技能、剑气、飞弹和锁定目标后的出招方向。
+- 支持最大飞行距离和命中后销毁；时间生命周期使用 `HitboxBase.lifetime`。
+- `destroyOnHit` 关闭后可以临时作为穿透型远程 Hitbox 使用。
+
+对应脚本：
+- `Assets/_EndLink/Combat/HitboxProjectile.cs`
+- `Assets/_EndLink/Combat/HitboxBase.cs`
+
+相关资产：
+- 远程 Hitbox prefab：手动创建，挂载 `HitboxProjectile`，再配置到对应 `CombatActionDefinition.hitboxPrefab`
+- 远程技能动作资产：手动创建 `CombatActionDefinition`，动作资产只负责选择 prefab 和生成位置
+
+关键配置：
+- `speed`：飞行速度，单位米/秒
+- `maxDistance`：最大飞行距离，小于等于 0 表示不按距离销毁
+- `lifetime`：来自 `HitboxBase` 的时间生命周期，小于等于 0 表示不按时间销毁
+- `destroyOnHit`：命中后是否立即销毁
 </details>
 
 <a id="feature-enemy-dummy"></a>

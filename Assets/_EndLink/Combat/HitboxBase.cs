@@ -37,6 +37,12 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float combatTagDuration;
 
+        [Header("生命周期")]
+        [Tooltip("Hitbox 自动销毁时间。小于等于 0 表示不由 HitboxBase 按时间销毁。")]
+        [InspectorName("Lifetime")]
+        [SerializeField, Min(0f)]
+        private float lifetime = 0.2f;
+
         [Header("事件")]
         [Tooltip("成功命中 Enemy Layer 且目标实现 IHitReceiver 后触发。可用于挂音效、特效或调试输出。")]
         [SerializeField]
@@ -45,6 +51,7 @@ namespace EndLink.Combat
         private readonly HashSet<Collider> _hitColliders = new();
         private Collider _triggerCollider;
         private GameObject _owner;
+        private float _enabledTime;
 
         /// <summary>本 Hitbox 的伤害值。</summary>
         public float DamageAmount => damageAmount;
@@ -57,6 +64,9 @@ namespace EndLink.Combat
 
         /// <summary>本 Hitbox 命中时附加的战斗标签持续时间。小于等于 0 表示永久标签。</summary>
         public float CombatTagDuration => combatTagDuration;
+
+        /// <summary>Hitbox 自动销毁时间。小于等于 0 表示关闭基类时间销毁。</summary>
+        public float Lifetime => lifetime;
 
         /// <summary>允许命中的目标 Layer。</summary>
         public LayerMask TargetLayerMask => targetLayerMask;
@@ -74,6 +84,15 @@ namespace EndLink.Combat
         protected virtual void OnEnable()
         {
             ResetHitCache();
+            _enabledTime = Time.time;
+        }
+
+        protected virtual void Update()
+        {
+            if (ShouldExpireByLifetime(_enabledTime, Time.time, lifetime))
+            {
+                Destroy(gameObject);
+            }
         }
 
         protected virtual void Reset()
@@ -91,6 +110,7 @@ namespace EndLink.Combat
             damageAmount = Mathf.Max(0f, damageAmount);
             knockbackForce = Mathf.Max(0f, knockbackForce);
             combatTagDuration = Mathf.Max(0f, combatTagDuration);
+            lifetime = Mathf.Max(0f, lifetime);
 
             if (TryGetComponent(out Collider hitboxCollider))
             {
@@ -126,6 +146,15 @@ namespace EndLink.Combat
         public void ResetHitCache()
         {
             _hitColliders.Clear();
+        }
+
+        /// <summary>
+        /// 判断 Hitbox 是否已经达到生命周期。
+        /// lifetime 小于等于 0 时表示关闭时间销毁。
+        /// </summary>
+        public static bool ShouldExpireByLifetime(float startTime, float currentTime, float lifetime)
+        {
+            return lifetime > 0f && currentTime - startTime >= lifetime;
         }
 
         protected virtual void OnTriggerEnter(Collider other)

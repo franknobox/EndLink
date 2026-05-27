@@ -116,7 +116,6 @@ namespace EndLink.Combat
 
             GameObject hitboxInstance = Instantiate(actionDefinition.HitboxPrefab, spawnPosition, spawnRotation);
             ConfigureHitbox(hitboxInstance, actionDefinition);
-            Destroy(hitboxInstance, actionDefinition.HitboxLifetime);
 
             CombatEventsBus.RaiseActionStarted(gameObject, GetCurrentTargetObject(), actionDefinition);
             _lastCooldownAction = actionDefinition;

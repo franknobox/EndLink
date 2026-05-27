@@ -177,8 +177,6 @@ namespace EndLink.Ally
                     $"spawned hitbox has no HitboxBase, prefab={hitboxPrefab.name}");
             }
 
-            Destroy(hitboxInstance, actionDefinition.HitboxLifetime);
-
             _lastCooldownAction = actionDefinition;
             _lastActionCooldown = actionDefinition.Cooldown;
             _nextActionTime = Time.time + _lastActionCooldown;

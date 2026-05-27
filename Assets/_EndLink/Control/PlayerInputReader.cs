@@ -16,10 +16,16 @@ namespace EndLink.Core
         /// </summary>
         public Vector2 MoveInput { get; private set; }
 
+        /// <summary>
+        /// 当前是否按住冲刺输入。默认绑定为 Left Shift。
+        /// </summary>
+        public bool SprintHeld { get; private set; }
+
         private InputSystem_Actions _inputActions;
         private InputActionMap _playerActionMap;
         private InputAction _moveAction;
         private InputAction _attackAction;
+        private InputAction _sprintAction;
         private InputAction _playerSkillAction;
         private InputAction _allySlotASkillAction;
         private InputAction _allySlotBSkillAction;
@@ -69,6 +75,9 @@ namespace EndLink.Core
             _moveAction.performed -= OnMoveChanged;
             _moveAction.canceled -= OnMoveCanceled;
             _attackAction.performed -= OnAttackPerformed;
+            _sprintAction.started -= OnSprintStartedOrPerformed;
+            _sprintAction.performed -= OnSprintStartedOrPerformed;
+            _sprintAction.canceled -= OnSprintCanceled;
             _playerSkillAction.performed -= OnPlayerSkillPerformed;
             _allySlotASkillAction.performed -= OnAllySlotASkillPerformed;
             _allySlotBSkillAction.performed -= OnAllySlotBSkillPerformed;
@@ -187,6 +196,16 @@ namespace EndLink.Core
             }
         }
 
+        private void OnSprintStartedOrPerformed(InputAction.CallbackContext context)
+        {
+            SprintHeld = context.ReadValueAsButton();
+        }
+
+        private void OnSprintCanceled(InputAction.CallbackContext context)
+        {
+            SprintHeld = false;
+        }
+
         private void OnPlayerSkillPerformed(InputAction.CallbackContext context)
         {
             SetPressedIfButton(context, ref _playerSkillPressed);
@@ -243,6 +262,7 @@ namespace EndLink.Core
 
         private void ResetPressedInputs()
         {
+            SprintHeld = false;
             _attackPressed = false;
             _playerSkillPressed = false;
             _allySlotASkillPressed = false;
@@ -264,6 +284,7 @@ namespace EndLink.Core
             _playerActionMap = _inputActions.asset.FindActionMap("Player", true);
             _moveAction = _inputActions.asset.FindAction("Player/Move", true);
             _attackAction = _inputActions.asset.FindAction("Player/Attack", true);
+            _sprintAction = _inputActions.asset.FindAction("Player/Sprint", true);
             _playerSkillAction = _inputActions.asset.FindAction("Player/PlayerSkill", true);
             _allySlotASkillAction = _inputActions.asset.FindAction("Player/AllySlotASkill", true);
             _allySlotBSkillAction = _inputActions.asset.FindAction("Player/AllySlotBSkill", true);
@@ -275,6 +296,9 @@ namespace EndLink.Core
             _moveAction.performed += OnMoveChanged;
             _moveAction.canceled += OnMoveCanceled;
             _attackAction.performed += OnAttackPerformed;
+            _sprintAction.started += OnSprintStartedOrPerformed;
+            _sprintAction.performed += OnSprintStartedOrPerformed;
+            _sprintAction.canceled += OnSprintCanceled;
             _playerSkillAction.performed += OnPlayerSkillPerformed;
             _allySlotASkillAction.performed += OnAllySlotASkillPerformed;
             _allySlotBSkillAction.performed += OnAllySlotBSkillPerformed;

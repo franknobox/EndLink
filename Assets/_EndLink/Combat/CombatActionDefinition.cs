@@ -5,7 +5,6 @@ namespace EndLink.Combat
     /// <summary>
     /// 战斗动作类型。
     /// 描述动作本身的性质，不描述释放者来源。
-    /// 例如主控和队友都可以释放 BasicAttack 或 Skill，来源信息后续由战斗事件数据携带。
     /// </summary>
     public enum CombatActionType
     {
@@ -15,7 +14,7 @@ namespace EndLink.Combat
         /// <summary>普通技能。通常由玩家输入或 AI 决策释放，有冷却、时序和特殊效果。</summary>
         Skill = 1,
 
-        /// <summary>连携攻击。必须由标签、事件或连携规则打开合法窗口后释放，不能作为普通输入动作直接释放。</summary>
+        /// <summary>连携攻击。必须由标签、事件或连携规则打开合法窗口后释放。</summary>
         LinkAttack = 2,
 
         /// <summary>大招。通常消耗高权重资源或满足特殊条件，后续可接演出和镜头。</summary>
@@ -24,8 +23,8 @@ namespace EndLink.Combat
 
     /// <summary>
     /// 战斗动作配置。
-    /// 用一个 ScriptableObject 描述一次普攻或简单技能所需的基础数据，
-    /// 让伤害、冷却、命中盒和时序从组件字段逐步迁移到可复用的数据资产。
+    /// 用 ScriptableObject 描述一次普通攻击、技能、连携技或大招所需的基础数据。
+    /// Hitbox 的存活时间由 Hitbox prefab 自己配置，不由动作资产统一销毁。
     /// </summary>
     [CreateAssetMenu(
         fileName = "CombatAction_",
@@ -34,7 +33,7 @@ namespace EndLink.Combat
     {
         /// <summary>
         /// 旧版动作资产没有写入有效攻击距离时使用的默认值。
-        /// 当前近战波 Hitbox 默认生成在前方 1 米，1.2 米可以让 AI 停在能覆盖到目标表面的距离。
+        /// 当前近战波默认生成在前方 1 米，1.2 米可以让 AI 停在能覆盖到目标表面的距离。
         /// </summary>
         public const float DefaultEffectiveAttackRange = 1.2f;
 
@@ -47,7 +46,7 @@ namespace EndLink.Combat
         [SerializeField]
         private string displayName = "New Combat Action";
 
-        [Tooltip("动作类型。描述动作性质，不描述释放者来源。主控、队友和敌人后续可以共用同一套类型。")]
+        [Tooltip("动作类型。描述动作性质，不描述释放者来源。")]
         [SerializeField]
         private CombatActionType actionType = CombatActionType.BasicAttack;
 
@@ -60,7 +59,7 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float knockbackForce = 3f;
 
-        [Tooltip("动作命中时施加的战斗标签资产。新逻辑应优先使用它。")]
+        [Tooltip("动作命中时施加的战斗标签资产。")]
         [SerializeField]
         private CombatTagDefinition combatTagToApply;
 
@@ -77,7 +76,7 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float startupTime = 0.1f;
 
-        [Tooltip("有效时间。表示 Hitbox 或判定窗口持续多久。")]
+        [Tooltip("有效时间。表示 Hitbox 或判定窗口理论上持续多久。具体生成物生命周期由 Hitbox prefab 自己配置。")]
         [SerializeField, Min(0.01f)]
         private float activeTime = 0.2f;
 
@@ -98,100 +97,59 @@ namespace EndLink.Combat
         [SerializeField]
         private float hitboxSpawnHeight = 1f;
 
-        [Tooltip("Hitbox 自动销毁时间。通常应接近或等于有效时间。")]
-        [SerializeField, Min(0.01f)]
-        private float hitboxLifetime = 0.2f;
-
         [Header("AI 距离")]
-        [Tooltip("AI 判断这个动作可以命中的有效距离。队友会按自己到目标 Collider 表面的距离决定何时停步和出手；建议按 Hitbox 生成距离 + Hitbox 前向覆盖半径配置，并留少量余量。")]
+        [Tooltip("AI 判断这个动作可以命中的有效距离。队友会按自己到目标 Collider 表面的距离决定何时停止和出手。")]
         [SerializeField, Min(0.01f)]
         private float effectiveAttackRange = DefaultEffectiveAttackRange;
 
-        /// <summary>
-        /// 动作唯一标识。
-        /// </summary>
+        /// <summary>动作唯一标识。</summary>
         public string ActionId => actionId;
 
-        /// <summary>
-        /// 显示名称。
-        /// </summary>
+        /// <summary>显示名称。</summary>
         public string DisplayName => displayName;
 
-        /// <summary>
-        /// 动作类型。
-        /// </summary>
+        /// <summary>动作类型。</summary>
         public CombatActionType ActionType => actionType;
 
-        /// <summary>
-        /// 基础伤害值。
-        /// </summary>
+        /// <summary>基础伤害值。</summary>
         public int DamageAmount => damageAmount;
 
-        /// <summary>
-        /// 击退力度。
-        /// </summary>
+        /// <summary>击退力度。</summary>
         public float KnockbackForce => knockbackForce;
 
-        /// <summary>
-        /// 命中时施加的战斗标签资产。
-        /// </summary>
+        /// <summary>命中时施加的战斗标签资产。</summary>
         public CombatTagDefinition CombatTagToApply => combatTagToApply;
 
-        /// <summary>
-        /// 战斗标签持续时间。小于等于 0 表示永久标签。
-        /// </summary>
+        /// <summary>战斗标签持续时间。小于等于 0 表示永久标签。</summary>
         public float CombatTagDuration => combatTagDuration;
 
-        /// <summary>
-        /// 冷却时间。
-        /// </summary>
+        /// <summary>冷却时间。</summary>
         public float Cooldown => cooldown;
 
-        /// <summary>
-        /// 前摇时间。
-        /// </summary>
+        /// <summary>前摇时间。</summary>
         public float StartupTime => startupTime;
 
-        /// <summary>
-        /// 判定有效时间。
-        /// </summary>
+        /// <summary>判定有效时间。</summary>
         public float ActiveTime => activeTime;
 
-        /// <summary>
-        /// 后摇时间。
-        /// </summary>
+        /// <summary>后摇时间。</summary>
         public float RecoveryTime => recoveryTime;
 
-        /// <summary>
-        /// Hitbox 预制体。
-        /// </summary>
+        /// <summary>Hitbox 预制体。</summary>
         public GameObject HitboxPrefab => hitboxPrefab;
 
-        /// <summary>
-        /// Hitbox 前方生成距离。
-        /// </summary>
+        /// <summary>Hitbox 前方生成距离。</summary>
         public float HitboxSpawnDistance => hitboxSpawnDistance;
 
-        /// <summary>
-        /// Hitbox 高度偏移。
-        /// </summary>
+        /// <summary>Hitbox 高度偏移。</summary>
         public float HitboxSpawnHeight => hitboxSpawnHeight;
 
-        /// <summary>
-        /// Hitbox 存活时间。
-        /// </summary>
-        public float HitboxLifetime => hitboxLifetime;
-
-        /// <summary>
-        /// AI 判断该动作可以命中的有效距离。
-        /// </summary>
+        /// <summary>AI 判断该动作可以命中的有效距离。</summary>
         public float EffectiveAttackRange => effectiveAttackRange > 0f
             ? Mathf.Max(0.01f, effectiveAttackRange)
             : DefaultEffectiveAttackRange;
 
-        /// <summary>
-        /// 动作总时长，等于前摇、有效时间和后摇之和。
-        /// </summary>
+        /// <summary>动作总时长，等于前摇、有效时间和后摇之和。</summary>
         public float TotalDuration => startupTime + activeTime + recoveryTime;
 
 #if UNITY_EDITOR
@@ -232,7 +190,6 @@ namespace EndLink.Combat
             activeTime = Mathf.Max(0.01f, activeTime);
             recoveryTime = Mathf.Max(0f, recoveryTime);
             hitboxSpawnDistance = Mathf.Max(0f, hitboxSpawnDistance);
-            hitboxLifetime = Mathf.Max(0.01f, hitboxLifetime);
 
             if (effectiveAttackRange <= 0f)
             {

@@ -1,4 +1,5 @@
 using EndLink.Party;
+using EndLink.Core;
 using UnityEngine;
 
 namespace EndLink.Ally
@@ -42,6 +43,9 @@ namespace EndLink.Ally
         private float moveSpeed = 4f;
 
         [SerializeField, HideInInspector]
+        private float sprintSyncSpeedMultiplier = 1.5f;
+
+        [SerializeField, HideInInspector]
         private float arrivalSmoothTime = 0.12f;
 
         [SerializeField, HideInInspector]
@@ -80,6 +84,7 @@ namespace EndLink.Ally
         private const int AvoidanceOverlapCapacity = 8;
         private const int DeadZoneGizmoSegments = 64;
         private CharacterController _characterController;
+        private PlayerController _followTargetPlayerController;
         private readonly Collider[] _avoidanceOverlaps = new Collider[AvoidanceOverlapCapacity];
         private Vector3 _desiredWorldPosition;
         private Vector3 _followDeadZoneAnchorPosition;
@@ -101,6 +106,9 @@ namespace EndLink.Ally
 
         /// <summary>基础移动速度。</summary>
         public float MoveSpeed => moveSpeed;
+
+        /// <summary>主控冲刺时的跟随速度倍率。</summary>
+        public float SprintSyncSpeedMultiplier => sprintSyncSpeedMultiplier;
 
         /// <summary>接近目标点时的速度阻尼时间。</summary>
         public float ArrivalSmoothTime => arrivalSmoothTime;
@@ -160,6 +168,7 @@ namespace EndLink.Ally
             followSlotSoftness = Mathf.Max(0f, followSlotSoftness);
             followDeadZoneRadius = Mathf.Max(0f, followDeadZoneRadius);
             moveSpeed = Mathf.Max(0f, moveSpeed);
+            sprintSyncSpeedMultiplier = Mathf.Max(1f, sprintSyncSpeedMultiplier);
             arrivalSmoothTime = Mathf.Max(0.001f, arrivalSmoothTime);
             catchUpDistance = Mathf.Max(0f, catchUpDistance);
             catchUpSpeedMultiplier = Mathf.Max(1f, catchUpSpeedMultiplier);
@@ -187,6 +196,7 @@ namespace EndLink.Ally
         public void SetFollowTarget(Transform target)
         {
             followTarget = target;
+            _followTargetPlayerController = target != null ? target.GetComponent<PlayerController>() : null;
             ResetFollowDeadZoneAnchor();
             RequestReposition();
             ResetSpeed();
@@ -217,6 +227,7 @@ namespace EndLink.Ally
             followSlotSoftness = Mathf.Max(0f, settings.FollowSlotSoftness);
             followDeadZoneRadius = Mathf.Max(0f, settings.FollowDeadZoneRadius);
             moveSpeed = Mathf.Max(0f, settings.MoveSpeed);
+            sprintSyncSpeedMultiplier = Mathf.Max(1f, settings.SprintSyncSpeedMultiplier);
             arrivalSmoothTime = Mathf.Max(0.001f, settings.ArrivalSmoothTime);
             catchUpDistance = Mathf.Max(0f, settings.CatchUpDistance);
             catchUpSpeedMultiplier = Mathf.Max(1f, settings.CatchUpSpeedMultiplier);
@@ -280,7 +291,7 @@ namespace EndLink.Ally
 
             Vector3 moveDirection = toDesired / distance;
             Vector3 finalMoveDirection = BlendAvoidance(moveDirection, avoidanceVector);
-            float targetSpeed = CalculateTargetSpeed(distance, arriveRadius);
+            float targetSpeed = CalculateTargetSpeed(distance, arriveRadius, true);
             float currentSpeed = SmoothSpeedTo(targetSpeed, deltaTime);
             float step = Mathf.Min(currentSpeed * deltaTime, distance - arriveRadius);
 
@@ -323,7 +334,7 @@ namespace EndLink.Ally
 
             Vector3 moveDirection = toDesired / distance;
             Vector3 finalMoveDirection = BlendAvoidance(moveDirection, avoidanceVector);
-            float targetSpeed = CalculateTargetSpeed(distance, arriveRadius);
+            float targetSpeed = CalculateTargetSpeed(distance, arriveRadius, false);
             float currentSpeed = SmoothSpeedTo(targetSpeed, deltaTime);
             float step = Mathf.Min(currentSpeed * deltaTime, distance - arriveRadius);
 
@@ -388,9 +399,14 @@ namespace EndLink.Ally
             ResetSpeed();
         }
 
-        private float CalculateTargetSpeed(float distance, float arriveRadius)
+        private float CalculateTargetSpeed(float distance, float arriveRadius, bool allowSprintSync)
         {
             float speed = moveSpeed;
+
+            if (allowSprintSync && IsFollowTargetSprinting())
+            {
+                speed *= sprintSyncSpeedMultiplier;
+            }
 
             if (catchUpDistance > 0f && distance >= catchUpDistance)
             {
@@ -424,6 +440,11 @@ namespace EndLink.Ally
         {
             _currentSpeed = 0f;
             _speedVelocity = 0f;
+        }
+
+        private bool IsFollowTargetSprinting()
+        {
+            return _followTargetPlayerController != null && _followTargetPlayerController.IsSprinting;
         }
 
         private Vector3 CalculateAvoidanceVector()

@@ -29,6 +29,10 @@ namespace EndLink.Party
         [SerializeField, Min(0f)]
         private float moveSpeed = 4f;
 
+        [Tooltip("主控正在冲刺时，队友跟随移动速度的倍率。只影响 Follow 状态下的追随移动。")]
+        [SerializeField, Min(1f)]
+        private float sprintSyncSpeedMultiplier = 1.5f;
+
         [Tooltip("接近目标点时的速度阻尼时间。值越小越跟手，值越大越柔和。")]
         [SerializeField, Min(0.001f)]
         private float arrivalSmoothTime = 0.12f;
@@ -79,6 +83,7 @@ namespace EndLink.Party
         public float FollowSlotSoftness => followSlotSoftness;
         public float FollowDeadZoneRadius => followDeadZoneRadius;
         public float MoveSpeed => moveSpeed;
+        public float SprintSyncSpeedMultiplier => sprintSyncSpeedMultiplier;
         public float ArrivalSmoothTime => arrivalSmoothTime;
         public float CatchUpDistance => catchUpDistance;
         public float CatchUpSpeedMultiplier => catchUpSpeedMultiplier;
@@ -100,6 +105,7 @@ namespace EndLink.Party
             followSlotSoftness = Mathf.Max(0f, followSlotSoftness);
             followDeadZoneRadius = Mathf.Max(0f, followDeadZoneRadius);
             moveSpeed = Mathf.Max(0f, moveSpeed);
+            sprintSyncSpeedMultiplier = Mathf.Max(1f, sprintSyncSpeedMultiplier);
             arrivalSmoothTime = Mathf.Max(0.001f, arrivalSmoothTime);
             catchUpDistance = Mathf.Max(0f, catchUpDistance);
             catchUpSpeedMultiplier = Mathf.Max(1f, catchUpSpeedMultiplier);
