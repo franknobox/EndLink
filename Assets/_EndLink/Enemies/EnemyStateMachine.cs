@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using EndLink.Combat;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace EndLink.Enemies
 {
@@ -14,6 +15,11 @@ namespace EndLink.Enemies
     [RequireComponent(typeof(EnemyHealth))]
     public sealed class EnemyStateMachine : MonoBehaviour
     {
+        private const float StateIndicatorHeadOffset = 0.25f;
+        private const float StateIndicatorScale = 0.12f;
+        private static readonly Color AlertIndicatorColor = new(1f, 0.85f, 0.05f, 1f);
+        private static readonly Color CombatIndicatorColor = new(1f, 0.12f, 0.08f, 1f);
+
         [Header("初始状态")]
         [Tooltip("敌人启用后的初始大状态。通常使用 Idle。")]
         [SerializeField]
@@ -39,6 +45,9 @@ namespace EndLink.Enemies
         private EnemyActor _actor;
         private EnemyHealth _health;
         private Transform _currentTarget;
+        private GameObject _stateIndicatorInstance;
+        private Material _stateIndicatorMaterial;
+        private Renderer _stateIndicatorRenderer;
         private bool _alertTransitionExternallyControlled;
 
         /// <summary>当前状态标识，方便 Inspector 和调试工具观察。</summary>
@@ -98,6 +107,11 @@ namespace EndLink.Enemies
             _currentState?.Tick(Time.deltaTime);
         }
 
+        private void LateUpdate()
+        {
+            UpdateStateIndicator();
+        }
+
         private void OnDisable()
         {
             if (_health == null)
@@ -113,6 +127,19 @@ namespace EndLink.Enemies
         {
             alertDuration = Mathf.Max(0.01f, alertDuration);
             hitDuration = Mathf.Max(0.01f, hitDuration);
+        }
+
+        private void OnDestroy()
+        {
+            if (_stateIndicatorInstance != null)
+            {
+                Destroy(_stateIndicatorInstance);
+            }
+
+            if (_stateIndicatorMaterial != null)
+            {
+                Destroy(_stateIndicatorMaterial);
+            }
         }
 
         /// <summary>
@@ -237,6 +264,8 @@ namespace EndLink.Enemies
                     $"EnemyState: {previousStateId} -> {nextStateId} | target={GetTransformName(_currentTarget)}",
                     this);
             }
+
+            UpdateStateIndicator();
         }
 
         private void HandleDamaged(int damage, CombatTagDefinition tag)
@@ -279,6 +308,248 @@ namespace EndLink.Enemies
         private static string GetTransformName(Transform target)
         {
             return target != null ? target.name : "None";
+        }
+
+        private void UpdateStateIndicator()
+        {
+            if (!TryGetStateIndicatorColor(CurrentStateId, out Color indicatorColor))
+            {
+                SetStateIndicatorVisible(false);
+                return;
+            }
+
+            EnsureStateIndicatorInstance();
+
+            if (_stateIndicatorInstance == null)
+            {
+                return;
+            }
+
+            _stateIndicatorInstance.transform.position = GetStateIndicatorPosition();
+            _stateIndicatorInstance.transform.rotation = GetStateIndicatorRotation(_stateIndicatorInstance.transform.position);
+            _stateIndicatorInstance.transform.localScale = Vector3.one * StateIndicatorScale;
+            SetStateIndicatorColor(indicatorColor);
+            SetStateIndicatorVisible(true);
+        }
+
+        private bool TryGetStateIndicatorColor(EnemyStateId stateId, out Color indicatorColor)
+        {
+            switch (stateId)
+            {
+                case EnemyStateId.Alert:
+                    indicatorColor = AlertIndicatorColor;
+                    return true;
+                case EnemyStateId.Combat:
+                    indicatorColor = CombatIndicatorColor;
+                    return true;
+                default:
+                    indicatorColor = Color.clear;
+                    return false;
+            }
+        }
+
+        private void EnsureStateIndicatorInstance()
+        {
+            if (_stateIndicatorInstance != null)
+            {
+                return;
+            }
+
+            _stateIndicatorInstance = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            _stateIndicatorInstance.name = "EnemyStateIndicator_Runtime";
+
+            if (_stateIndicatorInstance.TryGetComponent(out Collider markerCollider))
+            {
+                Destroy(markerCollider);
+            }
+
+            _stateIndicatorRenderer = _stateIndicatorInstance.GetComponentInChildren<Renderer>();
+            PrepareStateIndicatorMaterial();
+        }
+
+        private void PrepareStateIndicatorMaterial()
+        {
+            if (_stateIndicatorRenderer == null)
+            {
+                return;
+            }
+
+            _stateIndicatorMaterial = CreateStateIndicatorMaterial(_stateIndicatorRenderer.sharedMaterial);
+            _stateIndicatorRenderer.sharedMaterial = _stateIndicatorMaterial;
+        }
+
+        private Vector3 GetStateIndicatorPosition()
+        {
+            if (TryGetEnemyBounds(out Bounds bounds))
+            {
+                Vector3 top = bounds.center;
+                top.y = bounds.max.y;
+                return top + Vector3.up * StateIndicatorHeadOffset;
+            }
+
+            return transform.position + Vector3.up * StateIndicatorHeadOffset;
+        }
+
+        private Quaternion GetStateIndicatorRotation(Vector3 indicatorPosition)
+        {
+            Camera mainCamera = Camera.main;
+
+            if (mainCamera == null)
+            {
+                return Quaternion.identity;
+            }
+
+            Vector3 toCamera = mainCamera.transform.position - indicatorPosition;
+
+            if (toCamera.sqrMagnitude <= 0.0001f)
+            {
+                return Quaternion.identity;
+            }
+
+            return Quaternion.LookRotation(toCamera.normalized, Vector3.up);
+        }
+
+        private bool TryGetEnemyBounds(out Bounds bounds)
+        {
+            Renderer[] renderers = GetComponentsInChildren<Renderer>();
+
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer currentRenderer = renderers[i];
+                if (!IsEnemyBoundsRenderer(currentRenderer))
+                {
+                    continue;
+                }
+
+                bounds = currentRenderer.bounds;
+
+                for (int j = i + 1; j < renderers.Length; j++)
+                {
+                    Renderer nextRenderer = renderers[j];
+                    if (IsEnemyBoundsRenderer(nextRenderer))
+                    {
+                        bounds.Encapsulate(nextRenderer.bounds);
+                    }
+                }
+
+                return true;
+            }
+
+            Collider[] colliders = GetComponentsInChildren<Collider>();
+
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                Collider currentCollider = colliders[i];
+                if (!IsEnemyBoundsCollider(currentCollider))
+                {
+                    continue;
+                }
+
+                bounds = currentCollider.bounds;
+
+                for (int j = i + 1; j < colliders.Length; j++)
+                {
+                    Collider nextCollider = colliders[j];
+                    if (IsEnemyBoundsCollider(nextCollider))
+                    {
+                        bounds.Encapsulate(nextCollider.bounds);
+                    }
+                }
+
+                return true;
+            }
+
+            bounds = default;
+            return false;
+        }
+
+        private bool IsEnemyBoundsRenderer(Renderer candidate)
+        {
+            return candidate != null
+                && candidate.enabled
+                && (_stateIndicatorInstance == null || !candidate.transform.IsChildOf(_stateIndicatorInstance.transform));
+        }
+
+        private bool IsEnemyBoundsCollider(Collider candidate)
+        {
+            return candidate != null
+                && candidate.enabled
+                && (_stateIndicatorInstance == null || !candidate.transform.IsChildOf(_stateIndicatorInstance.transform));
+        }
+
+        private Material CreateStateIndicatorMaterial(Material sourceMaterial)
+        {
+            Material material = sourceMaterial != null ? new Material(sourceMaterial) : CreateDefaultStateIndicatorMaterial();
+            ConfigureStateIndicatorMaterialDepth(material);
+            return material;
+        }
+
+        private Material CreateDefaultStateIndicatorMaterial()
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+
+            if (shader == null)
+            {
+                shader = Shader.Find("Unlit/Color");
+            }
+
+            if (shader == null)
+            {
+                shader = Shader.Find("Standard");
+            }
+
+            if (shader == null)
+            {
+                Debug.LogWarning("EnemyStateMachine could not find a shader for the state indicator.", this);
+                return null;
+            }
+
+            return new Material(shader);
+        }
+
+        private void ConfigureStateIndicatorMaterialDepth(Material material)
+        {
+            if (material == null)
+            {
+                return;
+            }
+
+            material.renderQueue = (int)RenderQueue.Overlay;
+
+            if (material.HasProperty("_ZTest"))
+            {
+                material.SetFloat("_ZTest", (float)CompareFunction.Always);
+            }
+
+            if (material.HasProperty("_ZWrite"))
+            {
+                material.SetFloat("_ZWrite", 0f);
+            }
+        }
+
+        private void SetStateIndicatorColor(Color color)
+        {
+            if (_stateIndicatorMaterial == null)
+            {
+                return;
+            }
+
+            if (_stateIndicatorMaterial.HasProperty("_BaseColor"))
+            {
+                _stateIndicatorMaterial.SetColor("_BaseColor", color);
+            }
+            else if (_stateIndicatorMaterial.HasProperty("_Color"))
+            {
+                _stateIndicatorMaterial.SetColor("_Color", color);
+            }
+        }
+
+        private void SetStateIndicatorVisible(bool visible)
+        {
+            if (_stateIndicatorInstance != null && _stateIndicatorInstance.activeSelf != visible)
+            {
+                _stateIndicatorInstance.SetActive(visible);
+            }
         }
     }
 }

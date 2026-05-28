@@ -2017,8 +2017,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3418238cefab46a281477d88bbb6373c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.PlayerTargeting
-  inputReader: {fileID: 509600057}
-  searchRadius: 16
+  autoTargetingEnabled: 1
+  targetRefreshInterval: 0.2
+  selectionMode: 0
+  searchRadius: 14
   maxTargetAngle: 150
   targetLayerMask:
     serializedVersion: 2
@@ -2027,11 +2029,13 @@ MonoBehaviour:
   viewReference: {fileID: 0}
   angleScoreWeight: 2
   distanceScoreWeight: 1
-  showLockIndicator: 1
-  lockIndicatorPrefab: {fileID: 0}
-  lockIndicatorOffset: {x: 0, y: 0.35, z: 0}
-  lockIndicatorScale: 0.25
-  lockIndicatorColor: {r: 1, g: 0.85, b: 0.1, a: 1}
+  showTargetIndicator: 1
+  targetIndicatorPrefab: {fileID: 0}
+  targetIndicatorOffset: {x: 0, y: 0, z: 0}
+  targetIndicatorSurfaceOffset: 0.04
+  targetIndicatorAlwaysOnTop: 1
+  targetIndicatorScale: 0.1
+  targetIndicatorColor: {r: 1, g: 1, b: 1, a: 0.60784316}
   logTargetChanges: 0
 --- !u!1 &698380643
 GameObject:

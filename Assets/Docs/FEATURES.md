@@ -30,7 +30,7 @@
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [玩家生命值与受击接线](#feature-player-health) | 已完成第一版 | 负责玩家扣血、治疗、死亡事件，并把有效受伤和死亡转发到玩家状态机。 |
-| [玩家目标选择与锁定](#feature-player-targeting) | 已完成基础锁定版 | 负责在 Enemy Layer 中按范围、角度和距离选择当前战斗目标，并支持中键锁定/解锁当前目标。 |
+| [玩家自动软锁定](#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按固定间隔自动选择当前战斗目标，默认优先最近敌人，并显示轻量目标点。 |
 | [战斗动作配置](#feature-combat-action) | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和大招的伤害、冷却、时序、Hitbox 和命中标签。 |
 | [战斗标签系统](#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和标签组合转化规则。 |
 | [战斗数据编辑工具](#feature-combat-data-tool) | 已完成第一版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则数据资产。 |
@@ -66,7 +66,6 @@
 - 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`，默认键位 E / F。
 - 主控和队友连携请求读取 `Player/PlayerLinkAttack`、`Player/AllySlotALinkAttack`、`Player/AllySlotBLinkAttack`，默认键位 1 / 2 / 3；这些输入不会绕过连携机制直接释放动作。
 - 全队极限技读取 `Player/PartyUltimate`，默认键位 V。
-- 目标锁定读取鼠标中键，当前由 `PlayerInputReader` 内部运行时输入动作提供，供 `PlayerTargeting` 消费。
 - 相机旋转读取 `Player/Look`。
 - 鼠标滚轮缩放通过 `Mouse.current.scroll` 读取。
 
@@ -91,13 +90,12 @@
 <details>
 <summary>展开详情</summary>
 
-
 功能说明：
 - 基于 `CharacterController` 移动。
 - 使用 `Mathf.SmoothDamp` 做平滑加速和减速。
 - 支持手动重力和贴地速度。
 - 移动时角色本地 Z 轴正方向会平滑转向移动方向。
-- 暴露面向指定世界方向的接口，供攻击和锁定动作在出手前让角色正面与动作方向一致。
+- 暴露面向指定世界方向的接口，供攻击和自动软锁目标在出手前让角色正面与动作方向一致。
 - 支持移动方向参考，拖入 `Main Camera` 后可实现相机相对移动。
 - 支持按住 `Left Shift` 冲刺；当前冲刺作为移动速度修饰，不单独进入状态机大状态。
 - 移动调用由 `PlayerStateMachine` 驱动，`PlayerController` 通过 `TickMovement` 执行实际位移。
@@ -129,7 +127,6 @@
 
 <details>
 <summary>展开详情</summary>
-
 
 功能说明：
 - 基于 Cinemachine 3.1.6。
@@ -182,7 +179,6 @@
 <details>
 <summary>展开详情</summary>
 
-
 功能说明：
 - 使用代码状态机，不依赖 Animator StateMachine。
 - 当前包含 `Idle`、`Move`、`Attack`、`Skill`、`Hit`、`Dead` 六个状态。
@@ -231,7 +227,6 @@
 <details>
 <summary>展开详情</summary>
 
-
 功能说明：
 - `PlayerHealth` 负责玩家生命值、受伤、治疗和死亡接线。
 - 同时实现 `IHitReceiver` 和 `IDamageable`，方便后续敌人 Hitbox、环境伤害或调试工具统一调用。
@@ -269,7 +264,6 @@
 <details>
 <summary>展开详情</summary>
 
-
 功能说明：
 - `PlayerAnimatorDriver` 是状态机到 Animator 的轻薄桥接层。
 - 不读取输入，不决定状态切换，不直接控制移动或战斗。
@@ -303,46 +297,50 @@
 
 <a id="feature-player-targeting"></a>
 
-### Feature：玩家目标选择与锁定
+### Feature：玩家自动软锁定
 
 <details>
 <summary>展开详情</summary>
 
-
 功能说明：
-- `PlayerTargeting` 是玩家索敌组件，放在战斗层。
-- 负责搜索、保存当前目标、消费锁定输入并完成锁定/解锁。
-- 锁定目标时会在目标头顶显示一个最小锁定标识；未配置 prefab 时自动生成简单小球标识。
+- `PlayerTargeting` 是玩家自动软锁定组件，放在战斗层。
+- 负责按固定刷新间隔搜索并保存当前软锁目标。
+- 默认选择范围内距离玩家最近的敌人，也保留 `CameraForward` 模式用于后续偏动作游戏的视角优先设置。
+- 有软锁目标时会在目标朝向玩家一侧的身体表面显示一个最小白点；未配置 prefab 时自动生成简单小球标识。
 - 不控制相机、不生成 Hitbox、不决定攻击是否可以释放。
 - 默认搜索 `Enemy` Layer。
 - 使用 `Physics.OverlapSphereNonAlloc` 搜索范围内目标，减少运行时 GC。
-- 目标评分同时考虑视角/朝向夹角和距离，默认更偏向玩家前方或画面中心附近的敌人。
+- `Nearest` 模式按距离最近自动刷新目标，刷新间隔默认 0.2 秒。
+- `CameraForward` 模式会同时考虑视角/朝向夹角和距离。
 - 当前目标离开搜索范围、Layer 不匹配或被销毁时，会自动清除。
 - 对外提供 `TryAcquireTarget()`、`SetCurrentTarget(Transform target)` 和 `ClearTarget()`。
-- 对外提供 `ToggleTargetLock()`，用于中键输入或后续 UI / 调试工具切换锁定。
-- `PlayerCombatDriver` 会读取当前锁定目标；有目标时先让玩家正面瞬间转向目标，再沿玩家正面生成 Hitbox / 远程技能；没有目标时继续按玩家自身前方生成。
+- `PlayerCombatDriver` 会读取当前软锁目标；有目标时先让玩家正面瞬间转向目标，再沿玩家正面生成 Hitbox / 远程技能；没有目标时继续按玩家自身前方生成。
 
 对应脚本：
 - `Assets/_EndLink/Combat/PlayerTargeting.cs`
-- `Assets/_EndLink/Control/PlayerInputReader.cs`
 
 相关物体：
 - 玩家根物体
   - `PlayerTargeting`
 
 关键配置：
+- `autoTargetingEnabled`：是否启用自动软锁定
+- `targetRefreshInterval`：自动刷新目标间隔
+- `selectionMode`：目标选择模式，默认 `Nearest`
 - `searchRadius`：搜索半径
-- `maxTargetAngle`：最大可锁定角度
+- `maxTargetAngle`：`CameraForward` 模式下的最大可选角度
 - `targetLayerMask`：目标 LayerMask，默认 Enemy
 - `searchOrigin`：搜索原点，空则使用玩家 Transform
-- `viewReference`：视角参考，空则使用玩家朝向，通常可拖 Main Camera 或 CameraTarget
-- `angleScoreWeight`：角度评分权重
-- `distanceScoreWeight`：距离评分权重
-- `showLockIndicator`：是否显示锁定标识
-- `lockIndicatorPrefab`：自定义锁定标识 prefab，空则自动生成简单小球
-- `lockIndicatorOffset`：锁定标识相对目标头顶的世界偏移
-- `lockIndicatorScale`：锁定标识缩放
-- `lockIndicatorColor`：自动生成标识的颜色
+- `viewReference`：`CameraForward` 模式下的视角参考，空则使用玩家朝向
+- `angleScoreWeight`：`CameraForward` 模式下的角度评分权重
+- `distanceScoreWeight`：`CameraForward` 模式下的距离评分权重
+- `showTargetIndicator`：是否显示软锁目标点
+- `targetIndicatorPrefab`：自定义目标点 prefab，空则自动生成简单小白点
+- `targetIndicatorOffset`：目标点相对计算位置的世界偏移
+- `targetIndicatorSurfaceOffset`：目标点从目标身体表面向外推出的距离
+- `targetIndicatorAlwaysOnTop`：自动生成目标点是否尽量优先于目标身体显示
+- `targetIndicatorScale`：目标点缩放
+- `targetIndicatorColor`：自动生成目标点的颜色
 - `logTargetChanges`：是否打印目标变化日志
 
 </details>
@@ -353,7 +351,6 @@
 
 <details>
 <summary>展开详情</summary>
-
 
 功能说明：
 - `CombatActionDefinition` 是战斗动作数据资产，用于描述一次普通攻击、技能、连携攻击或大招。
@@ -383,7 +380,6 @@
 
 <details>
 <summary>展开详情</summary>
-
 
 功能说明：
 - 战斗标签系统只服务 Combat，不做全项目泛用 GameplayTag。
@@ -425,7 +421,6 @@
 <details>
 <summary>展开详情</summary>
 
-
 功能说明：
 - 通过菜单 `EndLink > Combat Data Tool` 打开。
 - 提供 `Actions`、`Tag Definitions`、`Combination Rules` 和 `Asset List` 四个标签页。
@@ -450,6 +445,7 @@
 
 <details>
 <summary>展开详情</summary>
+
 功能说明：
 - `CombatActionSlotUI` 是小队战斗命令槽位的最小 UI 组件。
 - 槽位直接绑定 UI 键位槽，例如 `PlayerSkill`、`AllySlotASkill`、`AllySlotBSkill`。
@@ -528,7 +524,6 @@
 <details>
 <summary>展开详情</summary>
 
-
 功能说明：
 - `AllyBrain` 是队友大脑，负责监听 `CombatEventsBus` 并判断是否响应。
 - `AllyBrain` 默认响应 `HitLanded` 事件，忽略自己发出的事件，可选只响应指定来源，例如主控玩家。
@@ -605,6 +600,7 @@
 
 <details>
 <summary>展开详情</summary>
+
 功能说明：
 - `AllyStateMachine` 是队友专用有限状态机，不依赖玩家输入系统。
 - 当前包含 `Idle`、`Follow`、`Assist`、`Action`、`Hit`、`Dead` 六个外层状态。
@@ -653,7 +649,6 @@
 
 <details>
 <summary>展开详情</summary>
-
 
 功能说明：
 - `AllyFollowMotor` 是队友跟随移动执行组件，不依赖 NavMesh。
@@ -716,7 +711,6 @@
 <details>
 <summary>展开详情</summary>
 
-
 功能说明：
 - `PartyManager` 是固定三人小队的场景级管理入口。
 - 第一版只支持固定主控 + 2 个固定队友，不做主控切换、入队离队或复杂编队。
@@ -769,6 +763,7 @@
 
 <details>
 <summary>展开详情</summary>
+
 功能说明：
 - `EnemyActor` 是正式敌人的根入口组件，只暴露敌人身份、目标点和生命组件引用。
 - `EnemyActor` 要求同物体挂载 `CombatTagContainer`，保证正式敌人天然支持战斗标签、持续标签和组合转化。
@@ -838,13 +833,12 @@
 <details>
 <summary>展开详情</summary>
 
-
 功能说明：
 - `PlayerCombatDriver` 不读取输入，不决定是否能进入攻击状态。
 - 状态机决定能否攻击，`PlayerCombatDriver` 只负责执行攻击表现和判定。
 - 支持通过 `CombatActionDefinition` 配置普攻、主动技能、连携技的伤害、击退、`CombatTagDefinition` 标签、标签持续时间、冷却、Hitbox 和生成参数。
 - `PlayerCombatDriver` 执行的动作必须来自 `CombatActionDefinition`。
-- 当前执行内容是生成指定 Hitbox prefab；有锁定目标时先让玩家正面瞬间转向目标，再按玩家正前方生成，没有锁定目标时按角色当前正前方生成。
+- 当前执行内容是生成指定 Hitbox prefab；有自动软锁目标时先让玩家正面瞬间转向目标，再按玩家正前方生成，没有目标时按角色当前正前方生成。
 - 支持动作冷却，防止动作过快触发。
 - 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 区分普攻、技能和连携槽。
 - 支持通过动作资产中的 `Hitbox Spawn Distance` 和 `Hitbox Spawn Height` 调整 Hitbox 生成位置。
@@ -874,7 +868,6 @@
 
 <details>
 <summary>展开详情</summary>
-
 
 功能说明：
 - `HitboxBase` 是大多数攻击判定的基础组件。
@@ -931,7 +924,6 @@
 <details>
 <summary>展开详情</summary>
 
-
 功能说明：
 - `EnemyDummy` 用于验证 Hitbox 命中链路。
 - 同时实现 `IHitReceiver` 和 `IDamageable`。
@@ -965,13 +957,12 @@
 <details>
 <summary>展开详情</summary>
 
-
 当前约定：
 - 输入读取器只读输入，不做业务逻辑。
 - `PlayerStateMachine` 决定当前状态，负责 Idle、Move、Attack 等流程切换。
 - `PlayerController` 负责移动能力和朝向，不负责读取输入或判断是否允许移动。
 - `PlayerAnimatorDriver` 只把状态机和移动速度同步到 Animator 参数，不反向控制状态机。
-- `PlayerTargeting` 负责玩家当前战斗目标选择与锁定，不控制相机锁定、UI 或攻击执行。
+- `PlayerTargeting` 负责玩家当前自动软锁目标选择，不控制相机、UI 或攻击执行。
 - `PlayerCombatDriver` 不读取输入，只执行攻击表现和判定。
 - `AllyBrain` 负责监听战斗事件并判断队友是否响应，不直接生成 Hitbox。
 - `AllyStateMachine` 负责队友状态切换，不监听全局事件、不生成 Hitbox。
