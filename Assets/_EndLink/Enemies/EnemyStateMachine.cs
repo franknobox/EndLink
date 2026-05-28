@@ -39,6 +39,7 @@ namespace EndLink.Enemies
         private EnemyActor _actor;
         private EnemyHealth _health;
         private Transform _currentTarget;
+        private bool _alertTransitionExternallyControlled;
 
         /// <summary>当前状态标识，方便 Inspector 和调试工具观察。</summary>
         public EnemyStateId CurrentStateId => _currentState?.StateId ?? EnemyStateId.None;
@@ -54,6 +55,9 @@ namespace EndLink.Enemies
 
         /// <summary>受击硬直持续时间。</summary>
         public float HitDuration => hitDuration;
+
+        /// <summary>Alert 到 Combat / Idle 的转换是否由外部索敌组件控制。</summary>
+        public bool AlertTransitionExternallyControlled => _alertTransitionExternallyControlled;
 
         private void Awake()
         {
@@ -118,6 +122,15 @@ namespace EndLink.Enemies
         public void SetTarget(Transform target)
         {
             _currentTarget = target;
+        }
+
+        /// <summary>
+        /// 设置 Alert 状态是否由外部系统控制转换。
+        /// 索敌组件需要持续累积警觉时间时会启用它，避免 Alert 状态按自身默认时长提前进战。
+        /// </summary>
+        public void SetAlertTransitionExternallyControlled(bool controlled)
+        {
+            _alertTransitionExternallyControlled = controlled;
         }
 
         /// <summary>

@@ -41,6 +41,9 @@ namespace EndLink.Enemies
         /// <summary>警觉状态持续时间。</summary>
         public float AlertDuration => StateMachine.AlertDuration;
 
+        /// <summary>Alert 到 Combat / Idle 的转换是否由外部索敌组件控制。</summary>
+        public bool AlertTransitionExternallyControlled => StateMachine.AlertTransitionExternallyControlled;
+
         /// <summary>受击硬直持续时间。</summary>
         public float HitDuration => StateMachine.HitDuration;
     }

@@ -24,6 +24,16 @@ namespace EndLink.Enemies
         /// <inheritdoc />
         public override void Tick(float deltaTime)
         {
+            if (Context.AlertTransitionExternallyControlled)
+            {
+                if (!Context.HasValidTarget)
+                {
+                    Context.StateMachine.ChangeState(EnemyStateId.Idle);
+                }
+
+                return;
+            }
+
             _elapsedTime += deltaTime;
 
             if (_elapsedTime < Context.AlertDuration)

@@ -74,7 +74,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | [战斗 UI 槽位组件](#feature-combat-action-slot-ui) | 已完成最小版 | 提供小队命令槽位 UI，用于按主控/队友槽位读取当前动作、键位和冷却染色。 |
 | [战斗事件总栈](#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
 | [玩家战斗驱动](#feature-player-combat-driver) | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |
-| [敌人通用基底](#feature-enemy-foundation) | 已完成第一版 | 提供正式敌人身份入口、生命受击、死亡目标失效、目标有效性接口和大状态机骨架。 |
+| [敌人通用基底](#feature-enemy-foundation) | 已完成索敌 Alert 版 | 提供正式敌人身份入口、生命受击、死亡目标失效、目标有效性接口、大状态机骨架和基础玩家感知。 |
 | [基础 Hitbox 配置](#feature-hitbox) | 已完成第一版 | 提供通用 Hitbox 基类和远程直线 Hitbox，用于配置近战判定、远程飞行判定、目标过滤、生命周期、伤害、击退和标签。 |
 | [木桩敌人](#feature-enemy-dummy) | 已完成第一版 | 用于验证 Hitbox 命中、扣血、死亡、受击/死亡事件和基础调试显示。 |
 
@@ -814,6 +814,8 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `ICombatTarget` 是战斗目标有效性接口，当前用于判断目标死亡后是否还能被锁定、搜索或命中。
 - 敌人死亡后默认 `IsTargetable = false`，后续 `PlayerTargeting`、`AllyBrain` 和 `HitboxBase` 会跳过不可目标对象。
 - `EnemyStateMachine` 管理 `Idle`、`Alert`、`Combat`、`Hit`、`Dead` 五个敌人大状态。
+- `EnemyTargetSensor` 负责第一版敌人索敌：玩家进入发现范围后请求进入 `Alert`，持续停留达到警觉时间后请求进入 `Combat`。
+- `EnemyTargetSensor` 可以关闭自动索敌，关闭后不会主动触发 `Alert` / `Combat`。
 - `Combat` 当前保持空转，后续作为行为树的外层挂载点，内部再承载追击、站位、攻击、技能等细节行为。
 - `Hit` 作为独立大状态处理受击打断，不放进 Combat 行为树，方便后续加入硬直、霸体、击倒等规则。
 - `EnemyDummy` 是轻量命中测试对象，用于快速验证 Hitbox、扣血、死亡和调试显示。
@@ -822,6 +824,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `Assets/_EndLink/Enemies/EnemyActor.cs`
 - `Assets/_EndLink/Enemies/EnemyHealth.cs`
 - `Assets/_EndLink/Enemies/EnemyStateMachine.cs`
+- `Assets/_EndLink/Enemies/EnemyTargetSensor.cs`
 - `Assets/_EndLink/Enemies/EnemyStateId.cs`
 - `Assets/_EndLink/Enemies/IEnemyState.cs`
 - `Assets/_EndLink/Enemies/EnemyStateBase.cs`
@@ -840,6 +843,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 正式敌人根物体
   - `EnemyActor`
   - `EnemyHealth`
+  - `EnemyTargetSensor`
   - `CombatTagContainer`
   - Collider
   - Layer 设置为 `Enemy`
@@ -849,6 +853,11 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `maxHealth`：敌人最大生命值
 - `initialState`：敌人启用后的初始大状态，通常为 `Idle`
 - `alertDuration`：`Alert` 状态停留时间
+- `EnemyTargetSensor.detectionEnabled`：是否启用自动发现玩家
+- `EnemyTargetSensor.explicitTarget`：指定玩家目标，配置后优先检测该目标
+- `EnemyTargetSensor.targetLayerMask`：未指定目标时用于搜索玩家的 LayerMask
+- `EnemyTargetSensor.detectionRadius`：发现目标半径
+- `EnemyTargetSensor.requiredAlertTime`：目标持续停留多久后进入 `Combat`，当前默认可设置为 3 秒
 - `hitDuration`：`Hit` 受击硬直时间
 - `initialTags`：敌人启用时默认拥有的战斗标签
 - `combinationRules`：敌人身上标签组合转化使用的规则
