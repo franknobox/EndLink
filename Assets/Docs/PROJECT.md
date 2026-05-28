@@ -103,7 +103,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`，默认键位 E / F。
 - 主控和队友连携请求读取 `Player/PlayerLinkAttack`、`Player/AllySlotALinkAttack`、`Player/AllySlotBLinkAttack`，默认键位 1 / 2 / 3；这些输入不会绕过连携机制直接释放动作。
 - 全队极限技读取 `Player/PartyUltimate`，默认键位 V。
-- 目标锁定读取鼠标中键，当前由 `PlayerInputReader` 内部运行时输入动作提供，供 `PlayerTargetLockController` 消费。
+- 目标锁定读取鼠标中键，当前由 `PlayerInputReader` 内部运行时输入动作提供，供 `PlayerTargeting` 消费。
 - 相机旋转读取 `Player/Look`。
 - 鼠标滚轮缩放通过 `Mouse.current.scroll` 读取。
 
@@ -347,25 +347,25 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 
 功能说明：
-- `PlayerTargeting` 是基础目标选择组件，放在战斗层。
-- 只负责搜索并保存当前目标，不控制相机、不绘制 UI、不决定攻击逻辑。
-- `PlayerTargetLockController` 负责消费鼠标中键输入，并调用 `PlayerTargeting` 完成锁定/解锁。
+- `PlayerTargeting` 是玩家索敌组件，放在战斗层。
+- 负责搜索、保存当前目标、消费锁定输入并完成锁定/解锁。
+- 锁定目标时会在目标头顶显示一个最小锁定标识；未配置 prefab 时自动生成简单小球标识。
+- 不控制相机、不生成 Hitbox、不决定攻击是否可以释放。
 - 默认搜索 `Enemy` Layer。
 - 使用 `Physics.OverlapSphereNonAlloc` 搜索范围内目标，减少运行时 GC。
 - 目标评分同时考虑视角/朝向夹角和距离，默认更偏向玩家前方或画面中心附近的敌人。
 - 当前目标离开搜索范围、Layer 不匹配或被销毁时，会自动清除。
 - 对外提供 `TryAcquireTarget()`、`SetCurrentTarget(Transform target)` 和 `ClearTarget()`。
+- 对外提供 `ToggleTargetLock()`，用于中键输入或后续 UI / 调试工具切换锁定。
 - `PlayerCombatDriver` 会读取当前锁定目标；有目标时先让玩家正面瞬间转向目标，再沿玩家正面生成 Hitbox / 远程技能；没有目标时继续按玩家自身前方生成。
 
 对应脚本：
 - `Assets/_EndLink/Combat/PlayerTargeting.cs`
-- `Assets/_EndLink/Combat/PlayerTargetLockController.cs`
 - `Assets/_EndLink/Control/PlayerInputReader.cs`
 
 相关物体：
 - 玩家根物体
   - `PlayerTargeting`
-  - `PlayerTargetLockController`
 
 关键配置：
 - `searchRadius`：搜索半径
@@ -375,8 +375,12 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `viewReference`：视角参考，空则使用玩家朝向，通常可拖 Main Camera 或 CameraTarget
 - `angleScoreWeight`：角度评分权重
 - `distanceScoreWeight`：距离评分权重
+- `showLockIndicator`：是否显示锁定标识
+- `lockIndicatorPrefab`：自定义锁定标识 prefab，空则自动生成简单小球
+- `lockIndicatorOffset`：锁定标识相对目标头顶的世界偏移
+- `lockIndicatorScale`：锁定标识缩放
+- `lockIndicatorColor`：自动生成标识的颜色
 - `logTargetChanges`：是否打印目标变化日志
-- `PlayerTargetLockController.logTargetLockChanges`：是否打印锁定/解锁输入调试日志
 
 </details>
 
@@ -995,7 +999,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `PlayerStateMachine` 决定当前状态，负责 Idle、Move、Attack 等流程切换。
 - `PlayerController` 负责移动能力和朝向，不负责读取输入或判断是否允许移动。
 - `PlayerAnimatorDriver` 只把状态机和移动速度同步到 Animator 参数，不反向控制状态机。
-- `PlayerTargeting` 只负责当前战斗目标选择，不控制相机锁定、UI 或攻击执行。
+- `PlayerTargeting` 负责玩家当前战斗目标选择与锁定，不控制相机锁定、UI 或攻击执行。
 - `PlayerCombatDriver` 不读取输入，只执行攻击表现和判定。
 - `AllyBrain` 负责监听战斗事件并判断队友是否响应，不直接生成 Hitbox。
 - `AllyStateMachine` 负责队友状态切换，不监听全局事件、不生成 Hitbox。

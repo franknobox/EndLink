@@ -1,3 +1,4 @@
+using EndLink.Core;
 using UnityEngine;
 
 namespace EndLink.Combat
@@ -11,6 +12,11 @@ namespace EndLink.Combat
     {
         private const string EnemyLayerName = "Enemy";
         private const int MaxTargetBufferSize = 32;
+
+        [Header("Input")]
+        [Tooltip("玩家输入读取器。为空时会从当前物体或父物体自动查找。")]
+        [SerializeField]
+        private PlayerInputReader inputReader;
 
         [Header("搜索范围")]
         [Tooltip("目标搜索半径。")]
@@ -43,6 +49,27 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float distanceScoreWeight = 1f;
 
+        [Header("Lock Indicator")]
+        [Tooltip("锁定目标时是否显示头顶标识。")]
+        [SerializeField]
+        private bool showLockIndicator = true;
+
+        [Tooltip("锁定标识预制体。为空时会自动生成一个简单的小球标识。")]
+        [SerializeField]
+        private GameObject lockIndicatorPrefab;
+
+        [Tooltip("锁定标识相对目标头顶的世界偏移。默认略高于目标包围盒。")]
+        [SerializeField]
+        private Vector3 lockIndicatorOffset = new(0f, 0.35f, 0f);
+
+        [Tooltip("自动生成标识的尺寸。使用自定义预制体时也会作为整体缩放。")]
+        [SerializeField, Min(0.01f)]
+        private float lockIndicatorScale = 0.25f;
+
+        [Tooltip("自动生成标识的颜色。使用自定义预制体时不会改它的材质。")]
+        [SerializeField]
+        private Color lockIndicatorColor = new(1f, 0.85f, 0.1f, 1f);
+
         [Header("调试")]
         [Tooltip("目标获取、切换和清除时是否打印 Debug.Log。")]
         [SerializeField]
@@ -50,6 +77,8 @@ namespace EndLink.Combat
 
         private readonly Collider[] _targetBuffer = new Collider[MaxTargetBufferSize];
         private Transform _currentTarget;
+        private GameObject _lockIndicatorInstance;
+        private Material _runtimeIndicatorMaterial;
 
         /// <summary>当前目标。</summary>
         public Transform CurrentTarget => _currentTarget;
@@ -68,12 +97,15 @@ namespace EndLink.Combat
 
         private void Reset()
         {
+            CacheReferences();
             targetLayerMask = GetDefaultEnemyLayerMask();
         }
 
         private void OnValidate()
         {
+            CacheReferences();
             searchRadius = Mathf.Max(0.1f, searchRadius);
+            lockIndicatorScale = Mathf.Max(0.01f, lockIndicatorScale);
 
             if (targetLayerMask.value == 0)
             {
@@ -83,6 +115,11 @@ namespace EndLink.Combat
 
         private void Update()
         {
+            if (inputReader != null && inputReader.ConsumeTargetLockPressed())
+            {
+                ToggleTargetLock();
+            }
+
             if (_currentTarget == null)
             {
                 return;
@@ -91,6 +128,24 @@ namespace EndLink.Combat
             if (!IsTargetStillValid(_currentTarget))
             {
                 ClearTarget();
+            }
+        }
+
+        private void LateUpdate()
+        {
+            UpdateLockIndicator();
+        }
+
+        private void OnDestroy()
+        {
+            if (_lockIndicatorInstance != null)
+            {
+                Destroy(_lockIndicatorInstance);
+            }
+
+            if (_runtimeIndicatorMaterial != null)
+            {
+                Destroy(_runtimeIndicatorMaterial);
             }
         }
 
@@ -113,6 +168,20 @@ namespace EndLink.Combat
         }
 
         /// <summary>
+        /// 切换当前锁定目标。已有目标时解锁；没有目标时尝试按当前搜索规则获取目标。
+        /// </summary>
+        public bool ToggleTargetLock()
+        {
+            if (HasTarget)
+            {
+                ClearTarget();
+                return false;
+            }
+
+            return TryAcquireTarget();
+        }
+
+        /// <summary>
         /// 手动设置当前目标。
         /// 主要用于调试、UI 选择或后续目标切换逻辑。
         /// </summary>
@@ -124,6 +193,7 @@ namespace EndLink.Combat
             }
 
             _currentTarget = target;
+            UpdateLockIndicator();
 
             if (logTargetChanges)
             {
@@ -142,6 +212,7 @@ namespace EndLink.Combat
             }
 
             _currentTarget = null;
+            SetLockIndicatorVisible(false);
 
             if (logTargetChanges)
             {
@@ -193,6 +264,174 @@ namespace EndLink.Combat
             }
 
             return bestTarget;
+        }
+
+        private void CacheReferences()
+        {
+            if (inputReader != null)
+            {
+                return;
+            }
+
+            inputReader = GetComponent<PlayerInputReader>();
+
+            if (inputReader == null)
+            {
+                inputReader = GetComponentInParent<PlayerInputReader>();
+            }
+        }
+
+        private void UpdateLockIndicator()
+        {
+            if (!showLockIndicator || _currentTarget == null)
+            {
+                SetLockIndicatorVisible(false);
+                return;
+            }
+
+            EnsureLockIndicatorInstance();
+
+            if (_lockIndicatorInstance == null)
+            {
+                return;
+            }
+
+            _lockIndicatorInstance.transform.position = GetLockIndicatorPosition(_currentTarget);
+            _lockIndicatorInstance.transform.localScale = Vector3.one * lockIndicatorScale;
+            SetLockIndicatorVisible(true);
+        }
+
+        private void EnsureLockIndicatorInstance()
+        {
+            if (_lockIndicatorInstance != null)
+            {
+                return;
+            }
+
+            if (lockIndicatorPrefab != null)
+            {
+                _lockIndicatorInstance = Instantiate(lockIndicatorPrefab);
+                _lockIndicatorInstance.name = $"{lockIndicatorPrefab.name}_Runtime";
+                return;
+            }
+
+            _lockIndicatorInstance = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            _lockIndicatorInstance.name = "PlayerTargeting_LockIndicator";
+
+            if (_lockIndicatorInstance.TryGetComponent(out Collider markerCollider))
+            {
+                Destroy(markerCollider);
+            }
+
+            if (_lockIndicatorInstance.TryGetComponent(out Renderer markerRenderer))
+            {
+                _runtimeIndicatorMaterial = CreateRuntimeIndicatorMaterial();
+                markerRenderer.sharedMaterial = _runtimeIndicatorMaterial;
+            }
+        }
+
+        private Vector3 GetLockIndicatorPosition(Transform target)
+        {
+            if (TryGetTargetBounds(target, out Bounds bounds))
+            {
+                Vector3 top = bounds.center;
+                top.y = bounds.max.y;
+                return top + lockIndicatorOffset;
+            }
+
+            return target.position + lockIndicatorOffset;
+        }
+
+        private static bool TryGetTargetBounds(Transform target, out Bounds bounds)
+        {
+            Renderer[] renderers = target.GetComponentsInChildren<Renderer>();
+
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] == null || !renderers[i].enabled)
+                {
+                    continue;
+                }
+
+                bounds = renderers[i].bounds;
+
+                for (int j = i + 1; j < renderers.Length; j++)
+                {
+                    if (renderers[j] != null && renderers[j].enabled)
+                    {
+                        bounds.Encapsulate(renderers[j].bounds);
+                    }
+                }
+
+                return true;
+            }
+
+            Collider[] colliders = target.GetComponentsInChildren<Collider>();
+
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                if (colliders[i] == null || !colliders[i].enabled)
+                {
+                    continue;
+                }
+
+                bounds = colliders[i].bounds;
+
+                for (int j = i + 1; j < colliders.Length; j++)
+                {
+                    if (colliders[j] != null && colliders[j].enabled)
+                    {
+                        bounds.Encapsulate(colliders[j].bounds);
+                    }
+                }
+
+                return true;
+            }
+
+            bounds = default;
+            return false;
+        }
+
+        private Material CreateRuntimeIndicatorMaterial()
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
+
+            if (shader == null)
+            {
+                shader = Shader.Find("Unlit/Color");
+            }
+
+            if (shader == null)
+            {
+                shader = Shader.Find("Standard");
+            }
+
+            if (shader == null)
+            {
+                Debug.LogWarning("PlayerTargeting could not find a shader for the runtime lock indicator.", this);
+                return null;
+            }
+
+            Material material = new(shader);
+
+            if (material.HasProperty("_BaseColor"))
+            {
+                material.SetColor("_BaseColor", lockIndicatorColor);
+            }
+            else if (material.HasProperty("_Color"))
+            {
+                material.SetColor("_Color", lockIndicatorColor);
+            }
+
+            return material;
+        }
+
+        private void SetLockIndicatorVisible(bool visible)
+        {
+            if (_lockIndicatorInstance != null && _lockIndicatorInstance.activeSelf != visible)
+            {
+                _lockIndicatorInstance.SetActive(visible);
+            }
         }
 
         private bool TryCalculateTargetScore(
