@@ -33,6 +33,7 @@ namespace EndLink.Core
         private InputAction _allySlotALinkAttackAction;
         private InputAction _allySlotBLinkAttackAction;
         private InputAction _partyUltimateAction;
+        private InputAction _targetLockAction;
         private bool _initialized;
         private bool _attackPressed;
         private bool _playerSkillPressed;
@@ -42,6 +43,7 @@ namespace EndLink.Core
         private bool _allySlotALinkAttackPressed;
         private bool _allySlotBLinkAttackPressed;
         private bool _partyUltimatePressed;
+        private bool _targetLockPressed;
 
         private void Awake()
         {
@@ -52,6 +54,7 @@ namespace EndLink.Core
         {
             EnsureInitialized();
             _playerActionMap.Enable();
+            _targetLockAction.Enable();
         }
 
         private void OnDisable()
@@ -85,6 +88,8 @@ namespace EndLink.Core
             _allySlotALinkAttackAction.performed -= OnAllySlotALinkAttackPerformed;
             _allySlotBLinkAttackAction.performed -= OnAllySlotBLinkAttackPerformed;
             _partyUltimateAction.performed -= OnPartyUltimatePerformed;
+            _targetLockAction.performed -= OnTargetLockPerformed;
+            _targetLockAction.Dispose();
             _inputActions.Dispose();
             _initialized = false;
         }
@@ -155,6 +160,14 @@ namespace EndLink.Core
         public bool ConsumePartyUltimatePressed()
         {
             return ConsumePressed(ref _partyUltimatePressed);
+        }
+
+        /// <summary>
+        /// 娑堣垂涓€娆＄洰鏍囬攣瀹氳緭鍏ワ紝榛樿榧犳爣涓敭銆?
+        /// </summary>
+        public bool ConsumeTargetLockPressed()
+        {
+            return ConsumePressed(ref _targetLockPressed);
         }
 
         /// <summary>
@@ -241,6 +254,11 @@ namespace EndLink.Core
             SetPressedIfButton(context, ref _partyUltimatePressed);
         }
 
+        private void OnTargetLockPerformed(InputAction.CallbackContext context)
+        {
+            SetPressedIfButton(context, ref _targetLockPressed);
+        }
+
         private static void SetPressedIfButton(InputAction.CallbackContext context, ref bool pressedFlag)
         {
             if (context.ReadValueAsButton())
@@ -271,6 +289,7 @@ namespace EndLink.Core
             _allySlotALinkAttackPressed = false;
             _allySlotBLinkAttackPressed = false;
             _partyUltimatePressed = false;
+            _targetLockPressed = false;
         }
 
         private void EnsureInitialized()
@@ -292,6 +311,7 @@ namespace EndLink.Core
             _allySlotALinkAttackAction = _inputActions.asset.FindAction("Player/AllySlotALinkAttack", true);
             _allySlotBLinkAttackAction = _inputActions.asset.FindAction("Player/AllySlotBLinkAttack", true);
             _partyUltimateAction = _inputActions.asset.FindAction("Player/PartyUltimate", true);
+            _targetLockAction = new InputAction("TargetLock", InputActionType.Button, "<Mouse>/middleButton");
 
             _moveAction.performed += OnMoveChanged;
             _moveAction.canceled += OnMoveCanceled;
@@ -306,6 +326,7 @@ namespace EndLink.Core
             _allySlotALinkAttackAction.performed += OnAllySlotALinkAttackPerformed;
             _allySlotBLinkAttackAction.performed += OnAllySlotBLinkAttackPerformed;
             _partyUltimateAction.performed += OnPartyUltimatePerformed;
+            _targetLockAction.performed += OnTargetLockPerformed;
             _initialized = true;
         }
 
@@ -317,6 +338,7 @@ namespace EndLink.Core
             }
 
             _inputActions.asset?.Disable();
+            _targetLockAction?.Disable();
         }
 
         private static void ApplyKeyboardBindingOverride(InputAction action, Key key)

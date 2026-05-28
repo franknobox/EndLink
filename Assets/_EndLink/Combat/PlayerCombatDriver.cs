@@ -1,3 +1,4 @@
+using EndLink.Core;
 using UnityEngine;
 
 namespace EndLink.Combat
@@ -23,6 +24,7 @@ namespace EndLink.Combat
         private CombatActionDefinition linkAction;
 
         private PlayerTargeting _targeting;
+        private PlayerController _playerController;
         private float _nextActionTime;
         private float _lastActionCooldown;
         private CombatActionDefinition _lastCooldownAction;
@@ -76,6 +78,7 @@ namespace EndLink.Combat
         private void Awake()
         {
             TryGetComponent(out _targeting);
+            TryGetComponent(out _playerController);
         }
 
         /// <summary>
@@ -109,10 +112,13 @@ namespace EndLink.Combat
                 return false;
             }
 
+            Vector3 attackForward = ResolveAttackForward();
+            FaceAttackDirection(attackForward);
+            Vector3 hitboxForward = ResolveCurrentForward(attackForward);
             Vector3 spawnPosition = transform.position
-                + transform.forward * actionDefinition.HitboxSpawnDistance
+                + hitboxForward * actionDefinition.HitboxSpawnDistance
                 + Vector3.up * actionDefinition.HitboxSpawnHeight;
-            Quaternion spawnRotation = transform.rotation;
+            Quaternion spawnRotation = Quaternion.LookRotation(hitboxForward, Vector3.up);
 
             GameObject hitboxInstance = Instantiate(actionDefinition.HitboxPrefab, spawnPosition, spawnRotation);
             ConfigureHitbox(hitboxInstance, actionDefinition);
@@ -122,6 +128,61 @@ namespace EndLink.Combat
             _lastActionCooldown = actionDefinition.Cooldown;
             _nextActionTime = Time.time + _lastActionCooldown;
             return true;
+        }
+
+        private void FaceAttackDirection(Vector3 attackForward)
+        {
+            if (_playerController == null)
+            {
+                TryGetComponent(out _playerController);
+            }
+
+            if (_playerController != null)
+            {
+                _playerController.FaceDirection(attackForward, true);
+                return;
+            }
+
+            if (attackForward.sqrMagnitude > 0.0001f)
+            {
+                transform.rotation = Quaternion.LookRotation(attackForward, Vector3.up);
+            }
+        }
+
+        private Vector3 ResolveCurrentForward(Vector3 fallbackForward)
+        {
+            Vector3 forward = transform.forward;
+            forward.y = 0f;
+
+            if (forward.sqrMagnitude > 0.0001f)
+            {
+                return forward.normalized;
+            }
+
+            return fallbackForward.sqrMagnitude > 0.0001f
+                ? fallbackForward.normalized
+                : Vector3.forward;
+        }
+
+        private Vector3 ResolveAttackForward()
+        {
+            if (_targeting != null && _targeting.HasTarget && _targeting.CurrentTarget != null)
+            {
+                Vector3 toTarget = _targeting.CurrentTarget.position - transform.position;
+                toTarget.y = 0f;
+
+                if (toTarget.sqrMagnitude > 0.0001f)
+                {
+                    return toTarget.normalized;
+                }
+            }
+
+            Vector3 forward = transform.forward;
+            forward.y = 0f;
+
+            return forward.sqrMagnitude > 0.0001f
+                ? forward.normalized
+                : Vector3.forward;
         }
 
         private void ConfigureHitbox(GameObject hitboxInstance, CombatActionDefinition actionDefinition)

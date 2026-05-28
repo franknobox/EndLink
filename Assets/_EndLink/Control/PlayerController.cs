@@ -136,6 +136,31 @@ namespace EndLink.Core
             RotateTowardsMoveDirection(desiredMoveDirection, deltaTime);
         }
 
+        /// <summary>
+        /// 璁╃帺瀹舵湰鍦?Z 杞存鏂瑰悜闈㈠悜鎸囧畾涓栫晫鏂瑰悜銆?
+        /// 鏀诲嚮銆佹妧鑳芥垨鍚庣画閿佸畾鍔ㄤ綔鍙互璋冪敤瀹冿紝璁╄鑹叉湞鍚戝拰鏀诲嚮鍔ㄧ敾姝ｉ潰淇濇寔涓€鑷淬€?
+        /// </summary>
+        public void FaceDirection(Vector3 worldDirection, bool instant)
+        {
+            Vector3 planarDirection = Vector3.ProjectOnPlane(worldDirection, Vector3.up);
+
+            if (planarDirection.sqrMagnitude <= MoveInputDeadZoneSqr)
+            {
+                return;
+            }
+
+            Quaternion targetRotation = Quaternion.LookRotation(planarDirection.normalized, Vector3.up);
+
+            if (instant || rotationSharpness <= 0f)
+            {
+                transform.rotation = targetRotation;
+                return;
+            }
+
+            float lerpFactor = 1f - Mathf.Exp(-rotationSharpness * Time.deltaTime);
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, lerpFactor);
+        }
+
         private void OnValidate()
         {
             // Inspector 中允许直接调参，这里保证重力与贴地力始终向下。

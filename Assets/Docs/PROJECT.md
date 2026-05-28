@@ -37,13 +37,9 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 计划内容：
 - 连携触发规则初版：基于 `CombatEventsBus`、`CombatTagContainer` 和 `CombatTagDefinition`，定义最小可用的触发条件，例如指定标签命中、标签组合、目标处于可连携窗口等。
-- 连携反应规则初版：触发后能明确由谁响应、响应哪个目标、执行哪个 Action，并广播可观察事件，方便调试。
+- 连携反应规则初版：触发后能明确由谁响应、响应哪个目标、执行哪个 Action，并广播可观察看清事件，方便调试。
 - 四类 Action Base 版：分别做出`Skill`、`LinkAttack`、`Ultimate` 的基础数据资产和最小执行路径，键位。
 
-阶段完成标准：
-- 主控攻击敌人后，队友或主控能根据配置的规则执行一次 `LinkAttack`。
-- 四类 `CombatActionType` 都有可创建、可配置、可在调试链路中识别的 base 数据。
-- `Combat Monitor` 能看清 ActionStarted、HitLanded、Damaged、TagAdded、TagTransformed 等关键事件顺序。
 
 ## 当前已完成内容
 
@@ -71,7 +67,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [玩家生命值与受击接线](#feature-player-health) | 已完成第一版 | 负责玩家扣血、治疗、死亡事件，并把有效受伤和死亡转发到玩家状态机。 |
-| [玩家目标选择](#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按范围、角度和距离选择当前战斗目标，不控制镜头或 UI。 |
+| [玩家目标选择与锁定](#feature-player-targeting) | 已完成基础锁定版 | 负责在 Enemy Layer 中按范围、角度和距离选择当前战斗目标，并支持中键锁定/解锁当前目标。 |
 | [战斗动作配置](#feature-combat-action) | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和大招的伤害、冷却、时序、Hitbox 和命中标签。 |
 | [战斗标签系统](#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和标签组合转化规则。 |
 | [战斗数据编辑工具](#feature-combat-data-tool) | 已完成第一版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则数据资产。 |
@@ -107,6 +103,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`，默认键位 E / F。
 - 主控和队友连携请求读取 `Player/PlayerLinkAttack`、`Player/AllySlotALinkAttack`、`Player/AllySlotBLinkAttack`，默认键位 1 / 2 / 3；这些输入不会绕过连携机制直接释放动作。
 - 全队极限技读取 `Player/PartyUltimate`，默认键位 V。
+- 目标锁定读取鼠标中键，当前由 `PlayerInputReader` 内部运行时输入动作提供，供 `PlayerTargetLockController` 消费。
 - 相机旋转读取 `Player/Look`。
 - 鼠标滚轮缩放通过 `Mouse.current.scroll` 读取。
 
@@ -137,6 +134,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 使用 `Mathf.SmoothDamp` 做平滑加速和减速。
 - 支持手动重力和贴地速度。
 - 移动时角色本地 Z 轴正方向会平滑转向移动方向。
+- 暴露面向指定世界方向的接口，供攻击和锁定动作在出手前让角色正面与动作方向一致。
 - 支持移动方向参考，拖入 `Main Camera` 后可实现相机相对移动。
 - 支持按住 `Left Shift` 冲刺；当前冲刺作为移动速度修饰，不单独进入状态机大状态。
 - 移动调用由 `PlayerStateMachine` 驱动，`PlayerController` 通过 `TickMovement` 执行实际位移。
@@ -342,7 +340,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 <a id="feature-player-targeting"></a>
 
-### Feature：玩家目标选择
+### Feature：玩家目标选择与锁定
 
 <details>
 <summary>展开详情</summary>
@@ -351,18 +349,23 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 功能说明：
 - `PlayerTargeting` 是基础目标选择组件，放在战斗层。
 - 只负责搜索并保存当前目标，不控制相机、不绘制 UI、不决定攻击逻辑。
+- `PlayerTargetLockController` 负责消费鼠标中键输入，并调用 `PlayerTargeting` 完成锁定/解锁。
 - 默认搜索 `Enemy` Layer。
 - 使用 `Physics.OverlapSphereNonAlloc` 搜索范围内目标，减少运行时 GC。
 - 目标评分同时考虑视角/朝向夹角和距离，默认更偏向玩家前方或画面中心附近的敌人。
 - 当前目标离开搜索范围、Layer 不匹配或被销毁时，会自动清除。
 - 对外提供 `TryAcquireTarget()`、`SetCurrentTarget(Transform target)` 和 `ClearTarget()`。
+- `PlayerCombatDriver` 会读取当前锁定目标；有目标时先让玩家正面瞬间转向目标，再沿玩家正面生成 Hitbox / 远程技能；没有目标时继续按玩家自身前方生成。
 
 对应脚本：
 - `Assets/_EndLink/Combat/PlayerTargeting.cs`
+- `Assets/_EndLink/Combat/PlayerTargetLockController.cs`
+- `Assets/_EndLink/Control/PlayerInputReader.cs`
 
 相关物体：
 - 玩家根物体
   - `PlayerTargeting`
+  - `PlayerTargetLockController`
 
 关键配置：
 - `searchRadius`：搜索半径
@@ -373,6 +376,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - `angleScoreWeight`：角度评分权重
 - `distanceScoreWeight`：距离评分权重
 - `logTargetChanges`：是否打印目标变化日志
+- `PlayerTargetLockController.logTargetLockChanges`：是否打印锁定/解锁输入调试日志
 
 </details>
 
@@ -864,7 +868,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 - 状态机决定能否攻击，`PlayerCombatDriver` 只负责执行攻击表现和判定。
 - 支持通过 `CombatActionDefinition` 配置普攻、主动技能、连携技的伤害、击退、`CombatTagDefinition` 标签、标签持续时间、冷却、Hitbox 和生成参数。
 - `PlayerCombatDriver` 执行的动作必须来自 `CombatActionDefinition`。
-- 当前执行内容是在角色正前方生成指定 Hitbox prefab。
+- 当前执行内容是生成指定 Hitbox prefab；有锁定目标时先让玩家正面瞬间转向目标，再按玩家正前方生成，没有锁定目标时按角色当前正前方生成。
 - 支持动作冷却，防止动作过快触发。
 - 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 区分普攻、技能和连携槽。
 - 支持通过动作资产中的 `Hitbox Spawn Distance` 和 `Hitbox Spawn Height` 调整 Hitbox 生成位置。
