@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>EndLink Combat Lab</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workbench">
+        <aside class="side-panel">
+          <h2>反应规则</h2>
+          <form id="ruleForm" class="rule-form">
+            <label>
+              条件
+              <input id="ruleRequirements" type="text" placeholder="Fire:3 或 Break, Shock">
+            </label>
+            <label>
+              结果
+              <input id="ruleResult" type="text" placeholder="Burning">
+            </label>
+            <button type="submit">添加规则</button>
+          </form>
+          <div id="rulesList" class="rules-list"></div>
+        </aside>
+
+        <section class="center-panel">
+          <section class="target-zone">
+            <div class="target-orb">
+              <span id="targetHpText">100 / 100</span>
+            </div>
+
+            <div class="target-data">
+              <div class="target-header">
+                <h2 id="targetNameLabel">Enemy Dummy</h2>
+                <button type="button" id="resetButton">重置目标</button>
+              </div>
+              <div class="hp-bar">
+                <div id="targetHpFill" class="hp-fill"></div>
+              </div>
+              <div class="target-fields">
+                <label>
+                  最大血量
+                  <input id="targetMaxHealth" type="number" min="1" value="100">
+                </label>
+                <label>
+                  当前血量
+                  <input id="targetCurrentHealth" type="number" min="0" value="100">
+                </label>
+              </div>
+              <div class="target-tags">
+                <div class="section-title">目标 Tag</div>
+                <div id="targetTags" class="tag-list"></div>
+                <form id="tagForm" class="inline-form">
+                  <input id="tagInput" type="text" placeholder="Fire:3">
+                  <button type="submit">添加</button>
+                </form>
+              </div>
+            </div>
+          </section>
+
+          <section id="characterBoard" class="character-board"></section>
+        </section>
+
+        <aside class="side-panel">
+          <h2>时间线</h2>
+          <ol id="timeline" class="timeline"></ol>
+        </aside>
+      </section>
+    </main>
+
+    <template id="characterTemplate">
+      <article class="actor-row">
+        <input class="character-name" type="text">
+        <div class="action-line">
+          <span>Skill</span>
+          <input class="skill-damage" type="number" min="0" aria-label="Skill 伤害">
+          <input class="skill-tags" type="text" aria-label="Skill Tag" placeholder="Fire:2">
+          <button type="button" class="skill-button">释放</button>
+        </div>
+        <div class="action-line">
+          <span>Link</span>
+          <input class="link-damage" type="number" min="0" aria-label="Link 伤害">
+          <input class="link-tags" type="text" aria-label="Link Tag" placeholder="Burning">
+          <button type="button" class="link-button">释放</button>
+        </div>
+      </article>
+    </template>
+
+    <script src="reaction-engine.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
