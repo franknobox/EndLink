@@ -38,9 +38,14 @@ namespace EndLink.Ally
         public override void Tick(float deltaTime)
         {
             Transform target = Context.CurrentAssistTarget;
-            if (target == null || !target.gameObject.activeInHierarchy || IsMainCharacterTooFar())
+            if (IsMainCharacterTooFar())
             {
                 Context.StateMachine.CancelAssist(target);
+                return;
+            }
+
+            if (!TryEnsureAssistTarget(ref target))
+            {
                 return;
             }
 
@@ -55,6 +60,30 @@ namespace EndLink.Ally
             }
         }
 
+        private bool TryEnsureAssistTarget(ref Transform target)
+        {
+            if (AllyTargetSelector.IsTargetSelectable(target))
+            {
+                return true;
+            }
+
+            if (Context.TargetSelector != null
+                && Context.TargetSelector.TrySelectTarget(target, out Transform nextTarget)
+                && Context.StateMachine.TrySwitchAssistTarget(nextTarget))
+            {
+                target = nextTarget;
+                EnterApproachPhase();
+                return true;
+            }
+
+            AllyDebugLog.Raise(
+                Context.Transform.gameObject,
+                AllyDebugCategory.Assist,
+                $"assist target invalid and no replacement, target={GetTransformName(target)}");
+            Context.StateMachine.CancelAssist(target);
+            return false;
+        }
+
         private void TickApproach(Transform target, float deltaTime)
         {
             if (IsTargetInAttackRange(target))
@@ -63,7 +92,7 @@ namespace EndLink.Ally
                 return;
             }
 
-            Vector3 approachPosition = AllyTargetingUtility.GetClosestPointOnTarget(
+            Vector3 approachPosition = AllyTargetSelector.GetClosestPointOnTarget(
                 target,
                 Context.Transform.position,
                 _targetColliders);
@@ -155,7 +184,7 @@ namespace EndLink.Ally
         {
             float attackEnterDistance = Context.AssistAttackEnterDistance;
             float sqrAttackRange = attackEnterDistance * attackEnterDistance;
-            float sqrDistanceToTarget = AllyTargetingUtility.GetHorizontalSqrDistanceToTarget(
+            float sqrDistanceToTarget = AllyTargetSelector.GetHorizontalSqrDistanceToTarget(
                 target,
                 Context.Transform.position,
                 _targetColliders);
@@ -166,7 +195,7 @@ namespace EndLink.Ally
         private bool IsTargetOutOfRange(Transform target)
         {
             float reengageRange = Mathf.Max(Context.AssistAttackEnterDistance, Context.AssistReengageRange);
-            float sqrDistanceToTarget = AllyTargetingUtility.GetHorizontalSqrDistanceToTarget(
+            float sqrDistanceToTarget = AllyTargetSelector.GetHorizontalSqrDistanceToTarget(
                 target,
                 Context.Transform.position,
                 _targetColliders);
@@ -194,7 +223,7 @@ namespace EndLink.Ally
                 return 0f;
             }
 
-            return Mathf.Sqrt(AllyTargetingUtility.GetHorizontalSqrDistanceToTarget(
+            return Mathf.Sqrt(AllyTargetSelector.GetHorizontalSqrDistanceToTarget(
                 target,
                 Context.Transform.position,
                 _targetColliders));

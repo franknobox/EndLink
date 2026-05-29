@@ -267,7 +267,7 @@ namespace EndLink.Editor
                 return "-";
             }
 
-            float distance = Mathf.Sqrt(AllyTargetingUtility.GetHorizontalSqrDistanceToTarget(
+            float distance = Mathf.Sqrt(AllyTargetSelector.GetHorizontalSqrDistanceToTarget(
                 target,
                 from.position,
                 _colliderBuffer));

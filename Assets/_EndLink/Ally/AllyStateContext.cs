@@ -13,12 +13,14 @@ namespace EndLink.Ally
             AllyStateMachine stateMachine,
             Transform transform,
             AllyCombatDriver combatDriver,
-            AllyFollowMotor followMotor)
+            AllyFollowMotor followMotor,
+            AllyTargetSelector targetSelector)
         {
             StateMachine = stateMachine;
             Transform = transform;
             CombatDriver = combatDriver;
             FollowMotor = followMotor;
+            TargetSelector = targetSelector;
         }
 
         /// <summary>队友状态机。</summary>
@@ -32,6 +34,9 @@ namespace EndLink.Ally
 
         /// <summary>队友移动器，负责跟随、接近目标和局部避让。</summary>
         public AllyFollowMotor FollowMotor { get; }
+
+        /// <summary>队友目标选择器，只负责从战斗上下文中挑选可攻击目标。</summary>
+        public AllyTargetSelector TargetSelector { get; }
 
         /// <summary>当前跟随目标，通常是固定主控。</summary>
         public Transform FollowTarget => StateMachine.FollowTarget;

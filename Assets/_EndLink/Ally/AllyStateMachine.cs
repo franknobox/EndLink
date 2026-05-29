@@ -12,6 +12,7 @@ namespace EndLink.Ally
     [DisallowMultipleComponent]
     [RequireComponent(typeof(AllyCombatDriver))]
     [RequireComponent(typeof(AllyFollowMotor))]
+    [RequireComponent(typeof(AllyTargetSelector))]
     public sealed class AllyStateMachine : MonoBehaviour
     {
         [Header("初始状态")]
@@ -65,6 +66,7 @@ namespace EndLink.Ally
         private IAllyState _currentState;
         private AllyCombatDriver _combatDriver;
         private AllyFollowMotor _followMotor;
+        private AllyTargetSelector _targetSelector;
         private Transform _currentAssistTarget;
         private CombatActionDefinition _currentAction;
         private Transform _currentActionTarget;
@@ -78,6 +80,9 @@ namespace EndLink.Ally
 
         /// <summary>当前绑定的队友跟随移动组件。</summary>
         public AllyFollowMotor FollowMotor => _followMotor;
+
+        /// <summary>当前绑定的队友目标选择器。</summary>
+        public AllyTargetSelector TargetSelector => _targetSelector;
 
         /// <summary>当前跟随目标。</summary>
         public Transform FollowTarget => followTarget;
@@ -139,12 +144,18 @@ namespace EndLink.Ally
         {
             _combatDriver = GetComponent<AllyCombatDriver>();
             _followMotor = GetComponent<AllyFollowMotor>();
+            _targetSelector = GetComponent<AllyTargetSelector>();
+            if (_targetSelector == null)
+            {
+                _targetSelector = gameObject.AddComponent<AllyTargetSelector>();
+            }
 
             AllyStateContext context = new AllyStateContext(
                 this,
                 transform,
                 _combatDriver,
-                _followMotor);
+                _followMotor,
+                _targetSelector);
 
             RegisterState(new AllyIdleState(context));
             RegisterState(new AllyFollowState(context));
@@ -266,6 +277,36 @@ namespace EndLink.Ally
                 $"assist request accepted, target={GetTransformName(target)}");
             ChangeState(AllyStateId.Assist);
             return CurrentStateId == AllyStateId.Assist;
+        }
+
+        /// <summary>
+        /// 在 Assist 内部切换当前助战目标。
+        /// 用于当前目标死亡或失效后，继续攻击小队战斗上下文里的下一个目标。
+        /// </summary>
+        public bool TrySwitchAssistTarget(Transform target)
+        {
+            if (target == null || CurrentStateId != AllyStateId.Assist)
+            {
+                return false;
+            }
+
+            if (_combatDriver == null || !_combatDriver.HasAssistAction)
+            {
+                return false;
+            }
+
+            if (target == _currentAssistTarget)
+            {
+                return true;
+            }
+
+            Transform previousTarget = _currentAssistTarget;
+            _currentAssistTarget = target;
+            AllyDebugLog.Raise(
+                gameObject,
+                AllyDebugCategory.State,
+                $"assist target switched, from={GetTransformName(previousTarget)}, to={GetTransformName(target)}");
+            return true;
         }
 
         /// <summary>

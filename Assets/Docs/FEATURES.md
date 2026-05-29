@@ -57,6 +57,7 @@
 
 <details>
 <summary>展开详情</summary>
+
 功能说明：
 - 使用已生成的 `InputSystem_Actions` C# 包装类。
 - 玩家移动输入和相机输入分开读取，避免输入读取器承担移动或相机逻辑。
@@ -539,7 +540,6 @@
 - `CombatActionDefinition.Effective Attack Range` 决定队友距离目标 Collider 表面多远开始攻击。
 - `AllyCombatDriver` 执行助战时会朝目标方向生成判定，并广播 `ActionStarted` 事件。
 - `AllyTargetingUtility` 用目标 Collider 表面计算助战接近和攻击距离，避免大型敌人按中心点判断导致队友贴边却无法攻击。
-- 当前版本用于验证木桩队友参与连携的最短链路。
 
 对应脚本：
 - `Assets/_EndLink/Ally/AllyBrain.cs`
@@ -574,6 +574,7 @@
 
 <details>
 <summary>展开详情</summary>
+
 功能说明：
 - `AllyDebugLog` 是队友专用调试事件流，运行时代码只负责上报状态切换、事件响应、助战阶段、冷却等待和攻击执行等关键行为。
 - `AllyMonitorWindow` 是 Editor 队友监视窗口，通过 `EndLink > Debug > Ally Monitor` 打开。
