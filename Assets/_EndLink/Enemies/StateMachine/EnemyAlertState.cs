@@ -19,6 +19,7 @@ namespace EndLink.Enemies
         public override void Enter()
         {
             _elapsedTime = 0f;
+            Context.Motor?.Stop();
         }
 
         /// <inheritdoc />
@@ -29,8 +30,10 @@ namespace EndLink.Enemies
                 if (!Context.HasValidTarget)
                 {
                     Context.StateMachine.ChangeState(EnemyStateId.Idle);
+                    return;
                 }
 
+                Context.Motor?.FaceTarget(Context.CurrentTarget, deltaTime);
                 return;
             }
 

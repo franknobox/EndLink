@@ -14,6 +14,12 @@ namespace EndLink.Enemies
         public override EnemyStateId StateId => EnemyStateId.Idle;
 
         /// <inheritdoc />
+        public override void Enter()
+        {
+            Context.Motor?.Stop();
+        }
+
+        /// <inheritdoc />
         public override void Tick(float deltaTime)
         {
         }

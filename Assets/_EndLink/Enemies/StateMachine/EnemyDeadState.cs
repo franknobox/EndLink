@@ -16,6 +16,7 @@ namespace EndLink.Enemies
         /// <inheritdoc />
         public override void Enter()
         {
+            Context.Motor?.Stop();
             Context.StateMachine.SetTarget(null);
         }
 

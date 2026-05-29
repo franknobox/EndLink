@@ -21,6 +21,15 @@ namespace EndLink.Enemies
         [SerializeField]
         private Transform bodyRoot;
 
+        [Header("能力组件")]
+        [Tooltip("敌人移动能力组件。普通地面敌人拖 EnemyMotorBase；炮台或特殊敌人可以留空或拖自定义子类。")]
+        [SerializeField]
+        private EnemyMotorBase motor;
+
+        [Tooltip("敌人战斗执行器。需要攻击能力的敌人拖 EnemyCombatDriver；纯木桩或非攻击单位可以留空。")]
+        [SerializeField]
+        private EnemyCombatDriver combatDriver;
+
         private EnemyHealth _health;
         private CombatTagContainer _tagContainer;
 
@@ -53,6 +62,12 @@ namespace EndLink.Enemies
         }
 
         /// <summary>用于锁定、寻路和计算距离的目标点。</summary>
+        /// <summary>敌人的移动能力组件，由 EnemyActor 统一承载配置。允许为空。</summary>
+        public EnemyMotorBase Motor => motor;
+
+        /// <summary>敌人的战斗执行器。没有攻击能力的敌人可以为空。</summary>
+        public EnemyCombatDriver CombatDriver => combatDriver;
+
         public Transform TargetTransform => targetTransform != null ? targetTransform : transform;
 
         /// <summary>视觉根节点。</summary>

@@ -35,6 +35,15 @@ namespace EndLink.Enemies
         [SerializeField, Min(0.01f)]
         private float hitDuration = 0.25f;
 
+        [Header("Combat 移动")]
+        [Tooltip("不会攻击的基础敌人在 Combat 状态追到目标附近后停下的距离。")]
+        [SerializeField, Min(0f)]
+        private float combatChaseStopDistance = 1.25f;
+
+        [Tooltip("目标离敌人超过该距离时脱战并回到 Idle。小于等于 0 表示不按距离脱战。")]
+        [SerializeField, Min(0f)]
+        private float combatLeashDistance = 18f;
+
         [Header("调试")]
         [Tooltip("是否打印敌人大状态切换日志。排查受击、进战和死亡流程时开启。")]
         [SerializeField]
@@ -64,6 +73,12 @@ namespace EndLink.Enemies
 
         /// <summary>受击硬直持续时间。</summary>
         public float HitDuration => hitDuration;
+
+        /// <summary>Combat 状态追击目标时的停止距离。</summary>
+        public float CombatChaseStopDistance => combatChaseStopDistance;
+
+        /// <summary>Combat 状态目标超过该距离时脱战。小于等于 0 表示不按距离脱战。</summary>
+        public float CombatLeashDistance => combatLeashDistance;
 
         /// <summary>Alert 到 Combat / Idle 的转换是否由外部索敌组件控制。</summary>
         public bool AlertTransitionExternallyControlled => _alertTransitionExternallyControlled;
@@ -127,6 +142,8 @@ namespace EndLink.Enemies
         {
             alertDuration = Mathf.Max(0.01f, alertDuration);
             hitDuration = Mathf.Max(0.01f, hitDuration);
+            combatChaseStopDistance = Mathf.Max(0f, combatChaseStopDistance);
+            combatLeashDistance = Mathf.Max(0f, combatLeashDistance);
         }
 
         private void OnDestroy()
