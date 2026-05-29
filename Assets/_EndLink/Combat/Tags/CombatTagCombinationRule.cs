@@ -20,6 +20,14 @@ namespace EndLink.Combat
         [SerializeField]
         private CombatTagDefinition secondTag;
 
+        [Tooltip("触发规则所需的输入标签 A 层数。")]
+        [SerializeField, Min(1)]
+        private int requiredFirstStack = 1;
+
+        [Tooltip("触发规则所需的输入标签 B 层数。")]
+        [SerializeField, Min(1)]
+        private int requiredSecondStack = 1;
+
         [Header("输出标签")]
         [Tooltip("组合结果标签 C。")]
         [SerializeField]
@@ -33,11 +41,21 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float resultDuration;
 
+        [Tooltip("组合成功后给结果标签增加的层数。")]
+        [SerializeField, Min(1)]
+        private int resultStackCount = 1;
+
         /// <summary>组合输入标签 A。</summary>
         public CombatTagDefinition FirstTag => firstTag;
 
         /// <summary>组合输入标签 B。</summary>
         public CombatTagDefinition SecondTag => secondTag;
+
+        /// <summary>触发规则所需的输入标签 A 层数。</summary>
+        public int RequiredFirstStack => Mathf.Max(1, requiredFirstStack);
+
+        /// <summary>触发规则所需的输入标签 B 层数。</summary>
+        public int RequiredSecondStack => Mathf.Max(1, requiredSecondStack);
 
         /// <summary>组合结果标签 C。</summary>
         public CombatTagDefinition ResultTag => resultTag;
@@ -47,6 +65,9 @@ namespace EndLink.Combat
 
         /// <summary>结果标签持续时间。小于等于 0 表示永久标签。</summary>
         public float ResultDuration => resultDuration;
+
+        /// <summary>组合成功后给结果标签增加的层数。</summary>
+        public int ResultStackCount => Mathf.Max(1, resultStackCount);
 
         /// <summary>规则是否合法。</summary>
         public bool IsValid => IsValidTag(firstTag) && IsValidTag(secondTag) && IsValidTag(resultTag);
@@ -61,8 +82,30 @@ namespace EndLink.Combat
                 return false;
             }
 
-            return (ReferenceEquals(addedTag, firstTag) && readable.HasTag(secondTag))
-                || (ReferenceEquals(addedTag, secondTag) && readable.HasTag(firstTag));
+            bool addedTagMatches = ReferenceEquals(addedTag, firstTag) || ReferenceEquals(addedTag, secondTag);
+            return addedTagMatches && HasRequiredStacks(readable);
+        }
+
+        private bool HasRequiredStacks(ICombatTagReadable readable)
+        {
+            if (ReferenceEquals(firstTag, secondTag))
+            {
+                return readable.TryGetStackCount(firstTag, out int sameTagStack)
+                    && sameTagStack >= Mathf.Max(RequiredFirstStack, RequiredSecondStack);
+            }
+
+            return readable.TryGetStackCount(firstTag, out int firstStack)
+                && readable.TryGetStackCount(secondTag, out int secondStack)
+                && firstStack >= RequiredFirstStack
+                && secondStack >= RequiredSecondStack;
+        }
+
+        private void OnValidate()
+        {
+            requiredFirstStack = Mathf.Max(1, requiredFirstStack);
+            requiredSecondStack = Mathf.Max(1, requiredSecondStack);
+            resultDuration = Mathf.Max(0f, resultDuration);
+            resultStackCount = Mathf.Max(1, resultStackCount);
         }
 
         private static bool IsValidTag(CombatTagDefinition tag)

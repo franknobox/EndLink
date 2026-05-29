@@ -25,6 +25,11 @@ namespace EndLink.Combat
         [SerializeField]
         private string description;
 
+        [Header("层数")]
+        [Tooltip("该标签允许叠加的最大层数。1 表示不叠层，只刷新持续时间。")]
+        [SerializeField, Min(1)]
+        private int maxStackCount = 1;
+
         /// <summary>标签唯一标识。</summary>
         public string TagId => tagId;
 
@@ -34,12 +39,16 @@ namespace EndLink.Combat
         /// <summary>标签说明。</summary>
         public string Description => description;
 
+        /// <summary>该标签允许叠加的最大层数。</summary>
+        public int MaxStackCount => Mathf.Max(1, maxStackCount);
+
         /// <summary>标签是否合法。当前最小规则是资产存在且 tagId 非空。</summary>
         public bool IsValid => !string.IsNullOrWhiteSpace(tagId);
 
         private void OnValidate()
         {
             tagId = tagId?.Trim();
+            maxStackCount = Mathf.Max(1, maxStackCount);
         }
     }
 }

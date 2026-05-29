@@ -67,6 +67,10 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float combatTagDuration;
 
+        [Tooltip("动作命中时施加的战斗标签层数。最终会被标签定义的最大层数钳制。")]
+        [SerializeField, Min(1)]
+        private int combatTagStackCount = 1;
+
         [Header("冷却与时序")]
         [Tooltip("动作冷却时间。冷却未结束时不应再次释放同一个动作。")]
         [SerializeField, Min(0f)]
@@ -122,6 +126,9 @@ namespace EndLink.Combat
 
         /// <summary>战斗标签持续时间。小于等于 0 表示永久标签。</summary>
         public float CombatTagDuration => combatTagDuration;
+
+        /// <summary>动作命中时施加的战斗标签层数。</summary>
+        public int CombatTagStackCount => Mathf.Max(1, combatTagStackCount);
 
         /// <summary>冷却时间。</summary>
         public float Cooldown => cooldown;
@@ -185,6 +192,7 @@ namespace EndLink.Combat
             damageAmount = Mathf.Max(0, damageAmount);
             knockbackForce = Mathf.Max(0f, knockbackForce);
             combatTagDuration = Mathf.Max(0f, combatTagDuration);
+            combatTagStackCount = Mathf.Max(1, combatTagStackCount);
             cooldown = Mathf.Max(0f, cooldown);
             startupTime = Mathf.Max(0f, startupTime);
             activeTime = Mathf.Max(0.01f, activeTime);

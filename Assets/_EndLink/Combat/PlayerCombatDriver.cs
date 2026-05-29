@@ -194,7 +194,8 @@ namespace EndLink.Combat
                     actionDefinition.DamageAmount,
                     actionDefinition.KnockbackForce,
                     actionDefinition.CombatTagToApply,
-                    actionDefinition.CombatTagDuration);
+                    actionDefinition.CombatTagDuration,
+                    actionDefinition.CombatTagStackCount);
             }
         }
 

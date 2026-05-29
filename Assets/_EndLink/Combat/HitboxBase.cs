@@ -37,6 +37,10 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float combatTagDuration;
 
+        [Tooltip("命中时施加的战斗标签层数。最终会被标签定义的最大层数钳制。")]
+        [SerializeField, Min(1)]
+        private int combatTagStackCount = 1;
+
         [Header("生命周期")]
         [Tooltip("Hitbox 自动销毁时间。小于等于 0 表示不由 HitboxBase 按时间销毁。")]
         [InspectorName("Lifetime")]
@@ -64,6 +68,9 @@ namespace EndLink.Combat
 
         /// <summary>本 Hitbox 命中时附加的战斗标签持续时间。小于等于 0 表示永久标签。</summary>
         public float CombatTagDuration => combatTagDuration;
+
+        /// <summary>本 Hitbox 命中时附加的战斗标签层数。</summary>
+        public int CombatTagStackCount => Mathf.Max(1, combatTagStackCount);
 
         /// <summary>Hitbox 自动销毁时间。小于等于 0 表示关闭基类时间销毁。</summary>
         public float Lifetime => lifetime;
@@ -110,6 +117,7 @@ namespace EndLink.Combat
             damageAmount = Mathf.Max(0f, damageAmount);
             knockbackForce = Mathf.Max(0f, knockbackForce);
             combatTagDuration = Mathf.Max(0f, combatTagDuration);
+            combatTagStackCount = Mathf.Max(1, combatTagStackCount);
             lifetime = Mathf.Max(0f, lifetime);
 
             if (TryGetComponent(out Collider hitboxCollider))
@@ -131,12 +139,13 @@ namespace EndLink.Combat
         /// <summary>
         /// 运行时配置 Hitbox 参数，使用新的 CombatTagDefinition 标签通道。
         /// </summary>
-        public void Configure(float damage, float knockback, CombatTagDefinition combatTag, float tagDuration)
+        public void Configure(float damage, float knockback, CombatTagDefinition combatTag, float tagDuration, int tagStackCount = 1)
         {
             damageAmount = Mathf.Max(0f, damage);
             knockbackForce = Mathf.Max(0f, knockback);
             combatTagToApply = combatTag;
             combatTagDuration = Mathf.Max(0f, tagDuration);
+            combatTagStackCount = Mathf.Max(1, tagStackCount);
         }
 
         /// <summary>
@@ -231,6 +240,7 @@ namespace EndLink.Combat
                 knockbackForce,
                 combatTagToApply,
                 combatTagDuration,
+                combatTagStackCount,
                 hitPoint,
                 hitDirection);
         }
@@ -243,7 +253,7 @@ namespace EndLink.Combat
             }
 
             ICombatTagReceiver tagReceiver = other.GetComponentInParent<ICombatTagReceiver>();
-            tagReceiver?.AddTag(combatTagToApply, combatTagDuration, _owner);
+            tagReceiver?.AddTag(combatTagToApply, combatTagDuration, _owner, combatTagStackCount);
         }
 
         /// <summary>

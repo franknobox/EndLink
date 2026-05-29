@@ -16,6 +16,7 @@ namespace EndLink.Combat
             float knockbackForce,
             CombatTagDefinition combatTagToApply,
             float combatTagDuration,
+            int combatTagStackCount,
             Vector3 hitPoint,
             Vector3 hitDirection)
         {
@@ -26,6 +27,7 @@ namespace EndLink.Combat
             KnockbackForce = knockbackForce;
             CombatTagToApply = combatTagToApply;
             CombatTagDuration = Mathf.Max(0f, combatTagDuration);
+            CombatTagStackCount = Mathf.Max(1, combatTagStackCount);
             HitPoint = hitPoint;
             HitDirection = hitDirection;
         }
@@ -50,6 +52,9 @@ namespace EndLink.Combat
 
         /// <summary>战斗标签持续时间。小于等于 0 表示永久标签。</summary>
         public float CombatTagDuration { get; }
+
+        /// <summary>命中时附加的战斗标签层数。</summary>
+        public int CombatTagStackCount { get; }
 
         /// <summary>命中点。</summary>
         public Vector3 HitPoint { get; }

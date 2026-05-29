@@ -175,7 +175,8 @@ namespace EndLink.Enemies
                     actionDefinition.DamageAmount,
                     actionDefinition.KnockbackForce,
                     actionDefinition.CombatTagToApply,
-                    actionDefinition.CombatTagDuration);
+                    actionDefinition.CombatTagDuration,
+                    actionDefinition.CombatTagStackCount);
                 return;
             }
 

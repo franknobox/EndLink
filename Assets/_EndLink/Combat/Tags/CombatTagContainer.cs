@@ -75,7 +75,7 @@ namespace EndLink.Combat
                     continue;
                 }
 
-                AddTag(initialTag.Tag, initialTag.HasDuration ? initialTag.RemainingDuration : 0f, gameObject);
+                AddTag(initialTag.Tag, initialTag.HasDuration ? initialTag.RemainingDuration : 0f, gameObject, initialTag.StackCount);
             }
         }
 
@@ -125,7 +125,13 @@ namespace EndLink.Combat
         /// <summary>添加标签并记录标签来源。duration 小于等于 0 时表示永久标签。</summary>
         public bool AddTag(CombatTagDefinition tag, float duration, GameObject source)
         {
-            return AddTagInternal(tag, duration, source, true, 0);
+            return AddTag(tag, duration, source, 1);
+        }
+
+        /// <summary>添加标签、持续时间和层数，并记录标签来源。duration 小于等于 0 时表示永久标签。</summary>
+        public bool AddTag(CombatTagDefinition tag, float duration, GameObject source, int stackCount)
+        {
+            return AddTagInternal(tag, duration, source, stackCount, true, 0);
         }
 
         /// <summary>移除标签。</summary>
@@ -183,6 +189,21 @@ namespace EndLink.Combat
             return true;
         }
 
+        /// <summary>尝试读取标签当前层数。</summary>
+        public bool TryGetStackCount(CombatTagDefinition tag, out int stackCount)
+        {
+            stackCount = 0;
+
+            int index = FindTagIndex(tag);
+            if (index < 0)
+            {
+                return false;
+            }
+
+            stackCount = _activeTags[index].StackCount;
+            return true;
+        }
+
         /// <summary>清空所有标签。</summary>
         public void ClearTags()
         {
@@ -193,6 +214,7 @@ namespace EndLink.Combat
             CombatTagDefinition tag,
             float duration,
             GameObject source,
+            int stackCount,
             bool evaluateCombinations,
             int combinationDepth)
         {
@@ -206,13 +228,14 @@ namespace EndLink.Combat
 
             if (index >= 0)
             {
-                _activeTags[index].Refresh(duration);
+                _activeTags[index].Refresh(duration, stackCount, tag.MaxStackCount);
                 NotifyTagRefreshed(tag);
             }
             else
             {
-                _activeTags.Add(new ActiveCombatTag(tag, duration));
-                NotifyTagAdded(tag, source);
+                ActiveCombatTag activeTag = new ActiveCombatTag(tag, duration, stackCount);
+                _activeTags.Add(activeTag);
+                NotifyTagAdded(tag, source, activeTag.StackCount);
             }
 
             if (evaluateCombinations && combinationDepth < MaxCombinationDepth)
@@ -238,7 +261,7 @@ namespace EndLink.Combat
                     RemoveTag(rule.SecondTag, source);
                 }
 
-                AddTagInternal(rule.ResultTag, rule.ResultDuration, source, true, combinationDepth + 1);
+                AddTagInternal(rule.ResultTag, rule.ResultDuration, source, rule.ResultStackCount, true, combinationDepth + 1);
                 NotifyTagTransformed(rule.FirstTag, rule.SecondTag, rule.ResultTag, source);
                 return;
             }
@@ -267,11 +290,11 @@ namespace EndLink.Combat
             return tag != null && tag.IsValid;
         }
 
-        private void NotifyTagAdded(CombatTagDefinition tag, GameObject source)
+        private void NotifyTagAdded(CombatTagDefinition tag, GameObject source, int stackCount)
         {
             LogTagChange("added", tag);
             onTagAdded.Invoke(this, tag);
-            CombatEventsBus.RaiseTagAdded(source, gameObject, tag);
+            CombatEventsBus.RaiseTagAdded(source, gameObject, tag, stackCount);
         }
 
         private void NotifyTagRemoved(CombatTagDefinition tag, GameObject source)
@@ -347,10 +370,20 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float remainingDuration;
 
+        [Tooltip("当前标签层数。会被标签定义的最大层数钳制。")]
+        [SerializeField, Min(1)]
+        private int stackCount = 1;
+
         public ActiveCombatTag(CombatTagDefinition tag, float duration)
+            : this(tag, duration, 1)
+        {
+        }
+
+        public ActiveCombatTag(CombatTagDefinition tag, float duration, int stackCount)
         {
             this.tag = tag;
             remainingDuration = Mathf.Max(0f, duration);
+            this.stackCount = Mathf.Clamp(stackCount, 1, tag != null ? tag.MaxStackCount : 1);
         }
 
         /// <summary>标签定义。</summary>
@@ -359,19 +392,31 @@ namespace EndLink.Combat
         /// <summary>剩余持续时间。</summary>
         public float RemainingDuration => remainingDuration;
 
+        /// <summary>当前标签层数。</summary>
+        public int StackCount => Mathf.Max(1, stackCount);
+
         /// <summary>是否有持续时间。</summary>
         public bool HasDuration => remainingDuration > 0f;
 
         /// <summary>刷新持续时间。duration 小于等于 0 时会变为永久标签。</summary>
         public void Refresh(float duration)
         {
+            Refresh(duration, 1, tag != null ? tag.MaxStackCount : 1);
+        }
+
+        /// <summary>刷新持续时间并增加层数。</summary>
+        public void Refresh(float duration, int addedStackCount, int maxStackCount)
+        {
             if (duration <= 0f)
             {
                 remainingDuration = 0f;
-                return;
+            }
+            else
+            {
+                remainingDuration = Mathf.Max(remainingDuration, duration);
             }
 
-            remainingDuration = Mathf.Max(remainingDuration, duration);
+            stackCount = Mathf.Clamp(StackCount + Mathf.Max(1, addedStackCount), 1, Mathf.Max(1, maxStackCount));
         }
 
         /// <summary>推进持续时间。</summary>

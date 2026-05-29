@@ -166,7 +166,8 @@ namespace EndLink.Ally
                     actionDefinition.DamageAmount,
                     actionDefinition.KnockbackForce,
                     actionDefinition.CombatTagToApply,
-                    actionDefinition.CombatTagDuration);
+                    actionDefinition.CombatTagDuration,
+                    actionDefinition.CombatTagStackCount);
             }
             else
             {

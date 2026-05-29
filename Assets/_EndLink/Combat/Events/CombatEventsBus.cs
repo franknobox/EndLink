@@ -53,6 +53,7 @@ namespace EndLink.Combat
                 null,
                 hitInfo.CombatTagToApply,
                 hitInfo.DamageAmount,
+                hitInfo.CombatTagStackCount,
                 hitInfo,
                 true));
         }
@@ -86,9 +87,9 @@ namespace EndLink.Combat
         /// <summary>
         /// 广播标签添加事件。
         /// </summary>
-        public static void RaiseTagAdded(GameObject source, GameObject target, CombatTagDefinition combatTag)
+        public static void RaiseTagAdded(GameObject source, GameObject target, CombatTagDefinition combatTag, int stackCount = 0)
         {
-            RaiseTagEvent(CombatEventType.TagAdded, source, target, combatTag);
+            RaiseTagEvent(CombatEventType.TagAdded, source, target, combatTag, stackCount);
         }
 
         /// <summary>
@@ -120,9 +121,10 @@ namespace EndLink.Combat
             CombatEventType eventType,
             GameObject source,
             GameObject target,
-            CombatTagDefinition combatTag)
+            CombatTagDefinition combatTag,
+            int stackCount = 0)
         {
-            Raise(new CombatEvent(eventType, source, target, null, combatTag));
+            Raise(new CombatEvent(eventType, source, target, null, combatTag, 0f, stackCount));
         }
     }
 }

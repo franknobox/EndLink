@@ -11,6 +11,9 @@ namespace EndLink.Combat
 
         /// <summary>尝试读取指定标签的剩余时间。永久标签返回 false。</summary>
         bool TryGetRemainingDuration(CombatTagDefinition tag, out float remainingDuration);
+
+        /// <summary>尝试读取指定标签当前层数。</summary>
+        bool TryGetStackCount(CombatTagDefinition tag, out int stackCount);
     }
 
     /// <summary>
@@ -30,6 +33,9 @@ namespace EndLink.Combat
 
         /// <summary>添加带持续时间的标签，并记录标签来源。duration 小于等于 0 时视为永久标签。</summary>
         bool AddTag(CombatTagDefinition tag, float duration, UnityEngine.GameObject source);
+
+        /// <summary>添加带持续时间和层数的标签，并记录标签来源。</summary>
+        bool AddTag(CombatTagDefinition tag, float duration, UnityEngine.GameObject source, int stackCount);
 
         /// <summary>移除标签。</summary>
         bool RemoveTag(CombatTagDefinition tag);

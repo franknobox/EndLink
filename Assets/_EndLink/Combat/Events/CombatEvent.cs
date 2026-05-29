@@ -15,6 +15,7 @@ namespace EndLink.Combat
             CombatActionDefinition actionDefinition = null,
             CombatTagDefinition combatTag = null,
             float damageAmount = 0f,
+            int combatTagStackCount = 0,
             HitboxHitInfo hitInfo = default,
             bool hasHitInfo = false)
         {
@@ -24,6 +25,7 @@ namespace EndLink.Combat
             ActionDefinition = actionDefinition;
             CombatTag = combatTag;
             DamageAmount = Mathf.Max(0f, damageAmount);
+            CombatTagStackCount = Mathf.Max(0, combatTagStackCount);
             HitInfo = hitInfo;
             HasHitInfo = hasHitInfo;
             TimeStamp = Time.time;
@@ -43,6 +45,9 @@ namespace EndLink.Combat
 
         /// <summary>关联的战斗标签。</summary>
         public CombatTagDefinition CombatTag { get; }
+
+        /// <summary>关联战斗标签的层数。0 表示事件未携带层数信息。</summary>
+        public int CombatTagStackCount { get; }
 
         /// <summary>伤害值。非伤害事件可为 0。</summary>
         public float DamageAmount { get; }
