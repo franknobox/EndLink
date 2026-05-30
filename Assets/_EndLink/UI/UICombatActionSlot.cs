@@ -1,6 +1,7 @@
 using EndLink.Ally;
 using EndLink.Combat;
 using EndLink.Party;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,7 +11,7 @@ namespace EndLink.UI
     /// 战斗 UI 可以直接绑定的小队动作槽位。
     /// 这里描述的是“UI 上这个圆形按钮代表哪个队伍键位”，而不是具体 Action 资产。
     /// </summary>
-    public enum CombatActionUiSlot
+    public enum UICombatActionSlotId
     {
         PlayerSkill = 0,
         AllySlotASkill = 1,
@@ -26,7 +27,7 @@ namespace EndLink.UI
     /// 槽位绑定的是队伍键位槽，例如主控 Skill、队友 A Skill、队友 B Skill，而不是某个固定 Action 资产。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class CombatActionSlotUI : MonoBehaviour
+    public sealed class UICombatActionSlot : MonoBehaviour
     {
         [Header("槽位")]
         [Tooltip("小队管理器。为空时会在场景中自动查找。")]
@@ -35,12 +36,16 @@ namespace EndLink.UI
 
         [Tooltip("该 UI 对应的小队键位槽。主动技能一般对应 PlayerSkill、AllySlotASkill、AllySlotBSkill。")]
         [SerializeField]
-        private CombatActionUiSlot slot = CombatActionUiSlot.PlayerSkill;
+        private UICombatActionSlotId slot = UICombatActionSlotId.PlayerSkill;
 
         [Header("冷却染色")]
         [Tooltip("技能图标 Image。可以拖子物体上的 Icon Image。为空时会自动查找本物体或子物体上的第一个 Image。")]
         [SerializeField]
         private Image iconImage;
+
+        [Tooltip("键位显示文本。可拖 TextMeshProUGUI；为空时只提供 KeyLabel 属性，不主动显示。")]
+        [SerializeField]
+        private TextMeshProUGUI keyLabelText;
 
         [Tooltip("冷却中施加到图标上的颜色。只要当前动作还在冷却，就直接使用该颜色；冷却结束后恢复图标原色。")]
         [SerializeField]
@@ -50,8 +55,12 @@ namespace EndLink.UI
         [SerializeField]
         private bool autoRefreshCooldown = true;
 
+        [Tooltip("是否自动刷新键位文本。由上层 UIPartyCombatAction 统一驱动时可以关闭。")]
+        [SerializeField]
+        private bool autoRefreshKeyLabel = true;
+
         /// <summary>该 UI 对应的小队 UI 键位槽。</summary>
-        public CombatActionUiSlot Slot => slot;
+        public UICombatActionSlotId Slot => slot;
 
         /// <summary>该 UI 槽位映射到的小队战斗命令类型。</summary>
         public PartyCombatCommandType CommandType => ResolveCommandType(slot);
@@ -76,7 +85,7 @@ namespace EndLink.UI
             CacheReferences();
             CacheIconIfNeeded();
             CacheOriginalIconColor();
-            ApplyCooldown();
+            RefreshNow();
         }
 
         private void Reset()
@@ -91,25 +100,69 @@ namespace EndLink.UI
             CooldownNormalized = Mathf.Clamp01(CooldownNormalized);
             CacheIconIfNeeded();
             ApplyCooldown();
+            ApplyKeyLabel();
         }
 
         private void Update()
         {
-            if (!autoRefreshCooldown)
+            if (!autoRefreshCooldown && !autoRefreshKeyLabel)
             {
                 return;
             }
 
-            SetCooldown(ResolveCooldownNormalized());
+            if (autoRefreshCooldown)
+            {
+                SetCooldown(ResolveCooldownNormalized());
+            }
+
+            if (autoRefreshKeyLabel)
+            {
+                ApplyKeyLabel();
+            }
         }
 
         /// <summary>
         /// 设置该 UI 对应的小队 UI 键位槽。
         /// </summary>
-        public void SetSlot(CombatActionUiSlot nextSlot)
+        public void SetSlot(UICombatActionSlotId nextSlot)
         {
             slot = nextSlot;
+            RefreshNow();
+        }
+
+        /// <summary>
+        /// 绑定小队管理器。上层 HUD 或动作栏应优先调用它，避免每个槽位各自全场景查找。
+        /// </summary>
+        public void BindPartyManager(PartyManager manager)
+        {
+            partyManager = manager;
+            RefreshNow();
+        }
+
+        /// <summary>
+        /// 设置是否由本槽位自己每帧刷新冷却。
+        /// 当 UIPartyCombatAction 统一管理刷新时，应关闭它。
+        /// </summary>
+        public void SetAutoRefreshCooldown(bool enabled)
+        {
+            autoRefreshCooldown = enabled;
+        }
+
+        /// <summary>
+        /// 设置是否由本槽位自己每帧刷新键位文本。
+        /// </summary>
+        public void SetAutoRefreshKeyLabel(bool enabled)
+        {
+            autoRefreshKeyLabel = enabled;
+        }
+
+        /// <summary>
+        /// 立即从当前小队配置读取键位、动作和冷却状态，并刷新显示。
+        /// </summary>
+        public void RefreshNow()
+        {
             SetCooldown(ResolveCooldownNormalized());
+            ApplyKeyLabel();
         }
 
         /// <summary>
@@ -260,32 +313,32 @@ namespace EndLink.UI
             return stateMachine != null ? stateMachine.CombatDriver : null;
         }
 
-        private static PartyCombatCommandType ResolveCommandType(CombatActionUiSlot uiSlot)
+        private static PartyCombatCommandType ResolveCommandType(UICombatActionSlotId uiSlot)
         {
             return uiSlot switch
             {
-                CombatActionUiSlot.PlayerSkill => PartyCombatCommandType.Skill,
-                CombatActionUiSlot.AllySlotASkill => PartyCombatCommandType.Skill,
-                CombatActionUiSlot.AllySlotBSkill => PartyCombatCommandType.Skill,
-                CombatActionUiSlot.PlayerLinkAttack => PartyCombatCommandType.LinkAttack,
-                CombatActionUiSlot.AllySlotALinkAttack => PartyCombatCommandType.LinkAttack,
-                CombatActionUiSlot.AllySlotBLinkAttack => PartyCombatCommandType.LinkAttack,
-                CombatActionUiSlot.PartyUltimate => PartyCombatCommandType.Ultimate,
+                UICombatActionSlotId.PlayerSkill => PartyCombatCommandType.Skill,
+                UICombatActionSlotId.AllySlotASkill => PartyCombatCommandType.Skill,
+                UICombatActionSlotId.AllySlotBSkill => PartyCombatCommandType.Skill,
+                UICombatActionSlotId.PlayerLinkAttack => PartyCombatCommandType.LinkAttack,
+                UICombatActionSlotId.AllySlotALinkAttack => PartyCombatCommandType.LinkAttack,
+                UICombatActionSlotId.AllySlotBLinkAttack => PartyCombatCommandType.LinkAttack,
+                UICombatActionSlotId.PartyUltimate => PartyCombatCommandType.Ultimate,
                 _ => PartyCombatCommandType.Skill
             };
         }
 
-        private static PartyCombatActorSlot ResolveActorSlot(CombatActionUiSlot uiSlot)
+        private static PartyCombatActorSlot ResolveActorSlot(UICombatActionSlotId uiSlot)
         {
             return uiSlot switch
             {
-                CombatActionUiSlot.PlayerSkill => PartyCombatActorSlot.MainCharacter,
-                CombatActionUiSlot.PlayerLinkAttack => PartyCombatActorSlot.MainCharacter,
-                CombatActionUiSlot.AllySlotASkill => PartyCombatActorSlot.AllySlotA,
-                CombatActionUiSlot.AllySlotALinkAttack => PartyCombatActorSlot.AllySlotA,
-                CombatActionUiSlot.AllySlotBSkill => PartyCombatActorSlot.AllySlotB,
-                CombatActionUiSlot.AllySlotBLinkAttack => PartyCombatActorSlot.AllySlotB,
-                CombatActionUiSlot.PartyUltimate => PartyCombatActorSlot.Party,
+                UICombatActionSlotId.PlayerSkill => PartyCombatActorSlot.MainCharacter,
+                UICombatActionSlotId.PlayerLinkAttack => PartyCombatActorSlot.MainCharacter,
+                UICombatActionSlotId.AllySlotASkill => PartyCombatActorSlot.AllySlotA,
+                UICombatActionSlotId.AllySlotALinkAttack => PartyCombatActorSlot.AllySlotA,
+                UICombatActionSlotId.AllySlotBSkill => PartyCombatActorSlot.AllySlotB,
+                UICombatActionSlotId.AllySlotBLinkAttack => PartyCombatActorSlot.AllySlotB,
+                UICombatActionSlotId.PartyUltimate => PartyCombatActorSlot.Party,
                 _ => PartyCombatActorSlot.MainCharacter
             };
         }
@@ -303,6 +356,16 @@ namespace EndLink.UI
             }
 
             iconImage.color = CooldownNormalized > 0f ? cooldownTintColor : originalIconColor;
+        }
+
+        private void ApplyKeyLabel()
+        {
+            if (keyLabelText == null)
+            {
+                return;
+            }
+
+            keyLabelText.text = KeyLabel;
         }
     }
 }

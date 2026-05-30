@@ -227,7 +227,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 90156dba99ed447f83f84c9dfda07fa5, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EndLink.UI.CombatActionSlotUI
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.UI.UICombatActionSlot
   partyManager: {fileID: 163565087}
   slot: 0
   iconImage: {fileID: 2024264574}
@@ -522,7 +522,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 90156dba99ed447f83f84c9dfda07fa5, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EndLink.UI.CombatActionSlotUI
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.UI.UICombatActionSlot
   partyManager: {fileID: 163565087}
   slot: 2
   iconImage: {fileID: 1505265702}
@@ -1598,7 +1598,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 90156dba99ed447f83f84c9dfda07fa5, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EndLink.UI.CombatActionSlotUI
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.UI.UICombatActionSlot
   partyManager: {fileID: 163565087}
   slot: 1
   iconImage: {fileID: 171857036}
