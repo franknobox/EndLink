@@ -8,7 +8,7 @@
 
 ### 当前情况概览
 
-项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/StateMachine`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party` 和 `Assets/_EndLink/Enemies`。控制与状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、玩家生命值与受击接线、玩家 Animator 桥接、基础攻击驱动、基础 Hitbox 配置、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友状态机骨架、队友跟随移动第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架和木桩敌人的第一版基础设施。
+项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party`、`Assets/_EndLink/Enemies` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、玩家 Animator 桥接、基础攻击驱动、基础 Hitbox 配置、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架和战斗 UI 基础。
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
@@ -29,17 +29,16 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [玩家生命值与受击接线](#feature-player-health) | 已完成第一版 | 负责玩家扣血、治疗、死亡事件，并把有效受伤和死亡转发到玩家状态机。 |
+| [通用生命值与角色受击接线](#feature-character-health) | 已完成桥接版 | 提供可复用的血量、受击、治疗、死亡和目标有效性；玩家、队友通过薄桥接层接入各自状态机。 |
 | [玩家自动软锁定](#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按固定间隔自动选择当前战斗目标，默认优先最近敌人，并显示轻量目标点。 |
 | [战斗动作配置](#feature-combat-action) | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和大招的伤害、冷却、时序、Hitbox 和命中标签。 |
 | [战斗标签系统](#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和标签组合转化规则。 |
 | [战斗数据编辑工具](#feature-combat-data-tool) | 已完成第一版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则数据资产。 |
-| [战斗 UI 槽位组件](#feature-combat-action-slot-ui) | 已完成最小版 | 提供小队命令槽位 UI，用于按主控/队友槽位读取当前动作、键位和冷却染色。 |
+| [战斗 UI 基础](#feature-combat-ui-foundation) | 已完成基础版 | 提供 HUD 总入口、小队动作栏、动作槽位冷却显示和通用血条组件。 |
 | [战斗事件总栈](#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
 | [玩家战斗驱动](#feature-player-combat-driver) | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |
 | [敌人通用基底](#feature-enemy-foundation) | 已完成索敌 Alert 版 | 提供正式敌人身份入口、生命受击、死亡目标失效、目标有效性接口、大状态机骨架和基础玩家感知。 |
 | [基础 Hitbox 配置](#feature-hitbox) | 已完成第一版 | 提供通用 Hitbox 基类和远程直线 Hitbox，用于配置近战判定、远程飞行判定、目标过滤、生命周期、伤害、击退和标签。 |
-| [木桩敌人](#feature-enemy-dummy) | 已完成第一版 | 用于验证 Hitbox 命中、扣血、死亡、受击/死亡事件和基础调试显示。 |
 
 #### 队伍
 
@@ -48,6 +47,7 @@
 | [队友助战基础组件](#feature-ally-assist) | 已完成持续助战第一版 | 提供队友事件响应大脑和队友战斗执行器，用于主控命中敌人后让队友自动接近目标并持续攻击。 |
 | [队友调试监视窗口](#feature-ally-monitor) | 已完成第一版 | 提供 Editor 窗口集中查看队友状态快照和队友行为日志，辅助排查助战、冷却、距离和目标问题。 |
 | [队友有限状态机](#feature-ally-state-machine) | 已完成通用动作状态版 | 提供 Idle、Follow、Assist、Action、Hit、Dead 外层状态，Assist 处理自动助战，Action 承载主动技能等指令动作。 |
+| [小队战斗状态上下文](#feature-party-combat-context) | 已完成基础版 | 监听战斗事件，记录小队是否处于战斗、当前主目标和已知敌人，供队友目标选择、战斗 UI 和后续连携系统读取。 |
 | [队友跟随移动](#feature-ally-follow-motor) | 已完成手感增强版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持平滑减速、追赶、远距离归位和简易避让。 |
 | [固定三人小队管理](#feature-party-manager) | 已完成第一版 | 负责保存固定主控和 2 个队友槽位，统一分配队友跟随目标和队形偏移，并提供第一版小队战斗命令路由。 |
 
@@ -191,17 +191,17 @@
 - `Dead` 可以被外部通过 `RequestDead()` 触发，是当前最高优先级终止状态。
 
 对应脚本：
-- `Assets/_EndLink/StateMachine/IPlayerState.cs`
-- `Assets/_EndLink/StateMachine/PlayerStateId.cs`
-- `Assets/_EndLink/StateMachine/PlayerStateContext.cs`
-- `Assets/_EndLink/StateMachine/PlayerStateBase.cs`
-- `Assets/_EndLink/StateMachine/PlayerIdleState.cs`
-- `Assets/_EndLink/StateMachine/PlayerMoveState.cs`
-- `Assets/_EndLink/StateMachine/PlayerAttackState.cs`
-- `Assets/_EndLink/StateMachine/PlayerSkillState.cs`
-- `Assets/_EndLink/StateMachine/PlayerHitState.cs`
-- `Assets/_EndLink/StateMachine/PlayerDeadState.cs`
-- `Assets/_EndLink/StateMachine/PlayerStateMachine.cs`
+- `Assets/_EndLink/Player/StateMachine/IPlayerState.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerStateId.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerStateContext.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerStateBase.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerIdleState.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerMoveState.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerAttackState.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerSkillState.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerHitState.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerDeadState.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerStateMachine.cs`
 
 相关物体：
 - 玩家根物体
@@ -221,40 +221,60 @@
 
 </details>
 
-<a id="feature-player-health"></a>
+<a id="feature-character-health"></a>
 
-### Feature：玩家生命值与受击接线
+### Feature：通用生命值与角色受击接线
 
 <details>
 <summary>展开详情</summary>
 
 功能说明：
-- `PlayerHealth` 负责玩家生命值、受伤、治疗和死亡接线。
-- 同时实现 `IHitReceiver` 和 `IDamageable`，方便后续敌人 Hitbox、环境伤害或调试工具统一调用。
-- `ReceiveHit(HitboxHitInfo hitInfo)` 会转发到 `TakeDamage(int damage, CombatTagDefinition tag)`。
-- 受到有效伤害且未死亡时，会扣除生命值并请求 `PlayerStateMachine.RequestHit()`。
-- 生命值首次降到 0 时，会请求 `PlayerStateMachine.RequestDead()`。
-- 受到伤害和死亡时会通过 `CombatEventsBus` 广播 `Damaged` / `Dead`。
-- 支持 `OnHealthChanged`、`OnDamaged`、`OnHealed` 和 `OnDead` 事件。
-- 当前不把 Debuff / Buff 逻辑直接放进 `PlayerHealth`，后续应由独立状态效果系统处理，再通过事件或接口影响生命值与状态机。
+- `CharacterHealth` 是玩家、队友和后续更多角色可以复用的通用生命组件。
+- 负责最大生命值、当前生命值、治疗、受击、死亡、目标有效性和基础受击闪色反馈。
+- 实现 `IHitReceiver`、`IDamageable` 和 `ICombatTarget`，可以直接被 Hitbox、调试工具、目标选择和 AI 查询。
+- 接收 `HitboxHitInfo` 后会扣血、触发受击事件，并通过 `CombatEventsBus` 广播 `Damaged`。
+- 生命值首次降到 0 时会进入死亡状态，并通过 `CombatEventsBus` 广播 `Dead`。
+- 死亡后可配置是否不再作为战斗目标，以及是否禁用非 Trigger Collider。
+- 支持 `HealthChanged`、`Damaged`、`Healed`、`Died` 代码事件，以及对应 UnityEvent，方便 UI、状态机桥接和表现层接入。
+- 支持使用 `MaterialPropertyBlock` 做受击和死亡颜色反馈，适合 URP 白模调试。
+- 不直接切换玩家、队友或敌人的状态机；具体角色通过桥接脚本订阅事件。
+- `PlayerHealth` 是玩家生命桥接层，订阅 `CharacterHealth` 后把受伤和死亡转发给 `PlayerStateMachine.RequestHit()` / `RequestDead()`。
+- `PlayerHealth` 保留玩家侧 `OnHealthChanged`、`OnDamaged`、`OnHealed` 和 `OnDead` 事件，方便玩家 UI 或调试工具监听。
+- `AllyHealth` 是队友生命桥接层，订阅 `CharacterHealth` 后把受伤和死亡转发给 `AllyStateMachine.RequestHit()` / `RequestDead()`。
+- 当前不把 Debuff / Buff 逻辑直接放进生命桥接层，后续应由独立状态效果系统处理，再通过事件或接口影响生命值与状态机。
 
 对应脚本：
-- `Assets/_EndLink/Combat/PlayerHealth.cs`
+- `Assets/_EndLink/Combat/CharacterHealth.cs`
 - `Assets/_EndLink/Combat/IHitReceiver.cs`
 - `Assets/_EndLink/Combat/IDamageable.cs`
-- `Assets/_EndLink/StateMachine/PlayerStateMachine.cs`
+- `Assets/_EndLink/Combat/ICombatTarget.cs`
+- `Assets/_EndLink/Player/PlayerHealth.cs`
+- `Assets/_EndLink/Ally/AllyHealth.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerStateMachine.cs`
+- `Assets/_EndLink/Ally/AllyStateMachine.cs`
 
 相关物体：
 - 玩家根物体
+  - `CharacterHealth`
   - `PlayerHealth`
   - `PlayerStateMachine`
+- 队友根物体
+  - `CharacterHealth`
+  - `AllyHealth`
+  - `AllyStateMachine`
 
 关键配置：
-- `maxHealth`：玩家最大生命值
-- `requestHitStateOnDamage`：受伤时是否请求进入 Hit 状态
-- `requestDeadStateOnDeath`：死亡时是否请求进入 Dead 状态
-- `logHealthChanges`：是否打印血量变化调试信息
+- `maxHealth`：最大生命值
+- `resetHealthOnEnable`：启用时是否恢复满血
+- `untargetableOnDeath`：死亡后是否不再作为有效战斗目标
+- `disableCollidersOnDeath`：死亡后是否禁用非 Trigger Collider
+- `feedbackRenderer`：受击和死亡变色使用的 MeshRenderer
+- `hitColor` / `deadColor`：受击和死亡颜色
 - `showHealthInName`：是否在 GameObject 名字上显示血量
+- `PlayerHealth.requestHitStateOnDamage`：玩家受伤时是否请求进入 Hit 状态
+- `PlayerHealth.requestDeadStateOnDeath`：玩家死亡时是否请求进入 Dead 状态
+- `AllyHealth.requestHitStateOnDamage`：队友受伤时是否请求进入 Hit 状态
+- `AllyHealth.requestDeadStateOnDeath`：队友死亡时是否请求进入 Dead 状态
 
 </details>
 
@@ -275,7 +295,7 @@
 
 对应脚本：
 - `Assets/_EndLink/Control/PlayerAnimatorDriver.cs`
-- `Assets/_EndLink/StateMachine/PlayerStateMachine.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerStateMachine.cs`
 
 相关物体：
 - 玩家根物体
@@ -318,7 +338,7 @@
 - `PlayerCombatDriver` 会读取当前软锁目标；有目标时先让玩家正面瞬间转向目标，再沿玩家正面生成 Hitbox / 远程技能；没有目标时继续按玩家自身前方生成。
 
 对应脚本：
-- `Assets/_EndLink/Combat/PlayerTargeting.cs`
+- `Assets/_EndLink/Player/PlayerTargeting.cs`
 
 相关物体：
 - 玩家根物体
@@ -358,7 +378,7 @@
 - `CombatActionType` 描述动作性质，不描述释放者来源。
 - 当前动作类型包括 `BasicAttack`、`Skill`、`LinkAttack`、`Ultimate`。
 - 主控、队友和敌人后续可以共用同一套动作类型，释放者来源应由后续战斗事件数据携带。
-- 动作配置包含伤害、击退、`CombatTagDefinition` 命中标签、标签持续时间、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置、生命周期和 AI 有效攻击距离。
+- 动作配置包含伤害、击退、`CombatTagDefinition` 命中标签、标签持续时间、标签层数、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置和 AI 有效攻击距离。
 
 对应脚本：
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
@@ -384,16 +404,18 @@
 
 功能说明：
 - 战斗标签系统只服务 Combat，不做全项目泛用 GameplayTag。
-- `CombatTagDefinition` 是标签定义资产，包含 `tagId`、显示名和说明。
+- `CombatTagDefinition` 是标签定义资产，包含 `tagId`、显示名、说明和最大层数。
 - 标签合法检查当前要求标签资产非空且 `tagId` 非空。
-- `CombatTagContainer` 挂在目标身上，负责保存多标签、持续时间、添加、移除、过期和清空。
+- `CombatTagContainer` 挂在目标身上，负责保存多标签、层数、持续时间、添加、移除、过期和清空。
 - `CombatTagContainer` 支持永久标签和限时标签，限时标签会在 `Update` 中自动倒计时并过期移除。
-- `CombatTagCombinationRule` 描述 A + B => C 的组合转化规则，可选择转化后移除源标签，并可配置结果标签持续时间。
+- `CombatTagCombinationRule` 描述 A + B => C 的组合转化规则，可配置源标签所需层数、结果标签层数、结果标签持续时间和转化后是否移除源标签。
+- 同一个标签重复添加时会刷新持续时间并增加层数，最终层数会被 `CombatTagDefinition.MaxStackCount` 钳制。
+- 当组合规则的两个输入标签相同时，可以表达“同一标签达到指定层数后转化为另一个标签”，例如后续的 3 层火标签转化为燃烧。
 - 容器提供 `OnTagAdded`、`OnTagRemoved`、`OnTagExpired`、`OnTagRefreshed` 和 `OnTagTransformed` 事件。
 - 标签添加、移除、过期和组合转化时会同步通过 `CombatEventsBus` 广播事件。
 - 标签添加和移除接口支持传入 `source`，事件总线可以表达“谁给谁挂载或移除了某个标签”。
 - 对外提供 `ICombatTagReadable` 和 `ICombatTagReceiver`，后续连携规则、AI、UI 和状态效果系统应优先依赖接口。
-- `CombatActionDefinition`、`HitboxBase` 和 `HitboxHitInfo` 使用 `CombatTagDefinition` 作为标签数据。
+- `CombatActionDefinition`、`HitboxBase` 和 `HitboxHitInfo` 使用 `CombatTagDefinition` 作为标签数据，并携带命中时要添加的标签层数。
 - 命中时如果目标实现 `ICombatTagReceiver`，`HitboxBase` 会把 `CombatTagDefinition` 添加到目标标签容器，并把 Hitbox owner 作为标签来源。
 
 对应脚本：
@@ -401,6 +423,7 @@
 - `Assets/_EndLink/Combat/Tags/CombatTagCombinationRule.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagContainer.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagInterfaces.cs`
+- `Assets/_EndLink/Combat/HitboxHitInfo.cs`
 
 相关资产：
 - `CombatTagDefinition` 数据资产：可通过 `Create > EndLink > Combat > Combat Tag Definition` 创建
@@ -440,37 +463,57 @@
 
 </details>
 
-<a id="feature-combat-action-slot-ui"></a>
+<a id="feature-combat-ui-foundation"></a>
 
-### Feature：战斗 UI 槽位组件
+### Feature：战斗 UI 基础
 
 <details>
 <summary>展开详情</summary>
 
 功能说明：
-- `CombatActionSlotUI` 是小队战斗命令槽位的最小 UI 组件。
-- 槽位直接绑定 UI 键位槽，例如 `PlayerSkill`、`AllySlotASkill`、`AllySlotBSkill`。
-- 组件通过 `PartyManager` 解析当前角色，通过角色 CombatDriver 读取当前槽位动作和该动作自己的冷却。
-- 组件通过 `PartyManager.CombatRouter` 读取该槽位当前键位显示文本。
-- 组件不读取输入、不释放动作、不判断战斗规则。
-- 默认每帧自动刷新当前槽位动作的冷却染色，也支持外部通过 `SetCooldown(normalized)` 手动刷新。
-- `normalized > 0` 表示图标显示冷却染色，`normalized = 0` 表示恢复图标原色。
-- 冷却染色颜色可在 Inspector 中配置，默认半透明灰色，不做过渡插值。
+- `HUDCombatController` 是战斗 HUD 总入口，负责绑定 `PartyManager`、控制 HUD 显隐，并驱动下属 UI 模块刷新。
+- `UIPartyCombatAction` 是小队动作栏管理器，负责绑定主控、队友 A、队友 B 的主动技能槽、连携请求槽和全队极限技槽。
+- `UICombatActionSlot` 是单个动作槽位组件，槽位绑定的是小队命令槽，例如 `PlayerSkill`、`AllySlotASkill`、`AllySlotBSkill`，而不是固定动作资产。
+- `UICombatActionSlot` 通过 `PartyManager` 解析当前角色，通过角色 CombatDriver 读取当前槽位动作和该动作自己的冷却。
+- `UICombatActionSlot` 通过 `PartyManager.CombatRouter` 读取该槽位当前键位显示文本。
+- `UICombatActionSlot` 不读取输入、不释放动作、不判断战斗规则。
+- 冷却中直接把图标染成配置颜色，冷却结束后恢复图标原色。
+- `UIHealthBar` 是通用血条组件，只依赖 `CharacterHealth`，可用于主角、队友和敌人头顶血条。
+- `UIHealthBar` 支持 `Image.fillAmount`、可选血量文本、满血隐藏、死亡隐藏、无生命来源隐藏和运行时绑定生命来源。
 
 对应脚本：
-- `Assets/_EndLink/UI/CombatActionSlotUI.cs`
+- `Assets/_EndLink/UI/HUDCombatController.cs`
+- `Assets/_EndLink/UI/UIPartyCombatAction.cs`
+- `Assets/_EndLink/UI/UICombatActionSlot.cs`
+- `Assets/_EndLink/UI/UIHealthBar.cs`
 
 相关物体：
-- 战斗 UI Canvas 下的技能、连携、大招等圆形动作槽位
-  - `CombatActionSlotUI`
+- 战斗 UI Canvas / HUD 根物体
+  - `HUDCombatController`
+- 技能栏或动作栏父物体
+  - `UIPartyCombatAction`
+- 技能、连携、大招等圆形动作槽位
+  - `UICombatActionSlot`
   - `Image` 图标
+  - 可选 `TextMeshProUGUI` 键位文本
+- 血条物体
+  - `UIHealthBar`
+  - `Image` 填充图
+  - 可选 `TextMeshProUGUI` 血量文本
 
 关键配置：
-- `partyManager`：小队管理器，空时自动查找
-- `slot`：该 UI 对应的键位槽，例如 PlayerSkill、AllySlotASkill、AllySlotBSkill
-- `iconImage`：技能图标 Image，可拖子物体上的 Icon
-- `cooldownTintColor`：冷却染色颜色，默认半透明灰色
-- `autoRefreshCooldown`：是否每帧从对应角色槽位读取冷却
+- `HUDCombatController.partyManager`：小队管理器，空时自动查找
+- `HUDCombatController.partyCombatAction`：小队动作栏 UI 管理器
+- `UIPartyCombatAction.autoCollectChildSlots`：是否自动从子物体收集动作槽
+- `UIPartyCombatAction.driveChildSlotsManually`：是否由动作栏统一驱动子槽刷新
+- `UICombatActionSlot.slot`：该 UI 对应的键位槽，例如 PlayerSkill、AllySlotASkill、AllySlotBSkill
+- `UICombatActionSlot.iconImage`：技能图标 Image，可拖子物体上的 Icon
+- `UICombatActionSlot.keyLabelText`：键位显示文本
+- `UICombatActionSlot.cooldownTintColor`：冷却染色颜色，默认半透明灰色
+- `UIHealthBar.health`：要显示的 `CharacterHealth`
+- `UIHealthBar.fillImage`：血条填充 Image，建议 Image Type 使用 Filled
+- `UIHealthBar.valueText`：可选血量文本
+- `UIHealthBar.hideWhenFull` / `hideWhenDead`：满血和死亡时是否隐藏
 
 </details>
 
@@ -488,7 +531,7 @@
 - `CombatEventLog` 是白模阶段用的 Console 日志监听器，默认不打印，必要时手动开启。
 - `CombatMonitorWindow` 是 Editor 战斗事件监视窗口，通过 `EndLink > Debug > Combat Monitor` 打开，订阅事件后以表格查看最近的战斗事件。
 - 事件总栈只广播事实，不保存状态，不决定连携规则，不直接驱动队友 AI。
-- 接入范围包括 `PlayerCombatDriver` 的动作开始、`HitboxBase` 的命中、`PlayerHealth` / `EnemyDummy` 的受伤与死亡，以及 `CombatTagContainer` 的标签添加、移除、过期和组合转化。
+- 接入范围包括 `PlayerCombatDriver` / `AllyCombatDriver` / `EnemyCombatDriver` 的动作开始、`HitboxBase` 的命中、`CharacterHealth` / `EnemyHealth` / `EnemyDummy` 的受伤与死亡，以及 `CombatTagContainer` 的标签添加、移除、过期和组合转化。
 
 对应脚本：
 - `Assets/_EndLink/Combat/Events/CombatEventType.cs`
@@ -539,13 +582,15 @@
 - `AllyCombatDriver` 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 或调试窗口读取。
 - `CombatActionDefinition.Effective Attack Range` 决定队友距离目标 Collider 表面多远开始攻击。
 - `AllyCombatDriver` 执行助战时会朝目标方向生成判定，并广播 `ActionStarted` 事件。
-- `AllyTargetingUtility` 用目标 Collider 表面计算助战接近和攻击距离，避免大型敌人按中心点判断导致队友贴边却无法攻击。
+- `AllyTargetSelector` 负责队友目标选择，优先读取 `PartyCombatContext` 的当前主目标和已知敌人列表，当前目标死亡或失效后可以继续切换到下一个可攻击目标。
+- `AllyTargetSelector` 同时提供目标有效性检查和目标 Collider 表面距离计算，避免大型敌人按中心点判断导致队友贴边却无法攻击。
 
 对应脚本：
 - `Assets/_EndLink/Ally/AllyBrain.cs`
 - `Assets/_EndLink/Ally/AllyCombatDriver.cs`
 - `Assets/_EndLink/Ally/AllyStateMachine.cs`
-- `Assets/_EndLink/Ally/AllyTargetingUtility.cs`
+- `Assets/_EndLink/Ally/AllyTargetSelector.cs`
+- `Assets/_EndLink/Party/PartyCombatContext.cs`
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
 - `Assets/_EndLink/Combat/Events/CombatEventsBus.cs`
 
@@ -554,6 +599,9 @@
   - `AllyBrain`
   - `AllyStateMachine`
   - `AllyCombatDriver`
+  - `AllyTargetSelector`
+- 小队管理物体
+  - `PartyCombatContext`
 
 关键配置：
 - `assistAction`：队友助战动作配置资产
@@ -644,6 +692,37 @@
 
 </details>
 
+<a id="feature-party-combat-context"></a>
+
+### Feature：小队战斗状态上下文
+
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- `PartyCombatContext` 是小队战斗状态的轻量上下文，通常挂在小队管理物体上。
+- 它监听 `CombatEventsBus`，记录最近的小队战斗事件、当前主目标、已知敌人列表和小队是否处于战斗状态。
+- 它不读取输入、不执行攻击、不切换状态，只提供上下文查询。
+- 队友目标选择器 `AllyTargetSelector` 会从这里读取当前主目标和已知敌人，用于持续助战和目标失效后的目标切换。
+- 后续战斗 UI、连携触发规则和队友 AI 都可以优先从这里读取“当前小队正在和谁战斗”。
+
+对应脚本：
+- `Assets/_EndLink/Party/PartyCombatContext.cs`
+- `Assets/_EndLink/Ally/AllyTargetSelector.cs`
+- `Assets/_EndLink/Combat/Events/CombatEventsBus.cs`
+
+相关物体：
+- 小队管理物体
+  - `PartyCombatContext`
+- 队友根物体
+  - `AllyTargetSelector`
+
+关键配置：
+- 当前主目标和已知敌人由战斗事件自动维护。
+- 目标死亡或不再有效时，后续查询会跳过不可作为战斗目标的对象。
+
+</details>
+
 <a id="feature-ally-follow-motor"></a>
 
 ### Feature：队友跟随移动
@@ -720,6 +799,7 @@
 - 初始化时，`PartyManager` 会把两个槽位的 `formationOffset` 写入各自队友的 `AllyFollowMotor`。
 - 初始化时，`PartyManager` 会把统一的 `PartyFollowSettings` 写入两个队友的 `AllyFollowMotor`。
 - `PartyManager` 持有 `PartyCombatRouter` 引用，供战斗 UI 和后续小队系统读取当前键位路由。
+- `PartyCombatContext` 作为小队战斗状态上下文，供队友目标选择、战斗 UI 和后续连携系统读取当前主目标、已知敌人和战斗状态。
 - `PartyCombatRouter` 负责把 `PlayerInputReader` 中的战斗输入翻译成主控、队友 A、队友 B 或全队的命令请求。
 - `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害、标签或状态机切换。
 - 当前第一版中，主控 `Skill` 命令会由 `PartyCombatRouter` 立即转发给 `PlayerCombatDriver` 执行 `SkillAction`。
@@ -733,6 +813,7 @@
 - `Assets/_EndLink/Party/PartyFormationSlot.cs`
 - `Assets/_EndLink/Party/PartyFollowSettings.cs`
 - `Assets/_EndLink/Party/PartyCombatRouter.cs`
+- `Assets/_EndLink/Party/PartyCombatContext.cs`
 - `Assets/_EndLink/Ally/AllyFollowMotor.cs`
 - `Assets/_EndLink/Ally/AllyStateMachine.cs`
 
@@ -775,24 +856,29 @@
 - `EnemyStateMachine` 管理 `Idle`、`Alert`、`Combat`、`Hit`、`Dead` 五个敌人大状态。
 - `EnemyTargetSensor` 负责第一版敌人索敌：玩家进入发现范围后请求进入 `Alert`，持续停留达到警觉时间后请求进入 `Combat`。
 - `EnemyTargetSensor` 可以关闭自动索敌，关闭后不会主动触发 `Alert` / `Combat`。
-- `Combat` 当前保持空转，后续作为行为树的外层挂载点，内部再承载追击、站位、攻击、技能等细节行为。
+- `EnemyMotorBase` 是第一版地面敌人移动能力组件，基于 `CharacterController` 提供移动、转向、重力和停止能力。
+- `EnemyActor` 持有 `EnemyMotorBase` 和 `EnemyCombatDriver` 引用，状态机通过 Actor 读取敌人能力，而不是直接查找具体实现。
+- `EnemyCombatDriver` 是敌人战斗执行器，按 `CombatActionDefinition` 生成 Hitbox、记录冷却并广播动作开始事件；当前先作为攻击能力基底，具体何时出手后续交给 Combat 状态内部逻辑或行为树。
+- `Combat` 当前只做基础追击和面向目标，后续作为行为树的外层挂载点，内部再承载站位、攻击、技能等细节行为。
 - `Hit` 作为独立大状态处理受击打断，不放进 Combat 行为树，方便后续加入硬直、霸体、击倒等规则。
-- `EnemyDummy` 是轻量命中测试对象，用于快速验证 Hitbox、扣血、死亡和调试显示。
+- `EnemyDummy` 保留为早期轻量命中测试对象，用于快速验证 Hitbox、扣血和死亡显示；正式敌人能力以本节敌人基底为准。
 
 对应脚本：
 - `Assets/_EndLink/Enemies/EnemyActor.cs`
 - `Assets/_EndLink/Enemies/EnemyHealth.cs`
-- `Assets/_EndLink/Enemies/EnemyStateMachine.cs`
 - `Assets/_EndLink/Enemies/EnemyTargetSensor.cs`
-- `Assets/_EndLink/Enemies/EnemyStateId.cs`
-- `Assets/_EndLink/Enemies/IEnemyState.cs`
-- `Assets/_EndLink/Enemies/EnemyStateBase.cs`
-- `Assets/_EndLink/Enemies/EnemyStateContext.cs`
-- `Assets/_EndLink/Enemies/EnemyIdleState.cs`
-- `Assets/_EndLink/Enemies/EnemyAlertState.cs`
-- `Assets/_EndLink/Enemies/EnemyCombatState.cs`
-- `Assets/_EndLink/Enemies/EnemyHitState.cs`
-- `Assets/_EndLink/Enemies/EnemyDeadState.cs`
+- `Assets/_EndLink/Enemies/Abilities/EnemyMotorBase.cs`
+- `Assets/_EndLink/Enemies/Abilities/EnemyCombatDriver.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyStateMachine.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyStateId.cs`
+- `Assets/_EndLink/Enemies/StateMachine/IEnemyState.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyStateBase.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyStateContext.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyIdleState.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyAlertState.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyCombatState.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyHitState.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyDeadState.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagContainer.cs`
 - `Assets/_EndLink/Combat/ICombatTarget.cs`
 - `Assets/_EndLink/Combat/IHitReceiver.cs`
@@ -803,12 +889,18 @@
   - `EnemyActor`
   - `EnemyHealth`
   - `EnemyTargetSensor`
+  - `EnemyStateMachine`
+  - `EnemyMotorBase`
+  - 可选 `EnemyCombatDriver`
   - `CombatTagContainer`
+  - `CharacterController`
   - Collider
   - Layer 设置为 `Enemy`
 
 关键配置：
 - `targetTransform`：锁定、寻路和计算距离使用的目标点
+- `motor`：敌人移动能力引用，普通地面敌人拖 `EnemyMotorBase`
+- `combatDriver`：敌人战斗执行器引用，需要攻击能力的敌人拖 `EnemyCombatDriver`
 - `maxHealth`：敌人最大生命值
 - `initialState`：敌人启用后的初始大状态，通常为 `Idle`
 - `alertDuration`：`Alert` 状态停留时间
@@ -847,7 +939,7 @@
 - Hitbox 会在指定生命周期后自动销毁。
 - 成功执行攻击后会通过 `CombatEventsBus` 广播 `ActionStarted`。
 对应脚本：
-- `Assets/_EndLink/Combat/PlayerCombatDriver.cs`
+- `Assets/_EndLink/Player/PlayerCombatDriver.cs`
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
 - `Assets/_EndLink/Combat/HitboxBase.cs`
 相关物体/资产：
@@ -881,7 +973,7 @@
 - 使用 `HashSet<Collider>` 记录已经命中过的 Collider，避免同一个 Hitbox 重复命中同一目标。
 - 如果目标实现 `ICombatTarget` 且 `IsTargetable == false`，Hitbox 会跳过该目标。
 - 命中后查找目标父级上的 `IHitReceiver`。
-- 命中信息通过 `HitboxHitInfo` 传递，包含伤害、击退、`CombatTagDefinition` 标签、标签持续时间、命中点、命中方向、Owner、Hitbox 和命中的 Collider。
+- 命中信息通过 `HitboxHitInfo` 传递，包含伤害、击退、`CombatTagDefinition` 标签、标签持续时间、标签层数、命中点、命中方向、Owner、Hitbox 和命中的 Collider。
 - 命中时如果目标实现 `ICombatTagReceiver`，会把 `CombatTagDefinition` 添加到目标标签容器，并把 Hitbox owner 传入标签事件来源。
 - 命中后触发 `UnityEvent<Collider>`，方便后续挂音效、特效或调试组件。
 - 命中后会通过 `CombatEventsBus` 广播 `HitLanded`。
@@ -905,6 +997,7 @@
 - `knockbackForce`：击退力
 - `combatTagToApply`：命中战斗标签资产
 - `combatTagDuration`：命中战斗标签持续时间，小于等于 0 表示永久标签
+- `combatTagStackCount`：命中时添加的战斗标签层数
 - `lifetime`：Hitbox 自动销毁时间，小于等于 0 表示不按时间销毁
 - `onHit`：命中事件
 - `HitboxProjectile.speed`：远程 Hitbox 飞行速度，单位米/秒
@@ -916,39 +1009,6 @@
 - 为保证 `OnTriggerEnter` 稳定触发，Hitbox prefab 建议带 `Rigidbody`，设置 `Is Kinematic = true`、`Use Gravity = false`。
 - 当前玩家和队友攻击用的 Hitbox 默认要求敌人 Collider 所在物体设置为 `Enemy` Layer；其他攻击类型可通过 `targetLayerMask` 改为 Player、Ally 或自定义 Layer。
 - `ProjectSettings/TagManager.asset` 包含 `Enemy` Layer。
-</details>
-
-<a id="feature-enemy-dummy"></a>
-
-### Feature：木桩敌人
-
-<details>
-<summary>展开详情</summary>
-
-功能说明：
-- `EnemyDummy` 用于验证 Hitbox 命中链路。
-- 同时实现 `IHitReceiver` 和 `IDamageable`。
-- `ReceiveHit(HitboxHitInfo hitInfo)` 会转发到 `TakeDamage(int damage, CombatTagDefinition tag)`。
-- 支持 `maxHealth` / `CurrentHealth` / `IsDead`，受到伤害后会扣血，生命值降到 0 时进入死亡状态。
-- 受击后使用 URP 友好的 `MaterialPropertyBlock` 改写 `_BaseColor`，瞬间变为浅红不透明色，`0.1` 秒后恢复原色。
-- 死亡后切换为灰色，方便白模阶段观察木桩状态。
-- 支持 `OnDamaged` 和 `OnDead` 事件，方便以后挂音效、特效或调试 UI。
-- 受到伤害和死亡时会通过 `CombatEventsBus` 广播 `Damaged` / `Dead`。
-- 支持 `logHits` 打印伤害、标签和当前血量。
-- 支持 `showHealthInName` 把当前血量显示到 GameObject 名字上。
-
-对应脚本：
-- `Assets/_EndLink/Combat/EnemyDummy.cs`
-- `Assets/_EndLink/Combat/IDamageable.cs`
-- `Assets/_EndLink/Combat/IHitReceiver.cs`
-
-相关物体：
-- 木桩敌人
-  - `EnemyDummy`
-  - `MeshRenderer`
-  - Collider
-  - Layer 设置为 `Enemy`
-
 </details>
 
 <a id="feature-architecture-boundary"></a>
@@ -965,17 +1025,22 @@
 - `PlayerAnimatorDriver` 只把状态机和移动速度同步到 Animator 参数，不反向控制状态机。
 - `PlayerTargeting` 负责玩家当前自动软锁目标选择，不控制相机、UI 或攻击执行。
 - `PlayerCombatDriver` 不读取输入，只执行攻击表现和判定。
+- `CharacterHealth` 负责通用生命值、受击、死亡和目标有效性，不直接切换任何角色状态机。
+- `PlayerHealth` 和 `AllyHealth` 是生命到状态机的桥接层，只把受击和死亡结果转发给各自状态机。
 - `AllyBrain` 负责监听战斗事件并判断队友是否响应，不直接生成 Hitbox。
 - `AllyStateMachine` 负责队友状态切换，不监听全局事件、不生成 Hitbox。
 - `AllyCombatDriver` 负责执行队友助战动作，不订阅事件、不判断触发条件。
 - `CombatEventsBus` 只广播战斗事实，不保存状态、不决定连携规则、不直接驱动表现。
 - `HitboxBase` 负责命中检测和命中信息派发，不负责敌人如何扣血或表现。
+- `HUDCombatController` 和 `UIPartyCombatAction` 只刷新显示和绑定 UI 槽位，不执行技能、不判断连携规则。
+- `UICombatActionSlot` 只显示对应小队命令槽的键位和冷却，不拥有具体动作释放逻辑。
+- `UIHealthBar` 只读取 `CharacterHealth` 并显示血量，不参与生命结算。
 - `ThirdPersonCameraController` 负责相机目标旋转、缩放和 Cinemachine 参数，不负责玩家移动。
-- `EnemyDummy` 是临时验证对象，后续正式敌人应复用 `IHitReceiver` / `IDamageable` 接口。
+- `EnemyDummy` 只是早期命中验证对象；正式敌人能力以 `EnemyActor`、`EnemyHealth`、`EnemyStateMachine` 和敌人能力组件为主。
 
 后续需要调整：
 - 当前攻击仍是固定时间驱动，后续接动画后应改为动画事件或攻击窗口驱动。
-- 战斗事件当前只携带基础来源、目标和单个标签，后续如果连携规则需要更强表达，可扩展事件上下文或增加规则层数据结构。
+- 战斗事件当前携带基础来源、目标、动作、单个标签和标签层数；后续如果连携规则需要更强表达，可扩展事件上下文或增加规则层数据结构。
 - 当前 Hitbox 使用即时 Instantiate/Destroy，后续攻击频繁后建议切换对象池。
 
 </details>
