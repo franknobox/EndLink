@@ -36,9 +36,9 @@ namespace EndLink.Enemies
         private float hitDuration = 0.25f;
 
         [Header("Combat 移动")]
-        [Tooltip("不会攻击的基础敌人在 Combat 状态追到目标附近后停下的距离。")]
+        [Tooltip("基础敌人追击目标时，和目标表面之间保留的很近间隔。实际中心停止距离会自动加上敌人和目标的碰撞半径。")]
         [SerializeField, Min(0f)]
-        private float combatChaseStopDistance = 1.25f;
+        private float combatChaseStopDistance = 0.2f;
 
         [Tooltip("目标离敌人超过该距离时脱战并回到 Idle。小于等于 0 表示不按距离脱战。")]
         [SerializeField, Min(0f)]

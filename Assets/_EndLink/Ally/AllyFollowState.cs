@@ -12,6 +12,11 @@ namespace EndLink.Ally
 
         public override AllyStateId StateId => AllyStateId.Follow;
 
+        public override void Enter()
+        {
+            Context.FollowMotor.ResumeFollowFromCurrentPosition();
+        }
+
         public override void Tick(float deltaTime)
         {
             if (Context.FollowTarget == null)

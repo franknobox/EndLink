@@ -53,7 +53,7 @@ namespace EndLink.Enemies
         /// <summary>受击硬直持续时间。</summary>
         public float HitDuration => StateMachine.HitDuration;
 
-        /// <summary>Combat 状态追击目标时的停止距离。</summary>
+        /// <summary>Combat 状态追击目标时保留的表面间隔。</summary>
         public float CombatChaseStopDistance => StateMachine.CombatChaseStopDistance;
 
         /// <summary>Combat 状态目标超过该距离时脱战。小于等于 0 表示不按距离脱战。</summary>

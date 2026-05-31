@@ -49,8 +49,50 @@ namespace EndLink.Enemies
                 return;
             }
 
-            Context.Motor?.MoveTo(target.position, Context.CombatChaseStopDistance, deltaTime);
+            float stopDistance = CalculateCollisionAwareStopDistance(target);
+            Context.Motor?.MoveTo(target.position, stopDistance, deltaTime);
             Context.Motor?.FaceTarget(target, deltaTime);
+        }
+
+        private float CalculateCollisionAwareStopDistance(Transform target)
+        {
+            float surfaceGap = Mathf.Max(0f, Context.CombatChaseStopDistance);
+            return EstimatePlanarRadius(Context.Transform) + EstimatePlanarRadius(target) + surfaceGap;
+        }
+
+        private static float EstimatePlanarRadius(Transform root)
+        {
+            if (root == null)
+            {
+                return 0f;
+            }
+
+            CharacterController characterController = root.GetComponentInParent<CharacterController>();
+            if (characterController != null)
+            {
+                float scale = Mathf.Max(
+                    Mathf.Abs(characterController.transform.lossyScale.x),
+                    Mathf.Abs(characterController.transform.lossyScale.z));
+
+                return Mathf.Max(0f, characterController.radius * scale);
+            }
+
+            Collider[] colliders = root.GetComponentsInChildren<Collider>();
+            float radius = 0f;
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                Collider candidate = colliders[i];
+                if (candidate == null || !candidate.enabled || candidate.isTrigger)
+                {
+                    continue;
+                }
+
+                Bounds bounds = candidate.bounds;
+                Vector3 extents = bounds.extents;
+                radius = Mathf.Max(radius, extents.x, extents.z);
+            }
+
+            return radius;
         }
 
         private bool IsTargetBeyondLeash(Transform target)

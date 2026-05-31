@@ -180,6 +180,7 @@ namespace EndLink.Party
             if (!_isInCombat)
             {
                 _isInCombat = true;
+                _partyManager?.NotifyCombatStarted();
                 LogState("enter combat");
             }
 
@@ -284,6 +285,7 @@ namespace EndLink.Party
 
             _isInCombat = false;
             _currentPrimaryTarget = null;
+            _partyManager?.NotifyCombatEnded();
             LogState("exit combat");
         }
 

@@ -231,8 +231,10 @@ MonoBehaviour:
   partyManager: {fileID: 163565087}
   slot: 0
   iconImage: {fileID: 2024264574}
+  keyLabelText: {fileID: 0}
   cooldownTintColor: {r: 0.45, g: 0.45, b: 0.45, a: 0.65}
   autoRefreshCooldown: 1
+  autoRefreshKeyLabel: 1
 --- !u!1 &45882475
 GameObject:
   m_ObjectHideFlags: 0
@@ -304,7 +306,7 @@ Transform:
   m_GameObject: {fileID: 45882475}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: -3, y: 0, z: 4}
+  m_LocalPosition: {x: 8.67, y: 0, z: 1.94}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -526,8 +528,10 @@ MonoBehaviour:
   partyManager: {fileID: 163565087}
   slot: 2
   iconImage: {fileID: 1505265702}
+  keyLabelText: {fileID: 0}
   cooldownTintColor: {r: 0.45, g: 0.45, b: 0.45, a: 0.65}
   autoRefreshCooldown: 1
+  autoRefreshKeyLabel: 1
 --- !u!1 &153162658
 GameObject:
   m_ObjectHideFlags: 0
@@ -713,10 +717,14 @@ MonoBehaviour:
     slotName: Ally
     allyStateMachine: {fileID: 698380644}
     formationOffset: {x: 2, y: 0, z: -2.5}
+  useDynamicFormationSlots: 1
+  formationEvaluateInterval: 0.35
+  formationSwitchMinImprovement: 1
+  formationSwitchCooldown: 1.2
   followSettings:
-    stopDistance: 0.15
-    followSlotSoftness: 0.75
-    followDeadZoneRadius: 5
+    stopDistance: 0.2
+    followSlotSoftness: 0.8
+    followDeadZoneRadius: 6
     moveSpeed: 4
     sprintSyncSpeedMultiplier: 1.5
     arrivalSmoothTime: 0.12
@@ -733,6 +741,15 @@ MonoBehaviour:
       serializedVersion: 2
       m_Bits: 512
   combatRouter: {fileID: 0}
+  onCombatStarted:
+    m_PersistentCalls:
+      m_Calls: []
+  onCombatEnded:
+    m_PersistentCalls:
+      m_Calls: []
+  onMemberDead:
+    m_PersistentCalls:
+      m_Calls: []
   logInitialization: 0
 --- !u!4 &163565088
 Transform:
@@ -1377,7 +1394,7 @@ Transform:
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.5, y: 1.6, z: -2.6}
+  m_LocalPosition: {x: 12.17, y: 1.6, z: -4.66}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1602,8 +1619,10 @@ MonoBehaviour:
   partyManager: {fileID: 163565087}
   slot: 1
   iconImage: {fileID: 171857036}
+  keyLabelText: {fileID: 0}
   cooldownTintColor: {r: 0.45, g: 0.45, b: 0.45, a: 0.65}
   autoRefreshCooldown: 1
+  autoRefreshKeyLabel: 1
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -1966,7 +1985,7 @@ Transform:
   m_GameObject: {fileID: 509600055}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 11.67, y: 0, z: -2.06}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2316,7 +2335,7 @@ Transform:
   m_GameObject: {fileID: 698380643}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 2.1, y: 0, z: 5.23}
+  m_LocalPosition: {x: 13.77, y: 0, z: 3.17}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -3428,7 +3447,7 @@ MonoBehaviour:
   initialState: 1
   alertDuration: 0.35
   hitDuration: 0.25
-  combatChaseStopDistance: 1.25
+  combatChaseStopDistance: 0.5
   combatLeashDistance: 18
   logStateChanges: 0
 --- !u!114 &1284033431
@@ -3569,7 +3588,7 @@ CharacterController:
   m_StepOffset: 0.3
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Center: {x: 0, y: 1, z: 0}
 --- !u!114 &1284033437
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3587,6 +3606,8 @@ MonoBehaviour:
   rotationSpeed: 540
   gravity: -20
   groundedStickForce: 2
+  preventPlanarCollisionLift: 1
+  autoAlignControllerToFeet: 1
 --- !u!114 &1284033438
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4241,7 +4262,7 @@ CharacterController:
   m_StepOffset: 0.3
   m_SkinWidth: 0.08
   m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Center: {x: 0, y: 1, z: 0}
 --- !u!114 &2012491620
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4259,6 +4280,8 @@ MonoBehaviour:
   rotationSpeed: 540
   gravity: -20
   groundedStickForce: 2
+  preventPlanarCollisionLift: 1
+  autoAlignControllerToFeet: 1
 --- !u!114 &2012491621
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4313,7 +4336,7 @@ MonoBehaviour:
   initialState: 1
   alertDuration: 0.35
   hitDuration: 0.25
-  combatChaseStopDistance: 1.25
+  combatChaseStopDistance: 0.5
   combatLeashDistance: 18
   logStateChanges: 0
 --- !u!114 &2012491624
@@ -4627,7 +4650,7 @@ Transform:
   m_GameObject: {fileID: 2084252733}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.5, y: 1.6, z: -2.6}
+  m_LocalPosition: {x: 12.17, y: 1.6, z: -4.66}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

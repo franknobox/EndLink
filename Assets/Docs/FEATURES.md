@@ -8,7 +8,7 @@
 
 ### 当前情况概览
 
-项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party`、`Assets/_EndLink/Enemies` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、玩家 Animator 桥接、基础攻击驱动、基础 Hitbox 配置、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架和战斗 UI 基础。
+项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party`、`Assets/_EndLink/Enemies` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、玩家 Animator 桥接、基础攻击驱动、基础 Hitbox 配置、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动与动态站位第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架和战斗 UI 基础。
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
@@ -37,7 +37,7 @@
 | [战斗 UI 基础](#feature-combat-ui-foundation) | 已完成基础版 | 提供 HUD 总入口、小队动作栏、动作槽位冷却显示和通用血条组件。 |
 | [战斗事件总栈](#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
 | [玩家战斗驱动](#feature-player-combat-driver) | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |
-| [敌人通用基底](#feature-enemy-foundation) | 已完成索敌 Alert 版 | 提供正式敌人身份入口、生命受击、死亡目标失效、目标有效性接口、大状态机骨架和基础玩家感知。 |
+| [敌人通用基底](#feature-enemy-foundation) | 已完成追击基底版 | 提供正式敌人身份入口、生命受击、死亡目标失效、目标有效性接口、大状态机骨架、基础玩家感知和地面追击移动。 |
 | [基础 Hitbox 配置](#feature-hitbox) | 已完成第一版 | 提供通用 Hitbox 基类和远程直线 Hitbox，用于配置近战判定、远程飞行判定、目标过滤、生命周期、伤害、击退和标签。 |
 
 #### 队伍
@@ -48,8 +48,8 @@
 | [队友调试监视窗口](#feature-ally-monitor) | 已完成第一版 | 提供 Editor 窗口集中查看队友状态快照和队友行为日志，辅助排查助战、冷却、距离和目标问题。 |
 | [队友有限状态机](#feature-ally-state-machine) | 已完成通用动作状态版 | 提供 Idle、Follow、Assist、Action、Hit、Dead 外层状态，Assist 处理自动助战，Action 承载主动技能等指令动作。 |
 | [小队战斗状态上下文](#feature-party-combat-context) | 已完成基础版 | 监听战斗事件，记录小队是否处于战斗、当前主目标和已知敌人，供队友目标选择、战斗 UI 和后续连携系统读取。 |
-| [队友跟随移动](#feature-ally-follow-motor) | 已完成手感增强版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持平滑减速、追赶、远距离归位和简易避让。 |
-| [固定三人小队管理](#feature-party-manager) | 已完成第一版 | 负责保存固定主控和 2 个队友槽位，统一分配队友跟随目标和队形偏移，并提供第一版小队战斗命令路由。 |
+| [队友跟随移动](#feature-ally-follow-motor) | 已完成动态站位配套版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持死区、平滑减速、追赶、远距离归位和简易避让。 |
+| [固定三人小队管理](#feature-party-manager) | 已完成动态槽位版 | 负责保存固定主控和 2 个队友槽位，统一分配队友跟随目标、动态队形槽位、小队状态查询和第一版小队战斗命令路由。 |
 
 <a id="feature-input-system"></a>
 
@@ -744,9 +744,11 @@
 - 支持 `teleportDistance`，队友极端远离队形点时会直接归位，避免长距离丢失。
 - 支持 `followSlotSoftness`，队友进入队形点周围软半径后就算到位，不强制踩死精确坐标。
 - 支持 `followDeadZoneRadius`，每个队友站定后会以自己的站位作为死区中心；主控仍在该半径内移动时不会触发该队友重新跟随，也不会跟随主控转向；走出半径后才更新队形点和朝向。
-- `AllyFollowMotor` 会常驻绘制跟随死区 Gizmo，运行时以该队友当前死区中心为圆心，非运行时以队友自身为圆心；选中队友时 Gizmo 会更明显。
+- 归位过程中会同步更新死区圆心，避免动态槽位或重新归位后残留旧死区中心。
+- `AllyFollowMotor` 会常驻绘制跟随死区 Gizmo，运行时以该队友当前死区中心为圆心，非运行时以队友自身为圆心；当前使用深蓝色常态显示，不再依赖选中状态。
 - 支持第一版简易避让：离主控太近时会被推开，配置 `avoidanceLayerMask` 后也能对其他队友做局部排斥。
 - `formationOffset` 由 `PartyManager` 的队友槽位统一配置，并写入 `AllyFollowMotor`。
+- `SetFormationOffset` 在偏移未变化时不会重复触发重新归位，降低动态槽位评估带来的抖动。
 - 当前只处理平面 XZ 跟随和局部避让，后续如果需要复杂地形、障碍绕路，再接 NavMesh 或更完整的队伍槽位调度。
 
 对应脚本：
@@ -798,6 +800,9 @@
 - 初始化时，`PartyManager` 会把 `mainCharacter` 设置为两个队友的跟随目标。
 - 初始化时，`PartyManager` 会把两个槽位的 `formationOffset` 写入各自队友的 `AllyFollowMotor`。
 - 初始化时，`PartyManager` 会把统一的 `PartyFollowSettings` 写入两个队友的 `AllyFollowMotor`。
+- 支持两个队友的动态站位槽位交换：运行中会比较当前分配和交换后的移动代价，在收益足够且主控不处于队友死区内时交换左右后方槽位。
+- `PartyManager` 提供轻量队伍查询：主控引用、已配置队友数量、存活/有效队友数量、存活队友列表和队友是否存活。
+- `PartyManager` 提供最小小队表现调度入口：`NotifyCombatStarted`、`NotifyCombatEnded`、`NotifyMemberDead`，供后续 UI、镜头、语音和站位表现监听。
 - `PartyManager` 持有 `PartyCombatRouter` 引用，供战斗 UI 和后续小队系统读取当前键位路由。
 - `PartyCombatContext` 作为小队战斗状态上下文，供队友目标选择、战斗 UI 和后续连携系统读取当前主目标、已知敌人和战斗状态。
 - `PartyCombatRouter` 负责把 `PlayerInputReader` 中的战斗输入翻译成主控、队友 A、队友 B 或全队的命令请求。
@@ -832,6 +837,10 @@
 - `allySlotB`：第二个队友槽位
 - `followSettings`：两个队友共用的跟随移动参数
 - `formationOffset`：每个队友相对主控的本地队形偏移，例如左后 `(-2, 0, -2.5)`、右后 `(2, 0, -2.5)`
+- `useDynamicFormationSlots`：是否启用两个队友的动态站位槽位交换
+- `formationEvaluateInterval`：动态站位重新评估间隔
+- `formationSwitchMinImprovement`：交换后至少减少多少移动代价才允许换位
+- `formationSwitchCooldown`：站位交换冷却，避免频繁来回抢位
 - `playerSkillKey` / `allySlotASkillKey` / `allySlotBSkillKey`：主控和两个队友主动技能键位，默认 Q / E / F
 - `playerLinkAttackKey` / `allySlotALinkAttackKey` / `allySlotBLinkAttackKey`：主控和两个队友连携请求键位，默认 1 / 2 / 3
 - `logInitialization`：是否打印小队初始化日志
@@ -857,9 +866,12 @@
 - `EnemyTargetSensor` 负责第一版敌人索敌：玩家进入发现范围后请求进入 `Alert`，持续停留达到警觉时间后请求进入 `Combat`。
 - `EnemyTargetSensor` 可以关闭自动索敌，关闭后不会主动触发 `Alert` / `Combat`。
 - `EnemyMotorBase` 是第一版地面敌人移动能力组件，基于 `CharacterController` 提供移动、转向、重力和停止能力。
+- `EnemyMotorBase` 支持按“根物体在脚底”的白模约定自动校正 `CharacterController.center.y`，避免第一次移动时因胶囊底部埋入地面而被弹起。
+- `EnemyMotorBase` 在水平追击移动后会抑制碰撞带来的异常上抬，重力在 `LateUpdate` 中补充处理。
 - `EnemyActor` 持有 `EnemyMotorBase` 和 `EnemyCombatDriver` 引用，状态机通过 Actor 读取敌人能力，而不是直接查找具体实现。
 - `EnemyCombatDriver` 是敌人战斗执行器，按 `CombatActionDefinition` 生成 Hitbox、记录冷却并广播动作开始事件；当前先作为攻击能力基底，具体何时出手后续交给 Combat 状态内部逻辑或行为树。
-- `Combat` 当前只做基础追击和面向目标，后续作为行为树的外层挂载点，内部再承载站位、攻击、技能等细节行为。
+- `Combat` 当前只做基础追击和面向目标；追击停止距离会按敌人半径、目标半径和表面间隔计算，避免持续挤入目标中心。
+- `Combat` 后续作为行为树的外层挂载点，内部再承载站位、攻击、技能等细节行为。
 - `Hit` 作为独立大状态处理受击打断，不放进 Combat 行为树，方便后续加入硬直、霸体、击倒等规则。
 - `EnemyDummy` 保留为早期轻量命中测试对象，用于快速验证 Hitbox、扣血和死亡显示；正式敌人能力以本节敌人基底为准。
 
@@ -910,6 +922,9 @@
 - `EnemyTargetSensor.detectionRadius`：发现目标半径
 - `EnemyTargetSensor.requiredAlertTime`：目标持续停留多久后进入 `Combat`，当前默认可设置为 3 秒
 - `hitDuration`：`Hit` 受击硬直时间
+- `combatChaseStopDistance`：Combat 追击时保留的目标表面间隔，实际中心停止距离会额外加上双方碰撞半径
+- `EnemyMotorBase.autoAlignControllerToFeet`：是否自动按脚底根物体约定校正 `CharacterController`
+- `EnemyMotorBase.preventPlanarCollisionLift`：是否抑制水平移动碰撞导致的异常上抬
 - `initialTags`：敌人启用时默认拥有的战斗标签
 - `combinationRules`：敌人身上标签组合转化使用的规则
 - `untargetableOnDeath`：死亡后是否不再作为有效战斗目标

@@ -149,6 +149,21 @@ namespace EndLink.Ally
         /// <summary>最近一次计算得到的世界队形点，方便调试和后续可视化。</summary>
         public Vector3 DesiredWorldPosition => _desiredWorldPosition;
 
+        /// <summary>
+        /// 当前是否正在因为跟随死区而保持原地。
+        /// PartyManager 的动态站位会读取它，避免在死区内重写队形 offset 导致队友被强制拉动。
+        /// </summary>
+        public bool IsHoldingFollowDeadZone => ShouldHoldFollowDeadZone();
+
+        /// <summary>当前是否正在向新的跟随队形点归位。</summary>
+        public bool IsRepositioning => _isRepositioning;
+
+        /// <summary>
+        /// 跟随目标当前是否处在这个队友的死区圆内。
+        /// 这个判断不关心队友是否正在归位，给 PartyManager 判断“玩家是否仍在死区内，是否不该换位”使用。
+        /// </summary>
+        public bool IsFollowTargetInsideDeadZone => IsFollowTargetInsideCurrentDeadZone();
+
         private void Awake()
         {
             _characterController = GetComponent<CharacterController>();
@@ -181,12 +196,11 @@ namespace EndLink.Ally
 
         private void OnDrawGizmos()
         {
-            DrawDeadZoneGizmo(0.28f);
+            DrawDeadZoneGizmo();
         }
 
         private void OnDrawGizmosSelected()
         {
-            DrawDeadZoneGizmo(0.75f);
         }
 
         /// <summary>
@@ -208,8 +222,24 @@ namespace EndLink.Ally
         /// </summary>
         public void SetFormationOffset(Vector3 offset)
         {
+            if ((formationOffset - offset).sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
             formationOffset = offset;
             RequestReposition();
+        }
+
+        /// <summary>
+        /// 从助战、动作、受击等外部移动状态回到 Follow 时调用。
+        /// 这些状态可能已经改变了队友位置，必须丢弃旧死区圆心并重新走一次归位。
+        /// </summary>
+        public void ResumeFollowFromCurrentPosition()
+        {
+            ResetFollowDeadZoneAnchor();
+            RequestReposition();
+            ResetSpeed();
         }
 
         /// <summary>
@@ -263,6 +293,7 @@ namespace EndLink.Ally
             }
 
             _isRepositioning = true;
+            SyncFollowDeadZoneAnchorToCurrentPosition();
             _desiredWorldPosition = CalculateDesiredWorldPosition();
 
             Vector3 toDesired = _desiredWorldPosition - transform.position;
@@ -279,7 +310,7 @@ namespace EndLink.Ally
             }
 
             Vector3 avoidanceVector = CalculateAvoidanceVector();
-            float arriveRadius = Mathf.Max(stopDistance, followSlotSoftness);
+            float arriveRadius = Mathf.Max(stopDistance, 0.05f);
             if (distance <= arriveRadius || moveSpeed <= 0f)
             {
                 SmoothSpeedTo(0f, deltaTime);
@@ -298,6 +329,7 @@ namespace EndLink.Ally
             if (step > 0f)
             {
                 Move(finalMoveDirection * step);
+                SyncFollowDeadZoneAnchorToCurrentPosition();
                 RotateTowards(finalMoveDirection, deltaTime);
             }
         }
@@ -375,6 +407,16 @@ namespace EndLink.Ally
                 return false;
             }
 
+            return IsFollowTargetInsideCurrentDeadZone();
+        }
+
+        private bool IsFollowTargetInsideCurrentDeadZone()
+        {
+            if (followDeadZoneRadius <= 0f || followTarget == null)
+            {
+                return false;
+            }
+
             // 死区判断以队友自己的当前站位为中心；主控仍在该半径内时，这个队友保持原地。
             Vector3 toTarget = followTarget.position - _followDeadZoneAnchorPosition;
             toTarget.y = 0f;
@@ -383,9 +425,14 @@ namespace EndLink.Ally
 
         private void ResetFollowDeadZoneAnchor()
         {
+            SyncFollowDeadZoneAnchorToCurrentPosition();
+            _isRepositioning = false;
+        }
+
+        private void SyncFollowDeadZoneAnchorToCurrentPosition()
+        {
             _followDeadZoneAnchorPosition = transform.position;
             _followDeadZoneAnchorPosition.y = transform.position.y;
-            _isRepositioning = false;
         }
 
         private void RequestReposition()
@@ -648,7 +695,7 @@ namespace EndLink.Ally
             return center;
         }
 
-        private void DrawDeadZoneGizmo(float alpha)
+        private void DrawDeadZoneGizmo()
         {
             if (followDeadZoneRadius <= 0f)
             {
@@ -656,7 +703,7 @@ namespace EndLink.Ally
             }
 
             Color previousColor = Gizmos.color;
-            Gizmos.color = new Color(0.2f, 0.8f, 1f, alpha);
+            Gizmos.color = new Color(0.02f, 0.18f, 0.85f, 0.85f);
 
             Vector3 center = ResolveDeadZoneGizmoCenter();
             DrawHorizontalCircle(center, followDeadZoneRadius, DeadZoneGizmoSegments);

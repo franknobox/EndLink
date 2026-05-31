@@ -35,6 +35,14 @@ namespace EndLink.Enemies
         [SerializeField, Min(0f)]
         private float groundedStickForce = 2f;
 
+        [Tooltip("防止水平追击时被玩家、队友或敌人胶囊碰撞体顶到空中。基础地面敌人建议开启。")]
+        [SerializeField]
+        private bool preventPlanarCollisionLift = true;
+
+        [Tooltip("按“根物体在脚底”的白模约定自动校正 CharacterController Center Y，避免第一次 Move 时因为胶囊底部埋进地面而被弹起。")]
+        [SerializeField]
+        private bool autoAlignControllerToFeet = true;
+
         private CharacterController _characterController;
         private Vector3 _horizontalVelocity;
         private Vector3 _horizontalVelocitySmoothRef;
@@ -54,9 +62,10 @@ namespace EndLink.Enemies
         protected virtual void Awake()
         {
             _characterController = GetComponent<CharacterController>();
+            AlignControllerToFeetIfNeeded();
         }
 
-        protected virtual void Update()
+        protected virtual void LateUpdate()
         {
             TickGravity(Time.deltaTime);
         }
@@ -67,6 +76,7 @@ namespace EndLink.Enemies
             accelerationSmoothTime = Mathf.Max(0.01f, accelerationSmoothTime);
             rotationSpeed = Mathf.Max(0f, rotationSpeed);
             groundedStickForce = Mathf.Max(0f, groundedStickForce);
+            AlignControllerToFeetIfNeeded();
         }
 
         /// <summary>
@@ -102,7 +112,7 @@ namespace EndLink.Enemies
                 deltaTime);
 
             _isMoving = _horizontalVelocity.sqrMagnitude > 0.0001f;
-            _characterController.Move(_horizontalVelocity * Mathf.Max(0f, deltaTime));
+            MovePlanar(_horizontalVelocity * Mathf.Max(0f, deltaTime));
             FaceDirection(moveDirection, deltaTime);
         }
 
@@ -167,6 +177,21 @@ namespace EndLink.Enemies
                 rotationSpeed * Mathf.Max(0f, deltaTime));
         }
 
+        private void MovePlanar(Vector3 displacement)
+        {
+            float previousY = transform.position.y;
+            _characterController.Move(displacement);
+
+            if (!preventPlanarCollisionLift || transform.position.y <= previousY)
+            {
+                return;
+            }
+
+            Vector3 position = transform.position;
+            position.y = previousY;
+            transform.position = position;
+        }
+
         private void TickGravity(float deltaTime)
         {
             EnsureCharacterController();
@@ -190,7 +215,33 @@ namespace EndLink.Enemies
             if (_characterController == null)
             {
                 _characterController = GetComponent<CharacterController>();
+                AlignControllerToFeetIfNeeded();
             }
+        }
+
+        private void AlignControllerToFeetIfNeeded()
+        {
+            if (!autoAlignControllerToFeet)
+            {
+                return;
+            }
+
+            if (_characterController == null)
+            {
+                _characterController = GetComponent<CharacterController>();
+            }
+
+            if (_characterController == null)
+            {
+                return;
+            }
+
+            float height = Mathf.Max(_characterController.height, _characterController.radius * 2f);
+            Vector3 center = _characterController.center;
+            center.y = height * 0.5f;
+
+            _characterController.height = height;
+            _characterController.center = center;
         }
     }
 }
