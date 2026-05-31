@@ -99,11 +99,13 @@
 - 暴露面向指定世界方向的接口，供攻击和自动软锁目标在出手前让角色正面与动作方向一致。
 - 支持移动方向参考，拖入 `Main Camera` 后可实现相机相对移动。
 - 支持按住 `Left Shift` 冲刺；当前冲刺作为移动速度修饰，不单独进入状态机大状态。
+- 支持接收敌人移动碰撞带来的外部位移，玩家可以被敌人正常前进时挤开，但不会通过该通道反向推动敌人。
 - 移动调用由 `PlayerStateMachine` 驱动，`PlayerController` 通过 `TickMovement` 执行实际位移。
 
 对应脚本：
 - `Assets/_EndLink/Control/PlayerController.cs`
 - `Assets/_EndLink/Control/PlayerInputReader.cs`
+- `Assets/_EndLink/Control/IExternalDisplacementReceiver.cs`
 
 相关物体：
 - 玩家根物体
@@ -747,6 +749,7 @@
 - 归位过程中会同步更新死区圆心，避免动态槽位或重新归位后残留旧死区中心。
 - `AllyFollowMotor` 会常驻绘制跟随死区 Gizmo，运行时以该队友当前死区中心为圆心，非运行时以队友自身为圆心；当前使用深蓝色常态显示，不再依赖选中状态。
 - 支持第一版简易避让：离主控太近时会被推开，配置 `avoidanceLayerMask` 后也能对其他队友做局部排斥。
+- 支持接收敌人移动碰撞带来的外部位移：队友可以被敌人正常前进时挤开，但不会反向顶动敌人。
 - `formationOffset` 由 `PartyManager` 的队友槽位统一配置，并写入 `AllyFollowMotor`。
 - `SetFormationOffset` 在偏移未变化时不会重复触发重新归位，降低动态槽位评估带来的抖动。
 - 当前只处理平面 XZ 跟随和局部避让，后续如果需要复杂地形、障碍绕路，再接 NavMesh 或更完整的队伍槽位调度。
@@ -755,6 +758,7 @@
 - `Assets/_EndLink/Ally/AllyFollowMotor.cs`
 - `Assets/_EndLink/Ally/AllyFollowState.cs`
 - `Assets/_EndLink/Ally/AllyStateMachine.cs`
+- `Assets/_EndLink/Control/IExternalDisplacementReceiver.cs`
 - `Assets/_EndLink/Party/PartyFollowSettings.cs`
 - `Assets/_EndLink/Party/PartyManager.cs`
 
@@ -863,11 +867,13 @@
 - `ICombatTarget` 是战斗目标有效性接口，当前用于判断目标死亡后是否还能被锁定、搜索或命中。
 - 敌人死亡后默认 `IsTargetable = false`，后续 `PlayerTargeting`、`AllyBrain` 和 `HitboxBase` 会跳过不可目标对象。
 - `EnemyStateMachine` 管理 `Idle`、`Alert`、`Combat`、`Hit`、`Dead` 五个敌人大状态。
+- `EnemyStateMachine` 集中暴露索敌配置，`EnemyTargetSensor` 只作为执行器读取状态机参数，不在自身 Inspector 中重复配置。
 - `EnemyTargetSensor` 负责第一版敌人索敌：玩家进入发现范围后请求进入 `Alert`，持续停留达到警觉时间后请求进入 `Combat`。
-- `EnemyTargetSensor` 可以关闭自动索敌，关闭后不会主动触发 `Alert` / `Combat`。
+- 自动索敌可以在 `EnemyStateMachine` 中关闭，关闭后不会主动触发 `Alert` / `Combat`。
 - `EnemyMotorBase` 是第一版地面敌人移动能力组件，基于 `CharacterController` 提供移动、转向、重力和停止能力。
 - `EnemyMotorBase` 支持按“根物体在脚底”的白模约定自动校正 `CharacterController.center.y`，避免第一次移动时因胶囊底部埋入地面而被弹起。
 - `EnemyMotorBase` 在水平追击移动后会抑制碰撞带来的异常上抬，重力在 `LateUpdate` 中补充处理。
+- `EnemyMotorBase` 在正常移动撞到实现 `IExternalDisplacementReceiver` 的玩家或队友时，会把挡路角色沿敌人移动方向挤开；敌人自身不接收这条外部位移，因此队友和玩家不会反向顶动敌人。
 - `EnemyActor` 持有 `EnemyMotorBase` 和 `EnemyCombatDriver` 引用，状态机通过 Actor 读取敌人能力，而不是直接查找具体实现。
 - `EnemyCombatDriver` 是敌人战斗执行器，按 `CombatActionDefinition` 生成 Hitbox、记录冷却并广播动作开始事件；当前先作为攻击能力基底，具体何时出手后续交给 Combat 状态内部逻辑或行为树。
 - `Combat` 当前只做基础追击和面向目标；追击停止距离会按敌人半径、目标半径和表面间隔计算，避免持续挤入目标中心。
@@ -881,6 +887,7 @@
 - `Assets/_EndLink/Enemies/EnemyTargetSensor.cs`
 - `Assets/_EndLink/Enemies/Abilities/EnemyMotorBase.cs`
 - `Assets/_EndLink/Enemies/Abilities/EnemyCombatDriver.cs`
+- `Assets/_EndLink/Control/IExternalDisplacementReceiver.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyStateMachine.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyStateId.cs`
 - `Assets/_EndLink/Enemies/StateMachine/IEnemyState.cs`
@@ -916,15 +923,21 @@
 - `maxHealth`：敌人最大生命值
 - `initialState`：敌人启用后的初始大状态，通常为 `Idle`
 - `alertDuration`：`Alert` 状态停留时间
-- `EnemyTargetSensor.detectionEnabled`：是否启用自动发现玩家
-- `EnemyTargetSensor.explicitTarget`：指定玩家目标，配置后优先检测该目标
-- `EnemyTargetSensor.targetLayerMask`：未指定目标时用于搜索玩家的 LayerMask
-- `EnemyTargetSensor.detectionRadius`：发现目标半径
-- `EnemyTargetSensor.requiredAlertTime`：目标持续停留多久后进入 `Combat`，当前默认可设置为 3 秒
+- `EnemyStateMachine.detectionEnabled`：是否启用自动发现玩家
+- `EnemyStateMachine.explicitDetectionTarget`：指定玩家目标，配置后优先检测该目标
+- `EnemyStateMachine.targetLayerMask`：未指定目标时用于搜索玩家的 LayerMask
+- `EnemyStateMachine.detectionOrigin`：索敌检测原点，留空时使用敌人根物体
+- `EnemyStateMachine.detectionRadius`：发现目标半径
+- `EnemyStateMachine.requiredAlertTime`：目标持续停留多久后进入 `Combat`，当前默认可设置为 3 秒
+- `EnemyStateMachine.logSensorChanges`：是否打印索敌发现、丢失和进入 Combat 的日志
+- `EnemyStateMachine.drawDetectionGizmo`：是否绘制索敌范围 Gizmo
 - `hitDuration`：`Hit` 受击硬直时间
 - `combatChaseStopDistance`：Combat 追击时保留的目标表面间隔，实际中心停止距离会额外加上双方碰撞半径
 - `EnemyMotorBase.autoAlignControllerToFeet`：是否自动按脚底根物体约定校正 `CharacterController`
 - `EnemyMotorBase.preventPlanarCollisionLift`：是否抑制水平移动碰撞导致的异常上抬
+- `EnemyMotorBase.pushExternalDisplacementReceivers`：敌人正常移动撞到玩家或队友时，是否把挡路角色挤开
+- `EnemyMotorBase.collisionPushMultiplier`：敌人本帧移动量转换为推挤位移的倍率
+- `EnemyMotorBase.maxCollisionPushDistance`：单次碰撞最多传递给玩家或队友的位移
 - `initialTags`：敌人启用时默认拥有的战斗标签
 - `combinationRules`：敌人身上标签组合转化使用的规则
 - `untargetableOnDeath`：死亡后是否不再作为有效战斗目标

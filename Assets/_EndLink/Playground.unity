@@ -3417,14 +3417,14 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1284033434}
-  - component: {fileID: 1284033433}
-  - component: {fileID: 1284033432}
   - component: {fileID: 1284033431}
   - component: {fileID: 1284033430}
-  - component: {fileID: 1284033435}
   - component: {fileID: 1284033438}
   - component: {fileID: 1284033437}
   - component: {fileID: 1284033436}
+  - component: {fileID: 1284033435}
+  - component: {fileID: 1284033432}
+  - component: {fileID: 1284033433}
   m_Layer: 8
   m_Name: Enemy_Root
   m_TagString: Untagged
@@ -3446,10 +3446,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Enemies.EnemyStateMachine
   initialState: 1
   alertDuration: 0.35
+  detectionEnabled: 1
+  explicitDetectionTarget: {fileID: 0}
+  targetLayerMask:
+    serializedVersion: 2
+    m_Bits: 8
+  detectionOrigin: {fileID: 0}
+  detectionRadius: 8
+  requiredAlertTime: 3
   hitDuration: 0.25
   combatChaseStopDistance: 0.5
   combatLeashDistance: 18
   logStateChanges: 0
+  logSensorChanges: 0
+  drawDetectionGizmo: 1
 --- !u!114 &1284033431
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3554,16 +3564,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 19a74f7ad6e5409fa5f240e2512e26ce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Enemies.EnemyTargetSensor
-  detectionEnabled: 1
-  explicitTarget: {fileID: 0}
-  targetLayerMask:
-    serializedVersion: 2
-    m_Bits: 8
-  detectionOrigin: {fileID: 1284033434}
-  detectionRadius: 8
-  requiredAlertTime: 3
-  logSensorChanges: 0
-  drawDetectionGizmo: 1
 --- !u!143 &1284033436
 CharacterController:
   m_ObjectHideFlags: 0
@@ -3608,6 +3608,9 @@ MonoBehaviour:
   groundedStickForce: 2
   preventPlanarCollisionLift: 1
   autoAlignControllerToFeet: 1
+  pushExternalDisplacementReceivers: 1
+  collisionPushMultiplier: 1
+  maxCollisionPushDistance: 0.35
 --- !u!114 &1284033438
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4282,6 +4285,9 @@ MonoBehaviour:
   groundedStickForce: 2
   preventPlanarCollisionLift: 1
   autoAlignControllerToFeet: 1
+  pushExternalDisplacementReceivers: 1
+  collisionPushMultiplier: 1
+  maxCollisionPushDistance: 0.35
 --- !u!114 &2012491621
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4311,16 +4317,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 19a74f7ad6e5409fa5f240e2512e26ce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Enemies.EnemyTargetSensor
-  detectionEnabled: 1
-  explicitTarget: {fileID: 0}
-  targetLayerMask:
-    serializedVersion: 2
-    m_Bits: 8
-  detectionOrigin: {fileID: 2012491627}
-  detectionRadius: 8
-  requiredAlertTime: 3
-  logSensorChanges: 0
-  drawDetectionGizmo: 1
 --- !u!114 &2012491623
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4335,10 +4331,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Enemies.EnemyStateMachine
   initialState: 1
   alertDuration: 0.35
+  detectionEnabled: 1
+  explicitDetectionTarget: {fileID: 0}
+  targetLayerMask:
+    serializedVersion: 2
+    m_Bits: 8
+  detectionOrigin: {fileID: 0}
+  detectionRadius: 8
+  requiredAlertTime: 3
   hitDuration: 0.25
   combatChaseStopDistance: 0.5
   combatLeashDistance: 18
   logStateChanges: 0
+  logSensorChanges: 0
+  drawDetectionGizmo: 1
 --- !u!114 &2012491624
 MonoBehaviour:
   m_ObjectHideFlags: 0

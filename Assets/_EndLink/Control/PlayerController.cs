@@ -9,7 +9,7 @@ namespace EndLink.Core
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
-    public sealed class PlayerController : MonoBehaviour
+    public sealed class PlayerController : MonoBehaviour, IExternalDisplacementReceiver
     {
         private const float MoveInputDeadZoneSqr = 0.0001f;
 
@@ -59,6 +59,9 @@ namespace EndLink.Core
 
         /// <summary>当前帧玩家是否正在冲刺移动。</summary>
         public bool IsSprinting => _isSprinting;
+
+        /// <summary>玩家是否能被敌人的正常移动挤开。</summary>
+        public bool CanReceiveExternalDisplacement => isActiveAndEnabled;
 
         /// <summary>
         /// 移动方向参考。
@@ -159,6 +162,33 @@ namespace EndLink.Core
 
             float lerpFactor = 1f - Mathf.Exp(-rotationSharpness * Time.deltaTime);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, lerpFactor);
+        }
+
+        /// <summary>
+        /// 接收敌人移动碰撞带来的外部位移。
+        /// 这里只处理 XZ 平面，避免敌人水平移动把玩家顶上天；真正的击飞、击退之后应走战斗受击流程。
+        /// </summary>
+        public void AddExternalDisplacement(Vector3 displacement)
+        {
+            displacement.y = 0f;
+
+            if (displacement.sqrMagnitude <= MoveInputDeadZoneSqr)
+            {
+                return;
+            }
+
+            if (_characterController == null)
+            {
+                _characterController = GetComponent<CharacterController>();
+            }
+
+            if (_characterController != null && _characterController.enabled)
+            {
+                _characterController.Move(displacement);
+                return;
+            }
+
+            transform.position += displacement;
         }
 
         private void OnValidate()

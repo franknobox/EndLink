@@ -1,3 +1,4 @@
+using EndLink.Core;
 using UnityEngine;
 
 namespace EndLink.Enemies
@@ -43,12 +44,28 @@ namespace EndLink.Enemies
         [SerializeField]
         private bool autoAlignControllerToFeet = true;
 
+        [Header("碰撞推挤")]
+        [Tooltip("敌人正常移动撞到可接收外部位移的角色时，是否把挡路角色沿敌人移动方向挤开。")]
+        [SerializeField]
+        private bool pushExternalDisplacementReceivers = true;
+
+        [Tooltip("敌人本帧移动量转成推挤位移时的倍率。1 表示敌人走多少，挡路角色最多被挤开多少。")]
+        [SerializeField, Min(0f)]
+        private float collisionPushMultiplier = 1f;
+
+        [Tooltip("单次碰撞最多传给玩家或队友的位移，避免一帧内被高速敌人推得过远。")]
+        [SerializeField, Min(0f)]
+        private float maxCollisionPushDistance = 0.35f;
+
         private CharacterController _characterController;
         private Vector3 _horizontalVelocity;
         private Vector3 _horizontalVelocitySmoothRef;
         private float _verticalVelocity;
         private float _moveSpeedMultiplier = 1f;
         private bool _isMoving;
+        private bool _isApplyingPlanarMove;
+        private Vector3 _currentPlanarMoveDirection;
+        private float _currentPlanarMoveDistance;
 
         /// <summary>当前是否正在执行水平移动。</summary>
         public virtual bool IsMoving => _isMoving;
@@ -76,6 +93,8 @@ namespace EndLink.Enemies
             accelerationSmoothTime = Mathf.Max(0.01f, accelerationSmoothTime);
             rotationSpeed = Mathf.Max(0f, rotationSpeed);
             groundedStickForce = Mathf.Max(0f, groundedStickForce);
+            collisionPushMultiplier = Mathf.Max(0f, collisionPushMultiplier);
+            maxCollisionPushDistance = Mathf.Max(0f, maxCollisionPushDistance);
             AlignControllerToFeetIfNeeded();
         }
 
@@ -180,7 +199,16 @@ namespace EndLink.Enemies
         private void MovePlanar(Vector3 displacement)
         {
             float previousY = transform.position.y;
-            _characterController.Move(displacement);
+
+            BeginPlanarMove(displacement);
+            try
+            {
+                _characterController.Move(displacement);
+            }
+            finally
+            {
+                EndPlanarMove();
+            }
 
             if (!preventPlanarCollisionLift || transform.position.y <= previousY)
             {
@@ -190,6 +218,86 @@ namespace EndLink.Enemies
             Vector3 position = transform.position;
             position.y = previousY;
             transform.position = position;
+        }
+
+        private void OnControllerColliderHit(ControllerColliderHit hit)
+        {
+            if (!ShouldPushCollisionTarget(hit))
+            {
+                return;
+            }
+
+            IExternalDisplacementReceiver receiver = hit.collider.GetComponentInParent<IExternalDisplacementReceiver>();
+            if (receiver == null || !receiver.CanReceiveExternalDisplacement)
+            {
+                return;
+            }
+
+            Vector3 pushDirection = ResolvePushDirection(hit);
+            if (pushDirection.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            float pushDistance = _currentPlanarMoveDistance * collisionPushMultiplier;
+            if (maxCollisionPushDistance > 0f)
+            {
+                pushDistance = Mathf.Min(pushDistance, maxCollisionPushDistance);
+            }
+
+            if (pushDistance <= 0f)
+            {
+                return;
+            }
+
+            receiver.AddExternalDisplacement(pushDirection.normalized * pushDistance);
+        }
+
+        private void BeginPlanarMove(Vector3 displacement)
+        {
+            displacement.y = 0f;
+            _currentPlanarMoveDistance = displacement.magnitude;
+            _currentPlanarMoveDirection = _currentPlanarMoveDistance > 0.0001f
+                ? displacement / _currentPlanarMoveDistance
+                : Vector3.zero;
+            _isApplyingPlanarMove = _currentPlanarMoveDistance > 0.0001f;
+        }
+
+        private void EndPlanarMove()
+        {
+            _isApplyingPlanarMove = false;
+            _currentPlanarMoveDirection = Vector3.zero;
+            _currentPlanarMoveDistance = 0f;
+        }
+
+        private bool ShouldPushCollisionTarget(ControllerColliderHit hit)
+        {
+            if (!pushExternalDisplacementReceivers || !_isApplyingPlanarMove || _currentPlanarMoveDistance <= 0f)
+            {
+                return false;
+            }
+
+            if (hit == null || hit.collider == null)
+            {
+                return false;
+            }
+
+            Transform hitTransform = hit.collider.transform;
+            return hitTransform != transform && !hitTransform.IsChildOf(transform);
+        }
+
+        private Vector3 ResolvePushDirection(ControllerColliderHit hit)
+        {
+            Vector3 pushDirection = _currentPlanarMoveDirection;
+
+            if (pushDirection.sqrMagnitude <= 0.0001f && hit.transform != null)
+            {
+                pushDirection = hit.transform.position - transform.position;
+                pushDirection.y = 0f;
+            }
+
+            pushDirection.y = 0f;
+            return pushDirection;
         }
 
         private void TickGravity(float deltaTime)

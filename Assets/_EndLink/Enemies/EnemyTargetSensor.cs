@@ -12,44 +12,7 @@ namespace EndLink.Enemies
     [RequireComponent(typeof(EnemyStateMachine))]
     public sealed class EnemyTargetSensor : MonoBehaviour
     {
-        private const string PlayerLayerName = "Player";
         private const int TargetBufferSize = 16;
-
-        [Header("开关")]
-        [Tooltip("是否启用敌人自动索敌。关闭后敌人不会因为玩家进入范围而进入 Alert / Combat。")]
-        [SerializeField]
-        private bool detectionEnabled = true;
-
-        [Header("目标")]
-        [Tooltip("指定玩家目标。配置后优先检测该目标是否在范围内；为空时使用 Target Layer Mask 搜索。")]
-        [SerializeField]
-        private Transform explicitTarget;
-
-        [Tooltip("索敌检测使用的 Layer。未指定 Explicit Target 时才会使用。建议设置为 Player。")]
-        [SerializeField]
-        private LayerMask targetLayerMask;
-
-        [Tooltip("索敌原点。为空时使用敌人自身 Transform。")]
-        [SerializeField]
-        private Transform detectionOrigin;
-
-        [Header("距离与警觉")]
-        [Tooltip("敌人发现目标的半径。目标离开该范围后，Alert 累积会重置。")]
-        [SerializeField, Min(0.1f)]
-        private float detectionRadius = 8f;
-
-        [Tooltip("目标持续停留在发现范围内多久后进入 Combat。")]
-        [SerializeField, Min(0.01f)]
-        private float requiredAlertTime = 3f;
-
-        [Header("调试")]
-        [Tooltip("是否打印发现目标、丢失目标和进入 Combat 的日志。")]
-        [SerializeField]
-        private bool logSensorChanges;
-
-        [Tooltip("是否绘制索敌范围 Gizmo。")]
-        [SerializeField]
-        private bool drawDetectionGizmo = true;
 
         private readonly Collider[] _targetBuffer = new Collider[TargetBufferSize];
         private EnemyStateMachine _stateMachine;
@@ -65,15 +28,25 @@ namespace EndLink.Enemies
         public float AlertTimer => _alertTimer;
 
         /// <summary>Alert 累积进度，0 表示未警觉，1 表示已经满足进战条件。</summary>
-        public float AlertProgress01 => requiredAlertTime > 0f
-            ? Mathf.Clamp01(_alertTimer / requiredAlertTime)
+        public float AlertProgress01 => RequiredAlertTime > 0f
+            ? Mathf.Clamp01(_alertTimer / RequiredAlertTime)
             : 1f;
+
+        private bool DetectionEnabled => _stateMachine != null && _stateMachine.DetectionEnabled;
+
+        private Transform ExplicitTarget => _stateMachine != null ? _stateMachine.ExplicitDetectionTarget : null;
+
+        private LayerMask TargetLayerMask => _stateMachine != null ? _stateMachine.TargetLayerMask : default;
+
+        private Transform DetectionOrigin => _stateMachine != null ? _stateMachine.DetectionOrigin : transform;
+
+        private float DetectionRadius => _stateMachine != null ? _stateMachine.DetectionRadius : 0f;
+
+        private float RequiredAlertTime => _stateMachine != null ? _stateMachine.RequiredAlertTime : 0.01f;
 
         private void Reset()
         {
             CacheComponents();
-            targetLayerMask = GetDefaultPlayerLayerMask();
-            detectionOrigin = transform;
         }
 
         private void Awake()
@@ -84,7 +57,7 @@ namespace EndLink.Enemies
         private void OnEnable()
         {
             CacheComponents();
-            ApplyExternalAlertControl(detectionEnabled);
+            ApplyExternalAlertControl(DetectionEnabled);
         }
 
         private void OnDisable()
@@ -93,22 +66,11 @@ namespace EndLink.Enemies
             ApplyExternalAlertControl(false);
         }
 
-        private void OnValidate()
-        {
-            detectionRadius = Mathf.Max(0.1f, detectionRadius);
-            requiredAlertTime = Mathf.Max(0.01f, requiredAlertTime);
-
-            if (targetLayerMask.value == 0)
-            {
-                targetLayerMask = GetDefaultPlayerLayerMask();
-            }
-        }
-
         private void Update()
         {
-            ApplyExternalAlertControl(detectionEnabled);
+            ApplyExternalAlertControl(DetectionEnabled);
 
-            if (!detectionEnabled || !CanDetect())
+            if (!DetectionEnabled || !CanDetect())
             {
                 ResetDetectionState(clearStateMachineTarget: CurrentStateIsBeforeCombat());
                 return;
@@ -130,14 +92,17 @@ namespace EndLink.Enemies
         /// </summary>
         public void SetDetectionEnabled(bool enabled)
         {
-            detectionEnabled = enabled;
+            if (_stateMachine != null)
+            {
+                _stateMachine.SetDetectionEnabled(enabled);
+            }
 
-            if (!detectionEnabled)
+            if (!enabled)
             {
                 ResetDetectionState(clearStateMachineTarget: true);
             }
 
-            ApplyExternalAlertControl(detectionEnabled);
+            ApplyExternalAlertControl(enabled);
         }
 
         private void TickDetectedTarget(Transform detectedTarget, float deltaTime)
@@ -163,7 +128,7 @@ namespace EndLink.Enemies
 
                 _alertTimer += Mathf.Max(0f, deltaTime);
 
-                if (_alertTimer >= requiredAlertTime)
+                if (_alertTimer >= RequiredAlertTime)
                 {
                     Log($"alert complete, enter Combat target={detectedTarget.name}");
                     _stateMachine.RequestCombat(detectedTarget);
@@ -173,12 +138,13 @@ namespace EndLink.Enemies
 
         private Transform FindDetectedTarget()
         {
-            if (explicitTarget != null)
+            if (ExplicitTarget != null)
             {
-                Transform target = ResolveTargetTransform(explicitTarget);
+                Transform target = ResolveTargetTransform(ExplicitTarget);
                 return IsTargetInRange(target) && IsTargetValid(target) ? target : null;
             }
 
+            LayerMask targetLayerMask = TargetLayerMask;
             if (targetLayerMask.value == 0)
             {
                 return null;
@@ -187,7 +153,7 @@ namespace EndLink.Enemies
             Transform origin = GetDetectionOrigin();
             int hitCount = Physics.OverlapSphereNonAlloc(
                 origin.position,
-                detectionRadius,
+                DetectionRadius,
                 _targetBuffer,
                 targetLayerMask,
                 QueryTriggerInteraction.Ignore);
@@ -262,7 +228,7 @@ namespace EndLink.Enemies
             }
 
             return GetPlanarDistanceSqr(GetDetectionOrigin().position, target.position)
-                <= detectionRadius * detectionRadius;
+                <= DetectionRadius * DetectionRadius;
         }
 
         private static bool IsTargetValid(Transform target)
@@ -306,7 +272,7 @@ namespace EndLink.Enemies
 
         private Transform GetDetectionOrigin()
         {
-            return detectionOrigin != null ? detectionOrigin : transform;
+            return DetectionOrigin != null ? DetectionOrigin : transform;
         }
 
         private void CacheComponents()
@@ -335,7 +301,7 @@ namespace EndLink.Enemies
 
         private void Log(string message)
         {
-            if (logSensorChanges)
+            if (_stateMachine != null && _stateMachine.LogSensorChanges)
             {
                 Debug.Log($"EnemyTargetSensor: {message}", this);
             }
@@ -343,20 +309,22 @@ namespace EndLink.Enemies
 
         private void OnDrawGizmosSelected()
         {
-            if (!drawDetectionGizmo)
+            EnemyStateMachine stateMachine = _stateMachine != null ? _stateMachine : GetComponent<EnemyStateMachine>();
+            if (stateMachine == null || !stateMachine.DrawDetectionGizmo)
             {
                 return;
             }
 
-            Transform origin = detectionOrigin != null ? detectionOrigin : transform;
+            Transform origin = stateMachine.DetectionOrigin;
+            float radius = stateMachine.DetectionRadius;
             Gizmos.color = _currentDetectedTarget != null
                 ? new Color(1f, 0.7f, 0.1f, 0.35f)
                 : new Color(0.2f, 0.6f, 1f, 0.25f);
-            Gizmos.DrawSphere(origin.position, detectionRadius);
+            Gizmos.DrawSphere(origin.position, radius);
             Gizmos.color = _currentDetectedTarget != null
                 ? new Color(1f, 0.7f, 0.1f, 1f)
                 : new Color(0.2f, 0.6f, 1f, 1f);
-            Gizmos.DrawWireSphere(origin.position, detectionRadius);
+            Gizmos.DrawWireSphere(origin.position, radius);
         }
 
         private static float GetPlanarDistanceSqr(Vector3 from, Vector3 to)
@@ -366,10 +334,5 @@ namespace EndLink.Enemies
             return offset.sqrMagnitude;
         }
 
-        private static LayerMask GetDefaultPlayerLayerMask()
-        {
-            int playerLayer = LayerMask.NameToLayer(PlayerLayerName);
-            return playerLayer >= 0 ? 1 << playerLayer : 0;
-        }
     }
 }

@@ -25,7 +25,7 @@ namespace EndLink.Ally
     /// 状态机只在 Follow 状态中调用 TickFollow，不在这里判断队友当前是否允许跟随。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class AllyFollowMotor : MonoBehaviour
+    public sealed class AllyFollowMotor : MonoBehaviour, IExternalDisplacementReceiver
     {
         [SerializeField, HideInInspector]
         private Transform followTarget;
@@ -145,6 +145,9 @@ namespace EndLink.Ally
 
         /// <summary>队友间避让检测 Layer。</summary>
         public LayerMask AvoidanceLayerMask => avoidanceLayerMask;
+
+        /// <summary>队友是否能被敌人的正常移动挤开。</summary>
+        public bool CanReceiveExternalDisplacement => isActiveAndEnabled;
 
         /// <summary>最近一次计算得到的世界队形点，方便调试和后续可视化。</summary>
         public Vector3 DesiredWorldPosition => _desiredWorldPosition;
@@ -597,6 +600,23 @@ namespace EndLink.Ally
             {
                 RotateTowards(direction, deltaTime);
             }
+        }
+
+        /// <summary>
+        /// 接收敌人正常移动时传来的外部位移。
+        /// 被挤开后同步死区圆心，避免队友被推走后仍然使用旧站位作为死区中心。
+        /// </summary>
+        public void AddExternalDisplacement(Vector3 displacement)
+        {
+            displacement.y = 0f;
+
+            if (displacement.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            Move(displacement);
+            SyncFollowDeadZoneAnchorToCurrentPosition();
         }
 
         private void Move(Vector3 displacement)

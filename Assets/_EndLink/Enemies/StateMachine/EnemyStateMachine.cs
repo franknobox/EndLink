@@ -15,6 +15,7 @@ namespace EndLink.Enemies
     [RequireComponent(typeof(EnemyHealth))]
     public sealed class EnemyStateMachine : MonoBehaviour
     {
+        private const string PlayerLayerName = "Player";
         private const float StateIndicatorHeadOffset = 0.25f;
         private const float StateIndicatorScale = 0.12f;
         private static readonly Color AlertIndicatorColor = new(1f, 0.85f, 0.05f, 1f);
@@ -29,6 +30,31 @@ namespace EndLink.Enemies
         [Tooltip("进入 Alert 后停留的时间。结束后有有效目标则进入 Combat，否则回到 Idle。")]
         [SerializeField, Min(0.01f)]
         private float alertDuration = 0.35f;
+
+        [Header("索敌感知")]
+        [Tooltip("是否启用敌人自动索敌。关闭后敌人不会因为玩家进入范围而进入 Alert / Combat。")]
+        [SerializeField]
+        private bool detectionEnabled = true;
+
+        [Tooltip("指定玩家目标。配置后优先检测该目标是否在范围内；为空时使用 Target Layer Mask 搜索。")]
+        [SerializeField]
+        private Transform explicitDetectionTarget;
+
+        [Tooltip("索敌检测使用的 Layer。未指定 Explicit Target 时才会使用。建议设置为 Player。")]
+        [SerializeField]
+        private LayerMask targetLayerMask;
+
+        [Tooltip("索敌原点。为空时使用敌人自身 Transform。")]
+        [SerializeField]
+        private Transform detectionOrigin;
+
+        [Tooltip("敌人发现目标的半径。目标离开该范围后，Alert 累积会重置。")]
+        [SerializeField, Min(0.1f)]
+        private float detectionRadius = 8f;
+
+        [Tooltip("目标持续停留在发现范围内多久后进入 Combat。")]
+        [SerializeField, Min(0.01f)]
+        private float requiredAlertTime = 3f;
 
         [Header("受击状态")]
         [Tooltip("受击硬直的基础持续时间。后续可由攻击数据、霸体或韧性系统覆盖。")]
@@ -48,6 +74,14 @@ namespace EndLink.Enemies
         [Tooltip("是否打印敌人大状态切换日志。排查受击、进战和死亡流程时开启。")]
         [SerializeField]
         private bool logStateChanges;
+
+        [Tooltip("是否打印索敌发现目标、丢失目标和进入 Combat 的日志。")]
+        [SerializeField]
+        private bool logSensorChanges;
+
+        [Tooltip("是否绘制索敌范围 Gizmo。")]
+        [SerializeField]
+        private bool drawDetectionGizmo = true;
 
         private readonly Dictionary<EnemyStateId, IEnemyState> _states = new();
         private IEnemyState _currentState;
@@ -71,6 +105,30 @@ namespace EndLink.Enemies
         /// <summary>警觉状态持续时间。</summary>
         public float AlertDuration => alertDuration;
 
+        /// <summary>是否启用自动索敌。</summary>
+        public bool DetectionEnabled => detectionEnabled;
+
+        /// <summary>显式索敌目标。为空时按 Layer 搜索。</summary>
+        public Transform ExplicitDetectionTarget => explicitDetectionTarget;
+
+        /// <summary>索敌搜索 Layer。</summary>
+        public LayerMask TargetLayerMask => targetLayerMask;
+
+        /// <summary>索敌原点。为空时使用敌人根物体。</summary>
+        public Transform DetectionOrigin => detectionOrigin != null ? detectionOrigin : transform;
+
+        /// <summary>索敌半径。</summary>
+        public float DetectionRadius => detectionRadius;
+
+        /// <summary>目标停留多久后进入 Combat。</summary>
+        public float RequiredAlertTime => requiredAlertTime;
+
+        /// <summary>是否打印索敌日志。</summary>
+        public bool LogSensorChanges => logSensorChanges;
+
+        /// <summary>是否绘制索敌范围 Gizmo。</summary>
+        public bool DrawDetectionGizmo => drawDetectionGizmo;
+
         /// <summary>受击硬直持续时间。</summary>
         public float HitDuration => hitDuration;
 
@@ -85,6 +143,7 @@ namespace EndLink.Enemies
 
         private void Awake()
         {
+            EnsureDetectionDefaults();
             _actor = GetComponent<EnemyActor>();
             _health = GetComponent<EnemyHealth>();
 
@@ -141,9 +200,12 @@ namespace EndLink.Enemies
         private void OnValidate()
         {
             alertDuration = Mathf.Max(0.01f, alertDuration);
+            detectionRadius = Mathf.Max(0.1f, detectionRadius);
+            requiredAlertTime = Mathf.Max(0.01f, requiredAlertTime);
             hitDuration = Mathf.Max(0.01f, hitDuration);
             combatChaseStopDistance = Mathf.Max(0f, combatChaseStopDistance);
             combatLeashDistance = Mathf.Max(0f, combatLeashDistance);
+            EnsureDetectionDefaults();
         }
 
         private void OnDestroy()
@@ -175,6 +237,14 @@ namespace EndLink.Enemies
         public void SetAlertTransitionExternallyControlled(bool controlled)
         {
             _alertTransitionExternallyControlled = controlled;
+        }
+
+        /// <summary>
+        /// 运行时开关索敌。实际检测和状态切换由 EnemyTargetSensor 执行。
+        /// </summary>
+        public void SetDetectionEnabled(bool enabled)
+        {
+            detectionEnabled = enabled;
         }
 
         /// <summary>
@@ -325,6 +395,20 @@ namespace EndLink.Enemies
         private static string GetTransformName(Transform target)
         {
             return target != null ? target.name : "None";
+        }
+
+        private void EnsureDetectionDefaults()
+        {
+            if (targetLayerMask.value == 0)
+            {
+                targetLayerMask = GetDefaultPlayerLayerMask();
+            }
+        }
+
+        private static LayerMask GetDefaultPlayerLayerMask()
+        {
+            int playerLayer = LayerMask.NameToLayer(PlayerLayerName);
+            return playerLayer >= 0 ? 1 << playerLayer : 0;
         }
 
         private void UpdateStateIndicator()
