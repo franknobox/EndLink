@@ -17,6 +17,12 @@ namespace EndLink.Core
 
         public override void Tick(float deltaTime)
         {
+            if (Context.ConsumeDodgePressed() && Context.CanStartDodge)
+            {
+                Context.StateMachine.ChangeState(PlayerStateId.Dodge);
+                return;
+            }
+
             if (Context.ConsumeSkillRequested() && Context.CanStartSkill)
             {
                 Context.StateMachine.ChangeState(PlayerStateId.Skill);

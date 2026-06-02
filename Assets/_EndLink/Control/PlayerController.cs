@@ -140,6 +140,32 @@ namespace EndLink.Core
         }
 
         /// <summary>
+        /// 执行一帧闪避位移。
+        /// 闪避由状态机决定方向、速度和持续时间；控制器只负责用 CharacterController 移动并处理贴地重力。
+        /// </summary>
+        public void TickDodgeMovement(Vector3 dodgeDirection, float dodgeSpeed, float deltaTime, bool faceDodgeDirection = true)
+        {
+            dodgeDirection = Vector3.ProjectOnPlane(dodgeDirection, Vector3.up);
+
+            if (dodgeDirection.sqrMagnitude <= MoveInputDeadZoneSqr || dodgeSpeed <= 0f)
+            {
+                TickMovement(Vector2.zero, false, deltaTime);
+                return;
+            }
+
+            UpdateVerticalVelocity(deltaTime);
+
+            Vector3 motion = dodgeDirection.normalized * dodgeSpeed;
+            motion.y = _verticalVelocity;
+            _characterController.Move(motion * deltaTime);
+
+            if (faceDodgeDirection)
+            {
+                FaceDirection(dodgeDirection, false);
+            }
+        }
+
+        /// <summary>
         /// 璁╃帺瀹舵湰鍦?Z 杞存鏂瑰悜闈㈠悜鎸囧畾涓栫晫鏂瑰悜銆?
         /// 鏀诲嚮銆佹妧鑳芥垨鍚庣画閿佸畾鍔ㄤ綔鍙互璋冪敤瀹冿紝璁╄鑹叉湞鍚戝拰鏀诲嚮鍔ㄧ敾姝ｉ潰淇濇寔涓€鑷淬€?
         /// </summary>
@@ -234,7 +260,11 @@ namespace EndLink.Core
             _verticalVelocity += gravity * deltaTime;
         }
 
-        private Vector3 GetDesiredMoveDirection(Vector2 moveInput)
+        /// <summary>
+        /// 把输入方向转换为世界 XZ 平面移动方向。
+        /// 闪避、移动和后续其它行动状态可以共用这套相机相对方向换算。
+        /// </summary>
+        public Vector3 GetDesiredMoveDirection(Vector2 moveInput)
         {
             if (moveInput.sqrMagnitude <= MoveInputDeadZoneSqr)
             {

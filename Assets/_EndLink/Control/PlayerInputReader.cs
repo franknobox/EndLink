@@ -26,6 +26,7 @@ namespace EndLink.Core
         private InputAction _moveAction;
         private InputAction _attackAction;
         private InputAction _sprintAction;
+        private InputAction _dodgeAction;
         private InputAction _playerSkillAction;
         private InputAction _allySlotASkillAction;
         private InputAction _allySlotBSkillAction;
@@ -35,6 +36,7 @@ namespace EndLink.Core
         private InputAction _partyUltimateAction;
         private bool _initialized;
         private bool _attackPressed;
+        private bool _dodgePressed;
         private bool _playerSkillPressed;
         private bool _allySlotASkillPressed;
         private bool _allySlotBSkillPressed;
@@ -52,6 +54,11 @@ namespace EndLink.Core
         {
             EnsureInitialized();
             _playerActionMap.Enable();
+
+            if (_dodgeAction.actionMap == null)
+            {
+                _dodgeAction.Enable();
+            }
         }
 
         private void OnDisable()
@@ -78,6 +85,7 @@ namespace EndLink.Core
             _sprintAction.started -= OnSprintStartedOrPerformed;
             _sprintAction.performed -= OnSprintStartedOrPerformed;
             _sprintAction.canceled -= OnSprintCanceled;
+            _dodgeAction.performed -= OnDodgePerformed;
             _playerSkillAction.performed -= OnPlayerSkillPerformed;
             _allySlotASkillAction.performed -= OnAllySlotASkillPerformed;
             _allySlotBSkillAction.performed -= OnAllySlotBSkillPerformed;
@@ -85,6 +93,11 @@ namespace EndLink.Core
             _allySlotALinkAttackAction.performed -= OnAllySlotALinkAttackPerformed;
             _allySlotBLinkAttackAction.performed -= OnAllySlotBLinkAttackPerformed;
             _partyUltimateAction.performed -= OnPartyUltimatePerformed;
+            if (_dodgeAction.actionMap == null)
+            {
+                _dodgeAction.Dispose();
+            }
+
             _inputActions.Dispose();
             _initialized = false;
         }
@@ -96,6 +109,15 @@ namespace EndLink.Core
         public bool ConsumeAttackPressed()
         {
             return ConsumePressed(ref _attackPressed);
+        }
+
+        /// <summary>
+        /// 消费一次闪避输入，第一版默认键位为 Left Ctrl。
+        /// 返回 true 后会立即清空，避免同一次输入被多个状态重复处理。
+        /// </summary>
+        public bool ConsumeDodgePressed()
+        {
+            return ConsumePressed(ref _dodgePressed);
         }
 
         /// <summary>
@@ -206,6 +228,11 @@ namespace EndLink.Core
             SprintHeld = false;
         }
 
+        private void OnDodgePerformed(InputAction.CallbackContext context)
+        {
+            SetPressedIfButton(context, ref _dodgePressed);
+        }
+
         private void OnPlayerSkillPerformed(InputAction.CallbackContext context)
         {
             SetPressedIfButton(context, ref _playerSkillPressed);
@@ -264,6 +291,7 @@ namespace EndLink.Core
         {
             SprintHeld = false;
             _attackPressed = false;
+            _dodgePressed = false;
             _playerSkillPressed = false;
             _allySlotASkillPressed = false;
             _allySlotBSkillPressed = false;
@@ -285,6 +313,8 @@ namespace EndLink.Core
             _moveAction = _inputActions.asset.FindAction("Player/Move", true);
             _attackAction = _inputActions.asset.FindAction("Player/Attack", true);
             _sprintAction = _inputActions.asset.FindAction("Player/Sprint", true);
+            _dodgeAction = _inputActions.asset.FindAction("Player/Dodge", false)
+                ?? new InputAction("Dodge", InputActionType.Button, "<Keyboard>/leftCtrl");
             _playerSkillAction = _inputActions.asset.FindAction("Player/PlayerSkill", true);
             _allySlotASkillAction = _inputActions.asset.FindAction("Player/AllySlotASkill", true);
             _allySlotBSkillAction = _inputActions.asset.FindAction("Player/AllySlotBSkill", true);
@@ -298,6 +328,7 @@ namespace EndLink.Core
             _sprintAction.started += OnSprintStartedOrPerformed;
             _sprintAction.performed += OnSprintStartedOrPerformed;
             _sprintAction.canceled += OnSprintCanceled;
+            _dodgeAction.performed += OnDodgePerformed;
             _playerSkillAction.performed += OnPlayerSkillPerformed;
             _allySlotASkillAction.performed += OnAllySlotASkillPerformed;
             _allySlotBSkillAction.performed += OnAllySlotBSkillPerformed;
@@ -316,6 +347,11 @@ namespace EndLink.Core
             }
 
             _inputActions.asset?.Disable();
+
+            if (_dodgeAction != null && _dodgeAction.actionMap == null)
+            {
+                _dodgeAction.Disable();
+            }
         }
 
         private static void ApplyKeyboardBindingOverride(InputAction action, Key key)

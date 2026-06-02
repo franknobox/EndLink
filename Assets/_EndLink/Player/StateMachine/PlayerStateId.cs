@@ -10,7 +10,8 @@ namespace EndLink.Core
         Move = 2,
         Attack = 3,
         Skill = 4,
-        Hit = 5,
-        Dead = 6
+        Dodge = 5,
+        Hit = 6,
+        Dead = 7
     }
 }

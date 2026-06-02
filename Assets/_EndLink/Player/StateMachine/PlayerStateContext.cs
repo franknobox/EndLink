@@ -9,6 +9,8 @@ namespace EndLink.Core
     /// </summary>
     public sealed class PlayerStateContext
     {
+        private CharacterHealth _health;
+
         public PlayerStateContext(
             PlayerStateMachine stateMachine,
             Transform transform,
@@ -49,6 +51,22 @@ namespace EndLink.Core
         public PlayerCombatDriver CombatDriver { get; }
 
         /// <summary>
+        /// 玩家通用生命组件。用于闪避临时免伤等和生命系统有关的轻量接线。
+        /// </summary>
+        public CharacterHealth Health
+        {
+            get
+            {
+                if (_health == null)
+                {
+                    _health = Transform.GetComponent<CharacterHealth>();
+                }
+
+                return _health;
+            }
+        }
+
+        /// <summary>
         /// 攻击状态的基础持续时间。
         /// 胶囊白模阶段先用时间驱动，后续可改为动画事件驱动。
         /// </summary>
@@ -69,6 +87,21 @@ namespace EndLink.Core
         /// 技能期间移动输入倍率。0 表示站桩施法，1 表示完全保留移动。
         /// </summary>
         public float SkillMoveInputScale => StateMachine.SkillMoveInputScale;
+
+        /// <summary>
+        /// 闪避状态持续时间。
+        /// </summary>
+        public float DodgeDuration => StateMachine.DodgeDuration;
+
+        /// <summary>
+        /// 一次闪避期望移动距离。
+        /// </summary>
+        public float DodgeDistance => StateMachine.DodgeDistance;
+
+        /// <summary>
+        /// 闪避开始后的临时免伤窗口。
+        /// </summary>
+        public float DodgeInvincibleDuration => StateMachine.DodgeInvincibleDuration;
 
         /// <summary>
         /// 受击状态的基础持续时间。
@@ -99,11 +132,24 @@ namespace EndLink.Core
         public bool CanStartSkill => true;
 
         /// <summary>
+        /// 当前是否允许开始闪避。
+        /// </summary>
+        public bool CanStartDodge => StateMachine.CanStartDodge;
+
+        /// <summary>
         /// 消费一次攻击输入。
         /// </summary>
         public bool ConsumeAttackPressed()
         {
             return InputReader.ConsumeAttackPressed();
+        }
+
+        /// <summary>
+        /// 消费一次闪避输入。
+        /// </summary>
+        public bool ConsumeDodgePressed()
+        {
+            return InputReader.ConsumeDodgePressed();
         }
 
         /// <summary>

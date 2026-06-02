@@ -36,6 +36,23 @@ namespace EndLink.Core
         [SerializeField, Range(0f, 1f)]
         private float skillMoveInputScale = 0f;
 
+        [Header("闪避状态")]
+        [Tooltip("闪避状态持续时间。胶囊白模阶段先用固定时间控制，接动画后可改为动画事件或曲线驱动。")]
+        [SerializeField, Min(0.01f)]
+        private float dodgeDuration = 0.25f;
+
+        [Tooltip("一次闪避期望移动距离，单位米。")]
+        [SerializeField, Min(0f)]
+        private float dodgeDistance = 3f;
+
+        [Tooltip("闪避冷却时间，防止连续狂闪。")]
+        [SerializeField, Min(0f)]
+        private float dodgeCooldown = 0.45f;
+
+        [Tooltip("闪避开始后获得临时免伤的时间。设置为 0 表示不提供免伤窗口。")]
+        [SerializeField, Min(0f)]
+        private float dodgeInvincibleDuration = 0.18f;
+
         [Header("受击状态")]
         [Tooltip("受击硬直的基础持续时间。白模阶段先用时间控制，后续可由攻击数据、受击动画或韧性系统决定。")]
         [SerializeField, Min(0.01f)]
@@ -53,6 +70,7 @@ namespace EndLink.Core
         private readonly Dictionary<PlayerStateId, IPlayerState> _states = new();
         private IPlayerState _currentState;
         private bool _skillRequested;
+        private float _nextDodgeAllowedTime;
 
         /// <summary>
         /// 当前状态标识，便于调试面板或 Inspector 观察。
@@ -78,6 +96,31 @@ namespace EndLink.Core
         /// 技能状态移动输入倍率。
         /// </summary>
         public float SkillMoveInputScale => skillMoveInputScale;
+
+        /// <summary>
+        /// 闪避状态持续时间。
+        /// </summary>
+        public float DodgeDuration => dodgeDuration;
+
+        /// <summary>
+        /// 一次闪避期望移动距离。
+        /// </summary>
+        public float DodgeDistance => dodgeDistance;
+
+        /// <summary>
+        /// 闪避冷却时间。
+        /// </summary>
+        public float DodgeCooldown => dodgeCooldown;
+
+        /// <summary>
+        /// 闪避开始后的临时免伤窗口。
+        /// </summary>
+        public float DodgeInvincibleDuration => dodgeInvincibleDuration;
+
+        /// <summary>
+        /// 当前是否允许开始闪避。
+        /// </summary>
+        public bool CanStartDodge => Time.time >= _nextDodgeAllowedTime;
 
         /// <summary>
         /// 受击状态持续时间。
@@ -106,6 +149,7 @@ namespace EndLink.Core
             RegisterState(new PlayerMoveState(context));
             RegisterState(new PlayerAttackState(context));
             RegisterState(new PlayerSkillState(context));
+            RegisterState(new PlayerDodgeState(context));
             RegisterState(new PlayerHitState(context));
             RegisterState(new PlayerDeadState(context));
         }
@@ -118,6 +162,17 @@ namespace EndLink.Core
         private void Update()
         {
             _currentState?.Tick(Time.deltaTime);
+        }
+
+        private void OnValidate()
+        {
+            attackDuration = Mathf.Max(0.01f, attackDuration);
+            skillDuration = Mathf.Max(0.01f, skillDuration);
+            dodgeDuration = Mathf.Max(0.01f, dodgeDuration);
+            dodgeDistance = Mathf.Max(0f, dodgeDistance);
+            dodgeCooldown = Mathf.Max(0f, dodgeCooldown);
+            dodgeInvincibleDuration = Mathf.Max(0f, dodgeInvincibleDuration);
+            hitDuration = Mathf.Max(0.01f, hitDuration);
         }
 
         /// <summary>
@@ -177,6 +232,14 @@ namespace EndLink.Core
 
             _skillRequested = false;
             ChangeState(PlayerStateId.Hit);
+        }
+
+        /// <summary>
+        /// 记录一次闪避开始，用于刷新冷却。
+        /// </summary>
+        public void MarkDodgeStarted()
+        {
+            _nextDodgeAllowedTime = Time.time + dodgeCooldown;
         }
 
         /// <summary>

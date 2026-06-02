@@ -86,6 +86,7 @@ namespace EndLink.Combat
         private bool _isDead;
         private bool _isTargetable = true;
         private bool _componentsCached;
+        private float _temporaryInvincibleUntilTime;
 
         /// <summary>最大生命值。</summary>
         public int MaxHealth => maxHealth;
@@ -98,6 +99,9 @@ namespace EndLink.Combat
 
         /// <summary>当前是否可作为战斗目标。</summary>
         public bool IsTargetable => _isTargetable;
+
+        /// <summary>当前是否处于临时免伤窗口。</summary>
+        public bool IsTemporaryInvincible => Time.time < _temporaryInvincibleUntilTime;
 
         /// <summary>用于锁定、AI 和距离计算的目标 Transform。</summary>
         public Transform TargetTransform => transform;
@@ -168,11 +172,25 @@ namespace EndLink.Combat
         }
 
         /// <summary>
+        /// 设置临时免伤窗口。
+        /// 主要供闪避、出生保护或后续特殊状态使用；不会改变目标有效性，也不会阻止治疗。
+        /// </summary>
+        public void SetTemporaryInvincible(float duration)
+        {
+            if (duration <= 0f)
+            {
+                return;
+            }
+
+            _temporaryInvincibleUntilTime = Mathf.Max(_temporaryInvincibleUntilTime, Time.time + duration);
+        }
+
+        /// <summary>
         /// 直接施加伤害。返回实际扣除的生命值。
         /// </summary>
         public int ApplyDamage(int damage, CombatTagDefinition tag, GameObject source)
         {
-            if (_isDead || !_isTargetable)
+            if (_isDead || !_isTargetable || IsTemporaryInvincible)
             {
                 return 0;
             }
@@ -257,6 +275,7 @@ namespace EndLink.Combat
             _currentHealth = maxHealth;
             _isDead = false;
             _isTargetable = true;
+            _temporaryInvincibleUntilTime = 0f;
 
             if (_flashCoroutine != null)
             {

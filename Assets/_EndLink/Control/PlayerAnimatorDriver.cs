@@ -43,6 +43,10 @@ namespace EndLink.Core
         [SerializeField]
         private string skillTriggerParameter = "TriggerSkill";
 
+        [Tooltip("进入 Dodge 状态时触发的 Trigger 参数名。为空则不触发。")]
+        [SerializeField]
+        private string dodgeTriggerParameter = "TriggerDodge";
+
         [Tooltip("进入 Hit 状态时触发的 Trigger 参数名。为空则不触发。")]
         [SerializeField]
         private string hitTriggerParameter = "TriggerHit";
@@ -166,6 +170,9 @@ namespace EndLink.Core
                     break;
                 case PlayerStateId.Skill:
                     SetTriggerIfExists(skillTriggerParameter);
+                    break;
+                case PlayerStateId.Dodge:
+                    SetTriggerIfExists(dodgeTriggerParameter);
                     break;
                 case PlayerStateId.Hit:
                     SetTriggerIfExists(hitTriggerParameter);

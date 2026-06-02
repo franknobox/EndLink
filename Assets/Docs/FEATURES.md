@@ -21,7 +21,7 @@
 | [新版 Input System 输入读取](#feature-input-system) | 已完成第一版 | 负责读取玩家移动、相机旋转和鼠标滚轮缩放输入，并把输入缓存为控制层可使用的数据。 |
 | [玩家 CharacterController 移动](#feature-player-movement) | 已完成第一版 | 负责玩家在 XZ 平面的平滑移动、加减速、重力贴地和面向移动方向的平滑转向。 |
 | [第三人称自由相机](#feature-third-person-camera) | 已完成第一版 | 负责越肩第三人称视角、自由旋转、上下角度限制、滚轮缩放和较开阔的战斗观察距离。 |
-| [玩家有限状态机](#feature-player-state-machine) | 已完成最小战斗骨架 | 负责 Idle、Move、Attack、Skill、Hit、Dead 的状态切换，由状态机决定什么时候允许移动、攻击、释放技能、受击和死亡。 |
+| [玩家有限状态机](#feature-player-state-machine) | 已完成最小战斗骨架 | 负责 Idle、Move、Attack、Skill、Dodge、Hit、Dead 的状态切换，由状态机决定什么时候允许移动、攻击、释放技能、闪避、受击和死亡。 |
 | [玩家 Animator 桥接](#feature-player-animator) | 已完成第一版 | 负责把玩家状态、移动速度和状态进入触发器同步到 Animator 参数，不参与状态决策。 |
 | [当前架构边界](#feature-architecture-boundary) | 已建立初版约定 | 初步明确输入读取、玩家移动、相机控制、状态机、战斗驱动、命中检测之间的职责边界。 |
 
@@ -63,6 +63,7 @@
 - 玩家移动输入和相机输入分开读取，避免输入读取器承担移动或相机逻辑。
 - 移动输入读取 `Player/Move`。
 - 攻击输入读取 `Player/Attack`，由状态机消费后决定是否进入攻击状态。
+- 闪避输入第一版默认使用运行时 `InputAction` 读取 `Left Ctrl`，由状态机消费后决定是否进入闪避状态；后续确认键位后可并入 Input Actions 资产统一管理。
 - 主控主动技能读取 `Player/PlayerSkill`，默认键位 Q。
 - 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`，默认键位 E / F。
 - 主控和队友连携请求读取 `Player/PlayerLinkAttack`、`Player/AllySlotALinkAttack`、`Player/AllySlotBLinkAttack`，默认键位 1 / 2 / 3；这些输入不会绕过连携机制直接释放动作。
@@ -99,6 +100,7 @@
 - 暴露面向指定世界方向的接口，供攻击和自动软锁目标在出手前让角色正面与动作方向一致。
 - 支持移动方向参考，拖入 `Main Camera` 后可实现相机相对移动。
 - 支持按住 `Left Shift` 冲刺；当前冲刺作为移动速度修饰，不单独进入状态机大状态。
+- 支持状态机驱动的闪避位移，闪避期间由 `PlayerDodgeState` 决定方向、速度和持续时间。
 - 支持接收敌人移动碰撞带来的外部位移，玩家可以被敌人正常前进时挤开，但不会通过该通道反向推动敌人。
 - 移动调用由 `PlayerStateMachine` 驱动，`PlayerController` 通过 `TickMovement` 执行实际位移。
 
@@ -184,11 +186,15 @@
 
 功能说明：
 - 使用代码状态机，不依赖 Animator StateMachine。
-- 当前包含 `Idle`、`Move`、`Attack`、`Skill`、`Hit`、`Dead` 六个状态。
+- 当前包含 `Idle`、`Move`、`Attack`、`Skill`、`Dodge`、`Hit`、`Dead` 七个状态。
+- `Idle` 和 `Move` 会优先消费闪避输入，检查闪避冷却后切换到 `Dodge`。
 - `Idle` 和 `Move` 会消费攻击输入，检查攻击冷却后切换到 `Attack`。
 - `Skill` 是通用技能状态，当前通过 `PlayerStateMachine.RequestSkill()` 预留入口，具体键位待后续确定后接入新版 Input System。
 - `Attack` 状态进入时调用 `PlayerCombatDriver.ExecuteAttack()`，攻击持续时间结束后根据移动输入回到 `Move` 或 `Idle`。
 - 攻击期间移动输入会乘以 `attackMoveInputScale`，当前默认可以做站桩攻击。
+- `Dodge` 状态负责主控闪避：有移动输入时按输入方向闪避，没有移动输入时默认向角色正后方后撤。
+- 闪避期间普通移动、攻击和技能不会响应；闪避结束后根据移动输入回到 `Move` 或 `Idle`。
+- 闪避开始时会刷新冷却，并给 `CharacterHealth` 设置短暂临时免伤窗口。
 - `Hit` 可以被外部通过 `RequestHit()` 触发，用于短暂受击硬直，结束后根据移动输入回到 `Move` 或 `Idle`。
 - `Dead` 可以被外部通过 `RequestDead()` 触发，是当前最高优先级终止状态。
 
@@ -201,6 +207,7 @@
 - `Assets/_EndLink/Player/StateMachine/PlayerMoveState.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerAttackState.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerSkillState.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerDodgeState.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerHitState.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerDeadState.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerStateMachine.cs`
@@ -218,6 +225,10 @@
 - `attackMoveInputScale`：攻击期间移动输入倍率
 - `skillDuration`：通用技能状态持续时间
 - `skillMoveInputScale`：技能期间移动输入倍率
+- `dodgeDuration`：闪避状态持续时间
+- `dodgeDistance`：一次闪避期望移动距离
+- `dodgeCooldown`：闪避冷却时间
+- `dodgeInvincibleDuration`：闪避开始后的临时免伤窗口
 - `hitDuration`：受击硬直持续时间
 - `hitMoveInputScale`：受击期间移动输入倍率
 
@@ -237,6 +248,7 @@
 - 接收 `HitboxHitInfo` 后会扣血、触发受击事件，并通过 `CombatEventsBus` 广播 `Damaged`。
 - 生命值首次降到 0 时会进入死亡状态，并通过 `CombatEventsBus` 广播 `Dead`。
 - 死亡后可配置是否不再作为战斗目标，以及是否禁用非 Trigger Collider。
+- 支持临时免伤窗口，可用于主控闪避、出生保护或后续特殊状态；免伤期间不会扣血或触发受击事件。
 - 支持 `HealthChanged`、`Damaged`、`Healed`、`Died` 代码事件，以及对应 UnityEvent，方便 UI、状态机桥接和表现层接入。
 - 支持使用 `MaterialPropertyBlock` 做受击和死亡颜色反馈，适合 URP 白模调试。
 - 不直接切换玩家、队友或敌人的状态机；具体角色通过桥接脚本订阅事件。
