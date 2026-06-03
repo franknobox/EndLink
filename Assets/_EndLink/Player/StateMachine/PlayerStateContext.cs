@@ -129,7 +129,18 @@ namespace EndLink.Core
         /// 当前是否允许开始一次技能。
         /// 这里先保留为固定允许；后续可以接入技能冷却、资源、禁用输入和受击硬直判断。
         /// </summary>
-        public bool CanStartSkill => true;
+        public bool CanStartSkill => CombatDriver != null
+            && CombatDriver.SkillAction != null
+            && CombatDriver.CanAttack;
+
+        /// <summary>
+        /// 执行主控主动技能动作。
+        /// 状态机负责决定能否进入 Skill 状态，战斗驱动只负责实际表现和判定。
+        /// </summary>
+        public bool ExecuteSkillAction()
+        {
+            return CombatDriver != null && CombatDriver.ExecuteAction(CombatDriver.SkillAction);
+        }
 
         /// <summary>
         /// 当前是否允许开始闪避。

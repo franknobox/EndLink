@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace EndLink.Enemies
@@ -8,6 +9,11 @@ namespace EndLink.Enemies
     /// </summary>
     public sealed class EnemyCombatState : EnemyStateBase
     {
+        private readonly List<Collider> _radiusColliderBuffer = new();
+        private Transform _cachedRadiusTarget;
+        private float _selfPlanarRadius;
+        private float _targetPlanarRadius;
+
         public EnemyCombatState(EnemyStateContext context) : base(context)
         {
         }
@@ -18,6 +24,9 @@ namespace EndLink.Enemies
         /// <inheritdoc />
         public override void Enter()
         {
+            _selfPlanarRadius = EstimatePlanarRadius(Context.Transform);
+            RefreshTargetRadiusIfNeeded(Context.CurrentTarget);
+
             if (!Context.HasValidTarget)
             {
                 Context.StateMachine.ChangeState(EnemyStateId.Idle);
@@ -28,6 +37,8 @@ namespace EndLink.Enemies
         public override void Exit()
         {
             Context.Motor?.Stop();
+            _cachedRadiusTarget = null;
+            _targetPlanarRadius = 0f;
         }
 
         /// <inheritdoc />
@@ -56,11 +67,24 @@ namespace EndLink.Enemies
 
         private float CalculateCollisionAwareStopDistance(Transform target)
         {
+            RefreshTargetRadiusIfNeeded(target);
+
             float surfaceGap = Mathf.Max(0f, Context.CombatChaseStopDistance);
-            return EstimatePlanarRadius(Context.Transform) + EstimatePlanarRadius(target) + surfaceGap;
+            return _selfPlanarRadius + _targetPlanarRadius + surfaceGap;
         }
 
-        private static float EstimatePlanarRadius(Transform root)
+        private void RefreshTargetRadiusIfNeeded(Transform target)
+        {
+            if (_cachedRadiusTarget == target)
+            {
+                return;
+            }
+
+            _cachedRadiusTarget = target;
+            _targetPlanarRadius = EstimatePlanarRadius(target);
+        }
+
+        private float EstimatePlanarRadius(Transform root)
         {
             if (root == null)
             {
@@ -77,11 +101,13 @@ namespace EndLink.Enemies
                 return Mathf.Max(0f, characterController.radius * scale);
             }
 
-            Collider[] colliders = root.GetComponentsInChildren<Collider>();
+            _radiusColliderBuffer.Clear();
+            root.GetComponentsInChildren(false, _radiusColliderBuffer);
+
             float radius = 0f;
-            for (int i = 0; i < colliders.Length; i++)
+            for (int i = 0; i < _radiusColliderBuffer.Count; i++)
             {
-                Collider candidate = colliders[i];
+                Collider candidate = _radiusColliderBuffer[i];
                 if (candidate == null || !candidate.enabled || candidate.isTrigger)
                 {
                     continue;

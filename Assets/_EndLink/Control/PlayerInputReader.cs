@@ -54,11 +54,6 @@ namespace EndLink.Core
         {
             EnsureInitialized();
             _playerActionMap.Enable();
-
-            if (_dodgeAction.actionMap == null)
-            {
-                _dodgeAction.Enable();
-            }
         }
 
         private void OnDisable()
@@ -93,10 +88,6 @@ namespace EndLink.Core
             _allySlotALinkAttackAction.performed -= OnAllySlotALinkAttackPerformed;
             _allySlotBLinkAttackAction.performed -= OnAllySlotBLinkAttackPerformed;
             _partyUltimateAction.performed -= OnPartyUltimatePerformed;
-            if (_dodgeAction.actionMap == null)
-            {
-                _dodgeAction.Dispose();
-            }
 
             _inputActions.Dispose();
             _initialized = false;
@@ -313,8 +304,7 @@ namespace EndLink.Core
             _moveAction = _inputActions.asset.FindAction("Player/Move", true);
             _attackAction = _inputActions.asset.FindAction("Player/Attack", true);
             _sprintAction = _inputActions.asset.FindAction("Player/Sprint", true);
-            _dodgeAction = _inputActions.asset.FindAction("Player/Dodge", false)
-                ?? new InputAction("Dodge", InputActionType.Button, "<Keyboard>/leftCtrl");
+            _dodgeAction = _inputActions.asset.FindAction("Player/Dodge", true);
             _playerSkillAction = _inputActions.asset.FindAction("Player/PlayerSkill", true);
             _allySlotASkillAction = _inputActions.asset.FindAction("Player/AllySlotASkill", true);
             _allySlotBSkillAction = _inputActions.asset.FindAction("Player/AllySlotBSkill", true);
@@ -347,11 +337,6 @@ namespace EndLink.Core
             }
 
             _inputActions.asset?.Disable();
-
-            if (_dodgeAction != null && _dodgeAction.actionMap == null)
-            {
-                _dodgeAction.Disable();
-            }
         }
 
         private static void ApplyKeyboardBindingOverride(InputAction action, Key key)

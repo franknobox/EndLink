@@ -10,6 +10,7 @@ namespace EndLink.Core
     public sealed class PlayerSkillState : PlayerStateBase
     {
         private float _elapsedTime;
+        private bool _executed;
 
         public PlayerSkillState(PlayerStateContext context) : base(context)
         {
@@ -20,10 +21,17 @@ namespace EndLink.Core
         public override void Enter()
         {
             _elapsedTime = 0f;
+            _executed = Context.ExecuteSkillAction();
         }
 
         public override void Tick(float deltaTime)
         {
+            if (!_executed)
+            {
+                Context.StateMachine.ChangeState(Context.HasMoveInput ? PlayerStateId.Move : PlayerStateId.Idle);
+                return;
+            }
+
             _elapsedTime += deltaTime;
 
             Vector2 skillMoveInput = Context.InputReader.MoveInput * Context.SkillMoveInputScale;

@@ -60,14 +60,16 @@
 
 功能说明：
 - 使用已生成的 `InputSystem_Actions` C# 包装类。
+- 输入动作以 `InputSystem_Actions.inputactions` 为唯一源头；修改动作或绑定后，需要在 Unity 中重新 Generate C# Class 生成 `InputSystem_Actions.cs`。
 - 玩家移动输入和相机输入分开读取，避免输入读取器承担移动或相机逻辑。
 - 移动输入读取 `Player/Move`。
 - 攻击输入读取 `Player/Attack`，由状态机消费后决定是否进入攻击状态。
-- 闪避输入第一版默认使用运行时 `InputAction` 读取 `Left Ctrl`，由状态机消费后决定是否进入闪避状态；后续确认键位后可并入 Input Actions 资产统一管理。
+- 闪避输入读取 `Player/Dodge`，默认键位为键盘 `Left Ctrl`、手柄 `buttonEast`。
 - 主控主动技能读取 `Player/PlayerSkill`，默认键位 Q。
 - 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`，默认键位 E / F。
 - 主控和队友连携请求读取 `Player/PlayerLinkAttack`、`Player/AllySlotALinkAttack`、`Player/AllySlotBLinkAttack`，默认键位 1 / 2 / 3；这些输入不会绕过连携机制直接释放动作。
 - 全队极限技读取 `Player/PartyUltimate`，默认键位 V。
+- 手柄第一版临时绑定：主控技能 `rightShoulder`，队友 A 技能 `leftShoulder`，队友 B 技能 `rightTrigger`，主控/队友连携为 D-Pad 上/左/右，全队极限技为 D-Pad 下；后续可根据实际手柄手感统一调整。
 - 相机旋转读取 `Player/Look`。
 - 鼠标滚轮缩放通过 `Mouse.current.scroll` 读取。
 
@@ -189,7 +191,7 @@
 - 当前包含 `Idle`、`Move`、`Attack`、`Skill`、`Dodge`、`Hit`、`Dead` 七个状态。
 - `Idle` 和 `Move` 会优先消费闪避输入，检查闪避冷却后切换到 `Dodge`。
 - `Idle` 和 `Move` 会消费攻击输入，检查攻击冷却后切换到 `Attack`。
-- `Skill` 是通用技能状态，当前通过 `PlayerStateMachine.RequestSkill()` 预留入口，具体键位待后续确定后接入新版 Input System。
+- `Skill` 是通用技能状态，当前由 `PartyCombatRouter` 发起请求，状态机决定是否进入，进入状态后再调用 `PlayerCombatDriver` 执行技能表现和判定。
 - `Attack` 状态进入时调用 `PlayerCombatDriver.ExecuteAttack()`，攻击持续时间结束后根据移动输入回到 `Move` 或 `Idle`。
 - 攻击期间移动输入会乘以 `attackMoveInputScale`，当前默认可以做站桩攻击。
 - `Dodge` 状态负责主控闪避：有移动输入时按输入方向闪避，没有移动输入时默认向角色正后方后撤。
@@ -822,8 +824,8 @@
 - `PartyManager` 持有 `PartyCombatRouter` 引用，供战斗 UI 和后续小队系统读取当前键位路由。
 - `PartyCombatContext` 作为小队战斗状态上下文，供队友目标选择、战斗 UI 和后续连携系统读取当前主目标、已知敌人和战斗状态。
 - `PartyCombatRouter` 负责把 `PlayerInputReader` 中的战斗输入翻译成主控、队友 A、队友 B 或全队的命令请求。
-- `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害、标签或状态机切换。
-- 当前第一版中，主控 `Skill` 命令会由 `PartyCombatRouter` 立即转发给 `PlayerCombatDriver` 执行 `SkillAction`。
+- `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害、标签或动作执行。
+- 当前第一版中，主控 `Skill` 命令会由 `PartyCombatRouter` 转发给 `PlayerStateMachine.RequestSkill()`，由玩家状态机决定能否进入 `Skill` 状态并执行动作。
 - 队友 `Skill` 命令会由 `PartyCombatRouter` 转发给对应 `AllyStateMachine.RequestAction(...)`，进入 `Action` 状态后再由 `AllyCombatDriver` 执行 `SkillAction`。
 - `PartyCombatRouter` Inspector 中可以覆盖 Q/E/F 和 1/2/3 对应的技能与连携请求键位，V 键全队极限技暂时固定。
 - `LinkAttack` 命令只表示玩家请求使用连携槽位，不能被普通动作执行层直接当成可释放技能处理。
@@ -889,6 +891,7 @@
 - `EnemyActor` 持有 `EnemyMotorBase` 和 `EnemyCombatDriver` 引用，状态机通过 Actor 读取敌人能力，而不是直接查找具体实现。
 - `EnemyCombatDriver` 是敌人战斗执行器，按 `CombatActionDefinition` 生成 Hitbox、记录冷却并广播动作开始事件；当前先作为攻击能力基底，具体何时出手后续交给 Combat 状态内部逻辑或行为树。
 - `Combat` 当前只做基础追击和面向目标；追击停止距离会按敌人半径、目标半径和表面间隔计算，避免持续挤入目标中心。
+- `Combat` 会缓存自身和当前目标的平面半径，避免追击 Tick 中每帧反复做组件搜索和 Collider 数组分配。
 - `Combat` 后续作为行为树的外层挂载点，内部再承载站位、攻击、技能等细节行为。
 - `Hit` 作为独立大状态处理受击打断，不放进 Combat 行为树，方便后续加入硬直、霸体、击倒等规则。
 - `EnemyDummy` 保留为早期轻量命中测试对象，用于快速验证 Hitbox、扣血和死亡显示；正式敌人能力以本节敌人基底为准。

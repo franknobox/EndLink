@@ -301,14 +301,14 @@ namespace EndLink.Party
 
         private void ExecutePlayerSkill(GameObject actor)
         {
-            if (actor == null || !actor.TryGetComponent(out PlayerCombatDriver combatDriver))
+            if (actor == null || !actor.TryGetComponent(out PlayerStateMachine stateMachine))
             {
-                LogCommand($"ignored player Skill: PlayerCombatDriver not found on {GetObjectName(actor)}");
+                LogCommand($"ignored player Skill: PlayerStateMachine not found on {GetObjectName(actor)}");
                 return;
             }
 
-            bool executed = combatDriver.ExecuteAction(combatDriver.SkillAction);
-            LogCommand($"execute player Skill result={executed}, actor={GetObjectName(actor)}");
+            stateMachine.RequestSkill();
+            LogCommand($"request player Skill state, actor={GetObjectName(actor)}");
         }
 
         private void ExecuteAllySkill(GameObject actor)
