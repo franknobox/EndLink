@@ -98,7 +98,13 @@ namespace EndLink.Combat
         /// <summary>兼容旧调用：直接对玩家施加伤害。</summary>
         public void TakeDamage(int damage, CombatTagDefinition tag)
         {
-            _health.ApplyDamage(damage, tag, null);
+            _health.ApplyDamage(damage, CombatDamageType.StructuralDamage, tag, null);
+        }
+
+        /// <summary>直接对玩家施加指定类型的伤害。</summary>
+        public void TakeDamage(int damage, CombatDamageType damageType, CombatTagDefinition tag)
+        {
+            _health.ApplyDamage(damage, damageType, tag, null);
         }
 
         /// <summary>兼容旧调用：治疗玩家。</summary>

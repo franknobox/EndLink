@@ -22,16 +22,16 @@ namespace EndLink.Combat
     /// </summary>
     public interface ICombatTagReceiver : ICombatTagReadable
     {
-        /// <summary>添加永久标签。</summary>
+        /// <summary>按标签定义的默认持续时间添加标签。</summary>
         bool AddTag(CombatTagDefinition tag);
 
-        /// <summary>添加永久标签，并记录标签来源。source 通常是施加该标签的攻击者或系统对象。</summary>
+        /// <summary>按标签定义的默认持续时间添加标签，并记录标签来源。source 通常是施加该标签的攻击者或系统对象。</summary>
         bool AddTag(CombatTagDefinition tag, UnityEngine.GameObject source);
 
-        /// <summary>添加带持续时间的标签。duration 小于等于 0 时视为永久标签。</summary>
+        /// <summary>添加带持续时间的标签。duration 小于等于 0 时使用标签定义的默认持续时间。</summary>
         bool AddTag(CombatTagDefinition tag, float duration);
 
-        /// <summary>添加带持续时间的标签，并记录标签来源。duration 小于等于 0 时视为永久标签。</summary>
+        /// <summary>添加带持续时间的标签，并记录标签来源。duration 小于等于 0 时使用标签定义的默认持续时间。</summary>
         bool AddTag(CombatTagDefinition tag, float duration, UnityEngine.GameObject source);
 
         /// <summary>添加带持续时间和层数的标签，并记录标签来源。</summary>

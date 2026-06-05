@@ -25,6 +25,10 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float damageAmount = 10f;
 
+        [Tooltip("本 Hitbox 命中时造成的伤害类型。结构伤害偏物理/武器，运行伤害偏协议/能量/异常数据。")]
+        [SerializeField]
+        private CombatDamageType damageType = CombatDamageType.StructuralDamage;
+
         [Tooltip("本 Hitbox 命中时传递给目标的击退力。实际如何击退由目标实现 IHitReceiver 时决定。")]
         [SerializeField, Min(0f)]
         private float knockbackForce = 3f;
@@ -33,7 +37,7 @@ namespace EndLink.Combat
         [SerializeField]
         private CombatTagDefinition combatTagToApply;
 
-        [Tooltip("战斗标签持续时间。小于等于 0 表示永久标签。")]
+        [Tooltip("战斗标签持续时间。小于等于 0 表示使用标签定义的默认持续时间。")]
         [SerializeField, Min(0f)]
         private float combatTagDuration;
 
@@ -55,10 +59,14 @@ namespace EndLink.Combat
         private readonly HashSet<Collider> _hitColliders = new();
         private Collider _triggerCollider;
         private GameObject _owner;
+        private CombatActionDefinition _actionDefinition;
         private float _enabledTime;
 
         /// <summary>本 Hitbox 的伤害值。</summary>
         public float DamageAmount => damageAmount;
+
+        /// <summary>本 Hitbox 的伤害类型。</summary>
+        public CombatDamageType DamageType => damageType;
 
         /// <summary>本 Hitbox 的击退力。</summary>
         public float KnockbackForce => knockbackForce;
@@ -66,7 +74,7 @@ namespace EndLink.Combat
         /// <summary>本 Hitbox 命中时附加的战斗标签资产。</summary>
         public CombatTagDefinition CombatTagToApply => combatTagToApply;
 
-        /// <summary>本 Hitbox 命中时附加的战斗标签持续时间。小于等于 0 表示永久标签。</summary>
+        /// <summary>本 Hitbox 命中时附加的战斗标签持续时间。小于等于 0 表示使用标签定义的默认持续时间。</summary>
         public float CombatTagDuration => combatTagDuration;
 
         /// <summary>本 Hitbox 命中时附加的战斗标签层数。</summary>
@@ -139,13 +147,22 @@ namespace EndLink.Combat
         /// <summary>
         /// 运行时配置 Hitbox 参数，使用新的 CombatTagDefinition 标签通道。
         /// </summary>
-        public void Configure(float damage, float knockback, CombatTagDefinition combatTag, float tagDuration, int tagStackCount = 1)
+        public void Configure(
+            float damage,
+            CombatDamageType type,
+            float knockback,
+            CombatTagDefinition combatTag,
+            float tagDuration,
+            int tagStackCount = 1,
+            CombatActionDefinition actionDefinition = null)
         {
             damageAmount = Mathf.Max(0f, damage);
+            damageType = type;
             knockbackForce = Mathf.Max(0f, knockback);
             combatTagToApply = combatTag;
             combatTagDuration = Mathf.Max(0f, tagDuration);
             combatTagStackCount = Mathf.Max(1, tagStackCount);
+            _actionDefinition = actionDefinition;
         }
 
         /// <summary>
@@ -236,7 +253,9 @@ namespace EndLink.Combat
                 this,
                 _owner,
                 other,
+                _actionDefinition,
                 damageAmount,
+                damageType,
                 knockbackForce,
                 combatTagToApply,
                 combatTagDuration,

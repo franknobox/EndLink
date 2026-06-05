@@ -27,7 +27,7 @@ namespace EndLink.Combat
         /// <summary>目标的限时战斗标签过期。</summary>
         TagExpired = 6,
 
-        /// <summary>战斗标签发生组合转化，例如 A + B => C。</summary>
+        /// <summary>战斗标签发生组合反应，例如 A + B 触发一组反应效果。</summary>
         TagTransformed = 7
     }
 }

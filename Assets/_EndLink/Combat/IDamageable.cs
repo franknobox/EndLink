@@ -7,8 +7,8 @@ namespace EndLink.Combat
     public interface IDamageable
     {
         /// <summary>
-        /// 接收伤害和命中战斗标签。
+        /// 接收伤害、伤害类型和命中战斗标签。
         /// </summary>
-        void TakeDamage(int damage, CombatTagDefinition tag);
+        void TakeDamage(int damage, CombatDamageType damageType, CombatTagDefinition tag);
     }
 }

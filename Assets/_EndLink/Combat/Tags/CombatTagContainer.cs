@@ -14,12 +14,12 @@ namespace EndLink.Combat
         private const int MaxCombinationDepth = 4;
 
         [Header("初始标签")]
-        [Tooltip("物体启用时自动拥有的初始标签。持续时间小于等于 0 表示永久标签。")]
+        [Tooltip("物体启用时自动拥有的初始标签。持续时间小于等于 0 表示使用标签默认持续时间。")]
         [SerializeField]
         private List<ActiveCombatTag> initialTags = new();
 
         [Header("组合规则")]
-        [Tooltip("标签组合规则。添加标签后会尝试匹配 A+B=>C。")]
+        [Tooltip("标签组合规则。添加标签后会尝试匹配 A+B 并触发反应效果。")]
         [SerializeField]
         private List<CombatTagCombinationRule> combinationRules = new();
 
@@ -104,31 +104,31 @@ namespace EndLink.Combat
             }
         }
 
-        /// <summary>添加永久标签。</summary>
+        /// <summary>按标签定义的默认持续时间添加标签。</summary>
         public bool AddTag(CombatTagDefinition tag)
         {
             return AddTag(tag, 0f, gameObject);
         }
 
-        /// <summary>添加永久标签，并记录标签来源。</summary>
+        /// <summary>按标签定义的默认持续时间添加标签，并记录标签来源。</summary>
         public bool AddTag(CombatTagDefinition tag, GameObject source)
         {
             return AddTag(tag, 0f, source);
         }
 
-        /// <summary>添加标签。duration 小于等于 0 时表示永久标签。</summary>
+        /// <summary>添加标签。duration 小于等于 0 时使用标签定义的默认持续时间。</summary>
         public bool AddTag(CombatTagDefinition tag, float duration)
         {
             return AddTag(tag, duration, gameObject);
         }
 
-        /// <summary>添加标签并记录标签来源。duration 小于等于 0 时表示永久标签。</summary>
+        /// <summary>添加标签并记录标签来源。duration 小于等于 0 时使用标签定义的默认持续时间。</summary>
         public bool AddTag(CombatTagDefinition tag, float duration, GameObject source)
         {
             return AddTag(tag, duration, source, 1);
         }
 
-        /// <summary>添加标签、持续时间和层数，并记录标签来源。duration 小于等于 0 时表示永久标签。</summary>
+        /// <summary>添加标签、持续时间和层数，并记录标签来源。duration 小于等于 0 时使用标签定义的默认持续时间。</summary>
         public bool AddTag(CombatTagDefinition tag, float duration, GameObject source, int stackCount)
         {
             return AddTagInternal(tag, duration, source, stackCount, true, 0);
@@ -224,16 +224,17 @@ namespace EndLink.Combat
                 return false;
             }
 
+            float resolvedDuration = ResolveDuration(tag, duration);
             int index = FindTagIndex(tag);
 
             if (index >= 0)
             {
-                _activeTags[index].Refresh(duration, stackCount, tag.MaxStackCount);
+                _activeTags[index].Refresh(resolvedDuration, stackCount, tag.MaxStackCount);
                 NotifyTagRefreshed(tag);
             }
             else
             {
-                ActiveCombatTag activeTag = new ActiveCombatTag(tag, duration, stackCount);
+                ActiveCombatTag activeTag = new ActiveCombatTag(tag, resolvedDuration, stackCount);
                 _activeTags.Add(activeTag);
                 NotifyTagAdded(tag, source, activeTag.StackCount);
             }
@@ -246,6 +247,16 @@ namespace EndLink.Combat
             return true;
         }
 
+        private static float ResolveDuration(CombatTagDefinition tag, float duration)
+        {
+            if (duration > 0f)
+            {
+                return duration;
+            }
+
+            return tag != null ? tag.DefaultDuration : 0f;
+        }
+
         private void TryApplyCombinationRules(CombatTagDefinition addedTag, GameObject source, int combinationDepth)
         {
             foreach (CombatTagCombinationRule rule in combinationRules)
@@ -255,16 +266,92 @@ namespace EndLink.Combat
                     continue;
                 }
 
-                if (rule.RemoveSourceTags)
-                {
-                    RemoveTag(rule.FirstTag, source);
-                    RemoveTag(rule.SecondTag, source);
-                }
-
-                AddTagInternal(rule.ResultTag, rule.ResultDuration, source, rule.ResultStackCount, true, combinationDepth + 1);
-                NotifyTagTransformed(rule.FirstTag, rule.SecondTag, rule.ResultTag, source);
+                CombatTagDefinition reactionTag = ExecuteReactionRuleEffects(rule, source, combinationDepth);
+                NotifyTagTransformed(rule.FirstTag, rule.SecondTag, reactionTag, source);
                 return;
             }
+        }
+
+        private CombatTagDefinition ExecuteReactionRuleEffects(
+            CombatTagCombinationRule rule,
+            GameObject source,
+            int combinationDepth)
+        {
+            CombatTagDefinition reactionTag = null;
+
+            foreach (CombatTagReactionEffect effect in rule.ReactionEffects)
+            {
+                if (effect == null || !effect.IsValid)
+                {
+                    continue;
+                }
+
+                CombatTagDefinition effectTag = ExecuteReactionEffect(effect, source, combinationDepth);
+                if (reactionTag == null && effectTag != null)
+                {
+                    reactionTag = effectTag;
+                }
+            }
+
+            return reactionTag;
+        }
+
+        private CombatTagDefinition ExecuteReactionEffect(
+            CombatTagReactionEffect effect,
+            GameObject source,
+            int combinationDepth)
+        {
+            switch (effect.EffectType)
+            {
+                case CombatTagReactionEffectType.ApplyTag:
+                    AddTagInternal(effect.Tag, effect.Duration, source, effect.StackCount, true, combinationDepth + 1);
+                    return effect.Tag;
+                case CombatTagReactionEffectType.RemoveTag:
+                    RemoveTag(effect.Tag, source);
+                    return null;
+                case CombatTagReactionEffectType.DealDamage:
+                    ApplyReactionDamage(effect, source);
+                    return effect.Tag;
+                case CombatTagReactionEffectType.SpreadTag:
+                case CombatTagReactionEffectType.ApplyControl:
+                case CombatTagReactionEffectType.InterruptAction:
+                case CombatTagReactionEffectType.ModifyResource:
+                case CombatTagReactionEffectType.CustomEvent:
+                    LogUnsupportedReactionEffect(effect);
+                    return effect.Tag;
+                default:
+                    return null;
+            }
+        }
+
+        private void ApplyReactionDamage(CombatTagReactionEffect effect, GameObject source)
+        {
+            if (effect.DamageAmount <= 0)
+            {
+                return;
+            }
+
+            CharacterHealth characterHealth = GetComponentInParent<CharacterHealth>();
+            if (characterHealth != null)
+            {
+                characterHealth.ApplyDamage(effect.DamageAmount, effect.DamageType, effect.Tag, source);
+                return;
+            }
+
+            IDamageable damageable = GetComponentInParent<IDamageable>();
+            damageable?.TakeDamage(effect.DamageAmount, effect.DamageType, effect.Tag);
+        }
+
+        private void LogUnsupportedReactionEffect(CombatTagReactionEffect effect)
+        {
+            if (!logTagChanges)
+            {
+                return;
+            }
+
+            Debug.Log(
+                $"CombatTagContainer reaction effect is reserved but not implemented: {effect.EffectType}.",
+                this);
         }
 
         private int FindTagIndex(CombatTagDefinition tag)
@@ -320,18 +407,19 @@ namespace EndLink.Combat
         private void NotifyTagTransformed(
             CombatTagDefinition firstTag,
             CombatTagDefinition secondTag,
-            CombatTagDefinition resultTag,
+            CombatTagDefinition reactionTag,
             GameObject source)
         {
             if (logTagChanges)
             {
+                string reactionTagId = reactionTag != null ? reactionTag.TagId : "None";
                 Debug.Log(
-                    $"CombatTagContainer transformed {firstTag.TagId} + {secondTag.TagId} => {resultTag.TagId}.",
+                    $"CombatTagContainer transformed {firstTag.TagId} + {secondTag.TagId} => {reactionTagId}.",
                     this);
             }
 
-            onTagTransformed.Invoke(this, firstTag, secondTag, resultTag);
-            CombatEventsBus.RaiseTagTransformed(source, gameObject, resultTag);
+            onTagTransformed.Invoke(this, firstTag, secondTag, reactionTag);
+            CombatEventsBus.RaiseTagTransformed(source, gameObject, reactionTag);
         }
 
         private void LogInvalidTag(CombatTagDefinition tag)
@@ -356,9 +444,9 @@ namespace EndLink.Combat
         }
     }
 
-    /// <summary>
-    /// 激活中的战斗标签。
-    /// </summary>
+        /// <summary>
+        /// 激活中的战斗标签。
+        /// </summary>
     [System.Serializable]
     public sealed class ActiveCombatTag
     {
@@ -366,7 +454,7 @@ namespace EndLink.Combat
         [SerializeField]
         private CombatTagDefinition tag;
 
-        [Tooltip("剩余持续时间。小于等于 0 表示永久标签。")]
+        [Tooltip("剩余持续时间。作为初始标签配置时，小于等于 0 表示使用标签默认持续时间。运行时小于等于 0 表示永久标签。")]
         [SerializeField, Min(0f)]
         private float remainingDuration;
 
@@ -440,7 +528,7 @@ namespace EndLink.Combat
     }
 
     /// <summary>
-    /// 标签组合转化事件。参数依次为：标签容器、输入 A、输入 B、输出 C。
+    /// 标签组合转化事件。参数依次为：标签容器、输入 A、输入 B、主要反应标签。
     /// </summary>
     [System.Serializable]
     public sealed class CombatTagTransformEvent : UnityEvent<CombatTagContainer, CombatTagDefinition, CombatTagDefinition, CombatTagDefinition>

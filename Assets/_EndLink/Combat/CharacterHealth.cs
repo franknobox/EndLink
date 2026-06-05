@@ -160,15 +160,24 @@ namespace EndLink.Combat
         /// </summary>
         public void ReceiveHit(HitboxHitInfo hitInfo)
         {
-            ApplyDamage(Mathf.RoundToInt(hitInfo.DamageAmount), hitInfo.CombatTagToApply, hitInfo.Owner);
+            DamageContext context = DamageContext.FromHit(hitInfo, gameObject);
+            ApplyDamage(DamageCalculator.Calculate(context));
+        }
+
+        /// <summary>
+        /// 兼容旧调用：接收简单伤害接口，默认按结构伤害处理。
+        /// </summary>
+        public void TakeDamage(int damage, CombatTagDefinition tag)
+        {
+            ApplyDamage(damage, CombatDamageType.StructuralDamage, tag, null);
         }
 
         /// <summary>
         /// 接收简单伤害接口。
         /// </summary>
-        public void TakeDamage(int damage, CombatTagDefinition tag)
+        public void TakeDamage(int damage, CombatDamageType damageType, CombatTagDefinition tag)
         {
-            ApplyDamage(damage, tag, null);
+            ApplyDamage(damage, damageType, tag, null);
         }
 
         /// <summary>
@@ -188,14 +197,23 @@ namespace EndLink.Combat
         /// <summary>
         /// 直接施加伤害。返回实际扣除的生命值。
         /// </summary>
-        public int ApplyDamage(int damage, CombatTagDefinition tag, GameObject source)
+        public int ApplyDamage(int damage, CombatDamageType damageType, CombatTagDefinition tag, GameObject source)
+        {
+            DamageContext context = DamageContext.Direct(source, gameObject, damage, damageType, tag);
+            return ApplyDamage(DamageCalculator.Calculate(context));
+        }
+
+        /// <summary>
+        /// 应用伤害管线输出结果。返回实际扣除的生命值。
+        /// </summary>
+        public int ApplyDamage(DamageResult damageResult)
         {
             if (_isDead || !_isTargetable || IsTemporaryInvincible)
             {
                 return 0;
             }
 
-            int appliedDamage = Mathf.Max(0, damage);
+            int appliedDamage = Mathf.Max(0, damageResult.FinalDamage);
             if (appliedDamage <= 0)
             {
                 return 0;
@@ -213,19 +231,24 @@ namespace EndLink.Combat
             if (logHealthChanges)
             {
                 Debug.Log(
-                    $"{name} took {actualDamage} damage, tag: {GetTagLogText(tag)}, hp: {_currentHealth}/{maxHealth}",
+                    $"{name} took {actualDamage} {damageResult.DamageType} damage, tag: {GetTagLogText(damageResult.CombatTag)}, hp: {_currentHealth}/{maxHealth}",
                     this);
             }
 
-            CharacterHealthDamageInfo damageInfo = new CharacterHealthDamageInfo(this, actualDamage, tag, source);
-            onDamaged.Invoke(actualDamage, tag);
+            CharacterHealthDamageInfo damageInfo = new CharacterHealthDamageInfo(this, actualDamage, damageResult, damageResult.Source);
+            onDamaged.Invoke(actualDamage, damageResult.CombatTag);
             Damaged?.Invoke(damageInfo);
-            CombatEventsBus.RaiseDamaged(source, gameObject, actualDamage, tag);
-            NotifyHealthChanged(source);
+            CombatEventsBus.RaiseDamaged(
+                damageResult.Source,
+                gameObject,
+                actualDamage,
+                damageResult.DamageType,
+                damageResult.CombatTag);
+            NotifyHealthChanged(damageResult.Source);
 
             if (_currentHealth <= 0)
             {
-                Die(source);
+                Die(damageResult.Source);
                 return actualDamage;
             }
 
@@ -468,17 +491,27 @@ namespace EndLink.Combat
     /// <summary>受击上下文。</summary>
     public readonly struct CharacterHealthDamageInfo
     {
-        public CharacterHealthDamageInfo(CharacterHealth health, int damage, CombatTagDefinition tag, GameObject source)
+        public CharacterHealthDamageInfo(
+            CharacterHealth health,
+            int damage,
+            DamageResult damageResult,
+            GameObject source)
         {
             Health = health;
             Damage = damage;
-            Tag = tag;
+            DamageResult = damageResult;
+            DamageType = damageResult.DamageType;
+            Tag = damageResult.CombatTag;
             Source = source;
         }
 
         public CharacterHealth Health { get; }
 
         public int Damage { get; }
+
+        public DamageResult DamageResult { get; }
+
+        public CombatDamageType DamageType { get; }
 
         public CombatTagDefinition Tag { get; }
 

@@ -15,6 +15,7 @@ namespace EndLink.Combat
             CombatActionDefinition actionDefinition = null,
             CombatTagDefinition combatTag = null,
             float damageAmount = 0f,
+            CombatDamageType damageType = CombatDamageType.StructuralDamage,
             int combatTagStackCount = 0,
             HitboxHitInfo hitInfo = default,
             bool hasHitInfo = false)
@@ -25,6 +26,7 @@ namespace EndLink.Combat
             ActionDefinition = actionDefinition;
             CombatTag = combatTag;
             DamageAmount = Mathf.Max(0f, damageAmount);
+            DamageType = damageType;
             CombatTagStackCount = Mathf.Max(0, combatTagStackCount);
             HitInfo = hitInfo;
             HasHitInfo = hasHitInfo;
@@ -51,6 +53,9 @@ namespace EndLink.Combat
 
         /// <summary>伤害值。非伤害事件可为 0。</summary>
         public float DamageAmount { get; }
+
+        /// <summary>伤害类型。</summary>
+        public CombatDamageType DamageType { get; }
 
         /// <summary>关联的 Hitbox 命中信息。</summary>
         public HitboxHitInfo HitInfo { get; }

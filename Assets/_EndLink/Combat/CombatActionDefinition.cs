@@ -55,6 +55,10 @@ namespace EndLink.Combat
         [SerializeField, Min(0)]
         private int damageAmount = 10;
 
+        [Tooltip("动作伤害类型。结构伤害偏物理/武器，运行伤害偏协议/能量/异常数据。")]
+        [SerializeField]
+        private CombatDamageType damageType = CombatDamageType.StructuralDamage;
+
         [Tooltip("动作命中时附带的击退力度。具体如何应用由受击方或后续击退系统决定。")]
         [SerializeField, Min(0f)]
         private float knockbackForce = 3f;
@@ -63,7 +67,7 @@ namespace EndLink.Combat
         [SerializeField]
         private CombatTagDefinition combatTagToApply;
 
-        [Tooltip("战斗标签持续时间。小于等于 0 表示永久标签。")]
+        [Tooltip("战斗标签持续时间。小于等于 0 表示使用标签定义的默认持续时间。")]
         [SerializeField, Min(0f)]
         private float combatTagDuration;
 
@@ -118,13 +122,16 @@ namespace EndLink.Combat
         /// <summary>基础伤害值。</summary>
         public int DamageAmount => damageAmount;
 
+        /// <summary>伤害类型。</summary>
+        public CombatDamageType DamageType => damageType;
+
         /// <summary>击退力度。</summary>
         public float KnockbackForce => knockbackForce;
 
         /// <summary>命中时施加的战斗标签资产。</summary>
         public CombatTagDefinition CombatTagToApply => combatTagToApply;
 
-        /// <summary>战斗标签持续时间。小于等于 0 表示永久标签。</summary>
+        /// <summary>战斗标签持续时间。小于等于 0 表示使用标签定义的默认持续时间。</summary>
         public float CombatTagDuration => combatTagDuration;
 
         /// <summary>动作命中时施加的战斗标签层数。</summary>

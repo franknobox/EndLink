@@ -12,7 +12,9 @@ namespace EndLink.Combat
             HitboxBase hitbox,
             GameObject owner,
             Collider hitCollider,
+            CombatActionDefinition actionDefinition,
             float damageAmount,
+            CombatDamageType damageType,
             float knockbackForce,
             CombatTagDefinition combatTagToApply,
             float combatTagDuration,
@@ -23,7 +25,9 @@ namespace EndLink.Combat
             Hitbox = hitbox;
             Owner = owner;
             HitCollider = hitCollider;
+            ActionDefinition = actionDefinition;
             DamageAmount = damageAmount;
+            DamageType = damageType;
             KnockbackForce = knockbackForce;
             CombatTagToApply = combatTagToApply;
             CombatTagDuration = Mathf.Max(0f, combatTagDuration);
@@ -41,8 +45,14 @@ namespace EndLink.Combat
         /// <summary>被命中的 Collider。</summary>
         public Collider HitCollider { get; }
 
+        /// <summary>关联动作配置。非动作来源可以为空。</summary>
+        public CombatActionDefinition ActionDefinition { get; }
+
         /// <summary>伤害值。</summary>
         public float DamageAmount { get; }
+
+        /// <summary>伤害类型。</summary>
+        public CombatDamageType DamageType { get; }
 
         /// <summary>击退力。</summary>
         public float KnockbackForce { get; }
@@ -50,7 +60,7 @@ namespace EndLink.Combat
         /// <summary>命中时附加的战斗标签资产。</summary>
         public CombatTagDefinition CombatTagToApply { get; }
 
-        /// <summary>战斗标签持续时间。小于等于 0 表示永久标签。</summary>
+        /// <summary>战斗标签持续时间。小于等于 0 表示使用标签定义的默认持续时间。</summary>
         public float CombatTagDuration { get; }
 
         /// <summary>命中时附加的战斗标签层数。</summary>

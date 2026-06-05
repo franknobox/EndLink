@@ -88,7 +88,13 @@ namespace EndLink.Ally
         /// <summary>直接对队友施加伤害。主要用于调试或敌人攻击接线前的临时测试。</summary>
         public void TakeDamage(int damage, CombatTagDefinition tag)
         {
-            _health.ApplyDamage(damage, tag, null);
+            _health.ApplyDamage(damage, CombatDamageType.StructuralDamage, tag, null);
+        }
+
+        /// <summary>直接对队友施加指定类型的伤害。主要用于调试或敌人攻击接线前的临时测试。</summary>
+        public void TakeDamage(int damage, CombatDamageType damageType, CombatTagDefinition tag)
+        {
+            _health.ApplyDamage(damage, damageType, tag, null);
         }
 
         /// <summary>治疗队友。</summary>

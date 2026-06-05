@@ -96,6 +96,7 @@ namespace EndLink.Editor
                 DrawColumn("Action", 150f, EditorStyles.boldLabel);
                 DrawColumn("Tag", 120f, EditorStyles.boldLabel);
                 DrawColumn("Damage", 64f, EditorStyles.boldLabel);
+                DrawColumn("Dmg Type", 112f, EditorStyles.boldLabel);
             }
         }
 
@@ -124,6 +125,7 @@ namespace EndLink.Editor
                     DrawColumn(record.ActionId, 150f);
                     DrawColumn(record.TagId, 120f);
                     DrawColumn(record.DamageText, 64f);
+                    DrawColumn(record.DamageTypeText, 112f);
                 }
             }
 
@@ -196,6 +198,7 @@ namespace EndLink.Editor
                 ActionId = eventData.ActionDefinition != null ? eventData.ActionDefinition.ActionId : "None";
                 TagId = eventData.CombatTag != null ? eventData.CombatTag.TagId : "None";
                 DamageText = eventData.DamageAmount > 0f ? eventData.DamageAmount.ToString("0.#") : "-";
+                DamageTypeText = eventData.DamageAmount > 0f ? eventData.DamageType.ToString() : "-";
             }
 
             public string TimeText { get; }
@@ -211,6 +214,8 @@ namespace EndLink.Editor
             public string TagId { get; }
 
             public string DamageText { get; }
+
+            public string DamageTypeText { get; }
 
             private static string GetObjectName(Object targetObject)
             {

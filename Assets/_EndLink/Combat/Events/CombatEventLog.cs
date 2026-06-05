@@ -69,6 +69,8 @@ namespace EndLink.Combat
             {
                 _builder.Append(" | damage=");
                 _builder.Append(eventData.DamageAmount);
+                _builder.Append(" ");
+                _builder.Append(eventData.DamageType);
             }
 
             Debug.Log(_builder.ToString(), this);

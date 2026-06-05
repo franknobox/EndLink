@@ -32,6 +32,7 @@
 | [通用生命值与角色受击接线](#feature-character-health) | 已完成桥接版 | 提供可复用的血量、受击、治疗、死亡和目标有效性；玩家、队友通过薄桥接层接入各自状态机。 |
 | [玩家自动软锁定](#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按固定间隔自动选择当前战斗目标，默认优先最近敌人，并显示轻量目标点。 |
 | [战斗动作配置](#feature-combat-action) | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和大招的伤害、冷却、时序、Hitbox 和命中标签。 |
+| [伤害结算管线基础](#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
 | [战斗标签系统](#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和标签组合转化规则。 |
 | [战斗数据编辑工具](#feature-combat-data-tool) | 已完成第一版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则数据资产。 |
 | [战斗 UI 基础](#feature-combat-ui-foundation) | 已完成基础版 | 提供 HUD 总入口、小队动作栏、动作槽位冷却显示和通用血条组件。 |
@@ -394,7 +395,7 @@
 - `CombatActionType` 描述动作性质，不描述释放者来源。
 - 当前动作类型包括 `BasicAttack`、`Skill`、`LinkAttack`、`Ultimate`。
 - 主控、队友和敌人后续可以共用同一套动作类型，释放者来源应由后续战斗事件数据携带。
-- 动作配置包含伤害、击退、`CombatTagDefinition` 命中标签、标签持续时间、标签层数、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置和 AI 有效攻击距离。
+- 动作配置包含伤害、伤害类型、击退、`CombatTagDefinition` 命中标签、标签持续时间、标签层数、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置和 AI 有效攻击距离。
 
 对应脚本：
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
@@ -411,6 +412,34 @@
 
 </details>
 
+<a id="feature-damage-pipeline"></a>
+
+### Feature：伤害结算管线基础
+
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- 新增 `Assets/_EndLink/Combat/Damage` 目录，集中放置伤害管线基础类型。
+- `CombatDamageType` 现在定义在 `DamageContext.cs` 中，当前包含 `StructuralDamage` 和 `RuntimeDamage`。
+- `DamageContext` 是伤害计算输入上下文，包含来源、目标、动作配置、Hitbox 命中信息、基础伤害、伤害类型、战斗标签、命中点和命中方向。
+- `DamageResult` 是伤害计算输出结果，包含最终伤害、伤害类型、战斗标签、来源、目标、命中点、命中方向，以及暴击、格挡、闪避等预留结果字段。
+- `DamageCalculator` 是统一伤害计算入口。第一版只把基础伤害取整为最终伤害，后续会在这里接入攻击者数值、受击者防御、动作倍率、暴击、抗性、易伤和标签修正。
+- `IDamageModifier` 是预留扩展接口，后续 Buff、Debuff、装备、被动和场地效果可以实现它参与伤害修正。
+- `HitboxHitInfo` 现在携带 `CombatActionDefinition`，用于让伤害上下文知道命中来自哪个动作。
+- `CharacterHealth`、正式敌人生命组件和木桩受击都通过 `DamageContext -> DamageCalculator -> DamageResult` 后再扣血。
+- 现有 `ApplyDamage(int, CombatDamageType, CombatTagDefinition, GameObject)` 兼容入口仍保留，内部会转成 `DamageContext`。
+
+对应脚本：
+- `Assets/_EndLink/Combat/Damage/DamageContext.cs`
+- `Assets/_EndLink/Combat/Damage/DamageResult.cs`
+- `Assets/_EndLink/Combat/Damage/DamageCalculator.cs`
+- `Assets/_EndLink/Combat/Damage/IDamageModifier.cs`
+- `Assets/_EndLink/Combat/HitboxHitInfo.cs`
+- `Assets/_EndLink/Combat/CharacterHealth.cs`
+
+</details>
+
 <a id="feature-combat-tags"></a>
 
 ### Feature：战斗标签系统
@@ -420,23 +449,28 @@
 
 功能说明：
 - 战斗标签系统只服务 Combat，不做全项目泛用 GameplayTag。
-- `CombatTagDefinition` 是标签定义资产，包含 `tagId`、显示名、说明和最大层数。
+- `CombatTagDefinition` 是标签定义资产，包含 `tagId`、显示名、说明、标签等级、默认持续时间和最大层数。
 - 标签合法检查当前要求标签资产非空且 `tagId` 非空。
 - `CombatTagContainer` 挂在目标身上，负责保存多标签、层数、持续时间、添加、移除、过期和清空。
-- `CombatTagContainer` 支持永久标签和限时标签，限时标签会在 `Update` 中自动倒计时并过期移除。
-- `CombatTagCombinationRule` 描述 A + B => C 的组合转化规则，可配置源标签所需层数、结果标签层数、结果标签持续时间和转化后是否移除源标签。
+- `CombatTagContainer` 支持永久标签和限时标签；添加标签时如果没有显式传入持续时间，会使用标签定义里的默认持续时间，默认持续时间小于等于 0 时才视为永久标签。
+- `CombatTagCombinationRule` 描述 A + B 触发反应效果的规则，可配置源标签所需层数，以及一组 `CombatTagReactionEffect`。
+- `CombatTagReactionEffect` 支持 `ApplyTag`、`RemoveTag`、`DealDamage`，并预留 `SpreadTag`、`ApplyControl`、`InterruptAction`、`ModifyResource` 和 `CustomEvent`。
+- 消耗源标签也通过 `RemoveTag` 反应效果配置，不再保留旧的单独输出标签或自动移除源标签字段。
 - 同一个标签重复添加时会刷新持续时间并增加层数，最终层数会被 `CombatTagDefinition.MaxStackCount` 钳制。
 - 当组合规则的两个输入标签相同时，可以表达“同一标签达到指定层数后转化为另一个标签”，例如后续的 3 层火标签转化为燃烧。
 - 容器提供 `OnTagAdded`、`OnTagRemoved`、`OnTagExpired`、`OnTagRefreshed` 和 `OnTagTransformed` 事件。
 - 标签添加、移除、过期和组合转化时会同步通过 `CombatEventsBus` 广播事件。
 - 标签添加和移除接口支持传入 `source`，事件总线可以表达“谁给谁挂载或移除了某个标签”。
 - 对外提供 `ICombatTagReadable` 和 `ICombatTagReceiver`，后续连携规则、AI、UI 和状态效果系统应优先依赖接口。
-- `CombatActionDefinition`、`HitboxBase` 和 `HitboxHitInfo` 使用 `CombatTagDefinition` 作为标签数据，并携带命中时要添加的标签层数。
+- `CombatActionDefinition`、`HitboxBase` 和 `HitboxHitInfo` 使用 `CombatDamageType` 区分 `RuntimeDamage` 和 `StructuralDamage`，并使用 `CombatTagDefinition` 作为标签数据。
+- 命中信息和受击事件会携带伤害类型；当前只记录类型，不做差异化公式结算。
+- `CombatActionDefinition`、`HitboxBase` 和 `HitboxHitInfo` 携带命中时要添加的标签持续时间和层数；标签持续时间小于等于 0 时使用标签定义的默认持续时间。
 - 命中时如果目标实现 `ICombatTagReceiver`，`HitboxBase` 会把 `CombatTagDefinition` 添加到目标标签容器，并把 Hitbox owner 作为标签来源。
 
 对应脚本：
 - `Assets/_EndLink/Combat/Tags/CombatTagDefinition.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagCombinationRule.cs`
+- `Assets/_EndLink/Combat/Tags/CombatTagReactionEffect.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagContainer.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagInterfaces.cs`
 - `Assets/_EndLink/Combat/HitboxHitInfo.cs`

@@ -85,6 +85,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
     public @InputSystem_Actions()
     {
         asset = InputActionAsset.FromJson(@"{
+    ""version"": 1,
     ""name"": ""InputSystem_Actions"",
     ""maps"": [
         {
@@ -1366,9 +1367,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             ]
         }
     ]
-}
-"
-);
+}");
         // Player
         m_Player = asset.FindActionMap("Player", throwIfNotFound: true);
         m_Player_Move = m_Player.FindAction("Move", throwIfNotFound: true);
@@ -1380,6 +1379,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         m_Player_Previous = m_Player.FindAction("Previous", throwIfNotFound: true);
         m_Player_Next = m_Player.FindAction("Next", throwIfNotFound: true);
         m_Player_Sprint = m_Player.FindAction("Sprint", throwIfNotFound: true);
+        m_Player_Dodge = m_Player.FindAction("Dodge", throwIfNotFound: true);
         m_Player_PlayerSkill = m_Player.FindAction("PlayerSkill", throwIfNotFound: true);
         m_Player_AllySlotASkill = m_Player.FindAction("AllySlotASkill", throwIfNotFound: true);
         m_Player_AllySlotBSkill = m_Player.FindAction("AllySlotBSkill", throwIfNotFound: true);
@@ -1489,6 +1489,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_Previous;
     private readonly InputAction m_Player_Next;
     private readonly InputAction m_Player_Sprint;
+    private readonly InputAction m_Player_Dodge;
     private readonly InputAction m_Player_PlayerSkill;
     private readonly InputAction m_Player_AllySlotASkill;
     private readonly InputAction m_Player_AllySlotBSkill;
@@ -1543,6 +1544,10 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Player/Sprint".
         /// </summary>
         public InputAction @Sprint => m_Wrapper.m_Player_Sprint;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/Dodge".
+        /// </summary>
+        public InputAction @Dodge => m_Wrapper.m_Player_Dodge;
         /// <summary>
         /// Provides access to the underlying input action "Player/PlayerSkill".
         /// </summary>
@@ -1624,6 +1629,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Sprint.started += instance.OnSprint;
             @Sprint.performed += instance.OnSprint;
             @Sprint.canceled += instance.OnSprint;
+            @Dodge.started += instance.OnDodge;
+            @Dodge.performed += instance.OnDodge;
+            @Dodge.canceled += instance.OnDodge;
             @PlayerSkill.started += instance.OnPlayerSkill;
             @PlayerSkill.performed += instance.OnPlayerSkill;
             @PlayerSkill.canceled += instance.OnPlayerSkill;
@@ -1683,6 +1691,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Sprint.started -= instance.OnSprint;
             @Sprint.performed -= instance.OnSprint;
             @Sprint.canceled -= instance.OnSprint;
+            @Dodge.started -= instance.OnDodge;
+            @Dodge.performed -= instance.OnDodge;
+            @Dodge.canceled -= instance.OnDodge;
             @PlayerSkill.started -= instance.OnPlayerSkill;
             @PlayerSkill.performed -= instance.OnPlayerSkill;
             @PlayerSkill.canceled -= instance.OnPlayerSkill;
@@ -2067,6 +2078,13 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnSprint(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "Dodge" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnDodge(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "PlayerSkill" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>

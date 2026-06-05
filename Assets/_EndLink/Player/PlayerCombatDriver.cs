@@ -192,10 +192,12 @@ namespace EndLink.Combat
                 hitbox.Initialize(gameObject);
                 hitbox.Configure(
                     actionDefinition.DamageAmount,
+                    actionDefinition.DamageType,
                     actionDefinition.KnockbackForce,
                     actionDefinition.CombatTagToApply,
                     actionDefinition.CombatTagDuration,
-                    actionDefinition.CombatTagStackCount);
+                    actionDefinition.CombatTagStackCount,
+                    actionDefinition);
             }
         }
 

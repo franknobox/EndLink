@@ -103,7 +103,8 @@ namespace EndLink.Combat
         /// </summary>
         public void ReceiveHit(HitboxHitInfo hitInfo)
         {
-            ApplyDamage(Mathf.RoundToInt(hitInfo.DamageAmount), hitInfo.CombatTagToApply, hitInfo.Owner);
+            DamageContext context = DamageContext.FromHit(hitInfo, gameObject);
+            ApplyDamage(DamageCalculator.Calculate(context));
         }
 
         /// <summary>
@@ -111,33 +112,49 @@ namespace EndLink.Combat
         /// </summary>
         public void TakeDamage(int damage, CombatTagDefinition tag)
         {
-            ApplyDamage(damage, tag, null);
+            ApplyDamage(damage, CombatDamageType.StructuralDamage, tag, null);
         }
 
-        private void ApplyDamage(int damage, CombatTagDefinition tag, GameObject source)
+        public void TakeDamage(int damage, CombatDamageType damageType, CombatTagDefinition tag)
+        {
+            ApplyDamage(damage, damageType, tag, null);
+        }
+
+        private void ApplyDamage(int damage, CombatDamageType damageType, CombatTagDefinition tag, GameObject source)
+        {
+            DamageContext context = DamageContext.Direct(source, gameObject, damage, damageType, tag);
+            ApplyDamage(DamageCalculator.Calculate(context));
+        }
+
+        private void ApplyDamage(DamageResult damageResult)
         {
             if (_isDead)
             {
                 return;
             }
 
-            int appliedDamage = Mathf.Max(0, damage);
+            int appliedDamage = Mathf.Max(0, damageResult.FinalDamage);
             _currentHealth = Mathf.Max(0, _currentHealth - appliedDamage);
 
             if (logHits)
             {
                 Debug.Log(
-                    $"EnemyDummy took {appliedDamage} damage, tag: {GetTagLogText(tag)}, hp: {_currentHealth}/{maxHealth}",
+                    $"EnemyDummy took {appliedDamage} {damageResult.DamageType} damage, tag: {GetTagLogText(damageResult.CombatTag)}, hp: {_currentHealth}/{maxHealth}",
                     this);
             }
 
-            onDamaged.Invoke(appliedDamage, tag);
-            CombatEventsBus.RaiseDamaged(source, gameObject, appliedDamage, tag);
+            onDamaged.Invoke(appliedDamage, damageResult.CombatTag);
+            CombatEventsBus.RaiseDamaged(
+                damageResult.Source,
+                gameObject,
+                appliedDamage,
+                damageResult.DamageType,
+                damageResult.CombatTag);
             UpdateDebugDisplay();
 
             if (_currentHealth <= 0)
             {
-                Die(source);
+                Die(damageResult.Source);
                 return;
             }
 

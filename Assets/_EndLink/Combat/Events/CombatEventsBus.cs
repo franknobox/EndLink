@@ -53,6 +53,7 @@ namespace EndLink.Combat
                 null,
                 hitInfo.CombatTagToApply,
                 hitInfo.DamageAmount,
+                hitInfo.DamageType,
                 hitInfo.CombatTagStackCount,
                 hitInfo,
                 true));
@@ -65,6 +66,7 @@ namespace EndLink.Combat
             GameObject source,
             GameObject target,
             float damageAmount,
+            CombatDamageType damageType,
             CombatTagDefinition combatTag)
         {
             Raise(new CombatEvent(
@@ -73,7 +75,8 @@ namespace EndLink.Combat
                 target,
                 null,
                 combatTag,
-                damageAmount));
+                damageAmount,
+                damageType));
         }
 
         /// <summary>
@@ -110,11 +113,11 @@ namespace EndLink.Combat
 
         /// <summary>
         /// 广播标签组合转化事件。
-        /// 当前只携带结果标签；输入标签可通过标签容器事件进一步扩展。
+        /// 当前携带主要结果标签；如果反应只造成伤害或移除标签，则结果标签可以为空。
         /// </summary>
-        public static void RaiseTagTransformed(GameObject source, GameObject target, CombatTagDefinition resultTag)
+        public static void RaiseTagTransformed(GameObject source, GameObject target, CombatTagDefinition reactionTag)
         {
-            RaiseTagEvent(CombatEventType.TagTransformed, source, target, resultTag);
+            RaiseTagEvent(CombatEventType.TagTransformed, source, target, reactionTag);
         }
 
         private static void RaiseTagEvent(
@@ -124,7 +127,15 @@ namespace EndLink.Combat
             CombatTagDefinition combatTag,
             int stackCount = 0)
         {
-            Raise(new CombatEvent(eventType, source, target, null, combatTag, 0f, stackCount));
+            Raise(new CombatEvent(
+                eventType,
+                source,
+                target,
+                null,
+                combatTag,
+                0f,
+                CombatDamageType.StructuralDamage,
+                stackCount));
         }
     }
 }
