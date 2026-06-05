@@ -262,8 +262,8 @@
 
 对应脚本：
 - `Assets/_EndLink/Combat/CharacterHealth.cs`
-- `Assets/_EndLink/Combat/IHitReceiver.cs`
-- `Assets/_EndLink/Combat/IDamageable.cs`
+- `Assets/_EndLink/Combat/Hitbox/IHitReceiver.cs`
+- `Assets/_EndLink/Combat/Damage/IDamageable.cs`
 - `Assets/_EndLink/Combat/ICombatTarget.cs`
 - `Assets/_EndLink/Player/PlayerHealth.cs`
 - `Assets/_EndLink/Ally/AllyHealth.cs`
@@ -435,7 +435,7 @@
 - `Assets/_EndLink/Combat/Damage/DamageResult.cs`
 - `Assets/_EndLink/Combat/Damage/DamageCalculator.cs`
 - `Assets/_EndLink/Combat/Damage/IDamageModifier.cs`
-- `Assets/_EndLink/Combat/HitboxHitInfo.cs`
+- `Assets/_EndLink/Combat/Hitbox/HitboxHitInfo.cs`
 - `Assets/_EndLink/Combat/CharacterHealth.cs`
 
 </details>
@@ -473,7 +473,7 @@
 - `Assets/_EndLink/Combat/Tags/CombatTagReactionEffect.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagContainer.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagInterfaces.cs`
-- `Assets/_EndLink/Combat/HitboxHitInfo.cs`
+- `Assets/_EndLink/Combat/Hitbox/HitboxHitInfo.cs`
 
 相关资产：
 - `CombatTagDefinition` 数据资产：可通过 `Create > EndLink > Combat > Combat Tag Definition` 创建
@@ -949,8 +949,8 @@
 - `Assets/_EndLink/Enemies/StateMachine/EnemyDeadState.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagContainer.cs`
 - `Assets/_EndLink/Combat/ICombatTarget.cs`
-- `Assets/_EndLink/Combat/IHitReceiver.cs`
-- `Assets/_EndLink/Combat/IDamageable.cs`
+- `Assets/_EndLink/Combat/Hitbox/IHitReceiver.cs`
+- `Assets/_EndLink/Combat/Damage/IDamageable.cs`
 
 相关物体：
 - 正式敌人根物体
@@ -1018,7 +1018,7 @@
 对应脚本：
 - `Assets/_EndLink/Player/PlayerCombatDriver.cs`
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
-- `Assets/_EndLink/Combat/HitboxBase.cs`
+- `Assets/_EndLink/Combat/Hitbox/HitboxBase.cs`
 相关物体/资产：
 - 玩家根物体：挂载 `PlayerCombatDriver`
 - `CombatActionDefinition` 数据资产：可通过 `Create > EndLink > Combat > Combat Action Definition` 创建
@@ -1056,10 +1056,10 @@
 - 命中后会通过 `CombatEventsBus` 广播 `HitLanded`。
 
 对应脚本：
-- `Assets/_EndLink/Combat/HitboxBase.cs`
-- `Assets/_EndLink/Combat/HitboxProjectile.cs`
-- `Assets/_EndLink/Combat/HitboxHitInfo.cs`
-- `Assets/_EndLink/Combat/IHitReceiver.cs`
+- `Assets/_EndLink/Combat/Hitbox/HitboxBase.cs`
+- `Assets/_EndLink/Combat/Hitbox/HitboxProjectile.cs`
+- `Assets/_EndLink/Combat/Hitbox/HitboxHitInfo.cs`
+- `Assets/_EndLink/Combat/Hitbox/IHitReceiver.cs`
 - `Assets/_EndLink/Combat/ICombatTarget.cs`
 
 相关资产：
