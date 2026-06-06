@@ -163,7 +163,7 @@ namespace EndLink.Ally
             {
                 hitbox.Initialize(gameObject);
                 hitbox.Configure(
-                    actionDefinition.DamageAmount,
+                    actionDefinition.FlatDamage,
                     actionDefinition.DamageType,
                     actionDefinition.KnockbackForce,
                     actionDefinition.CombatTagToApply,

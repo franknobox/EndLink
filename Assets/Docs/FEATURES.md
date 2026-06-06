@@ -30,6 +30,7 @@
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [通用生命值与角色受击接线](#feature-character-health) | 已完成桥接版 | 提供可复用的血量、受击、治疗、死亡和目标有效性；玩家、队友通过薄桥接层接入各自状态机。 |
+| [角色战斗数值基础](#feature-character-stats) | 已完成第一版 | 提供玩家、队友和敌人共用的攻击力入口，并支持动作按固定伤害与攻击力倍率组合计算伤害。 |
 | [玩家自动软锁定](#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按固定间隔自动选择当前战斗目标，默认优先最近敌人，并显示轻量目标点。 |
 | [战斗动作配置](#feature-combat-action) | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和大招的伤害、冷却、时序、Hitbox 和命中标签。 |
 | [伤害结算管线基础](#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
@@ -383,6 +384,28 @@
 
 </details>
 
+<a id="feature-character-stats"></a>
+
+### Feature：角色战斗数值基础
+
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- `CharacterStats` 是玩家、队友和敌人共用的战斗数值入口，第一版只提供基础攻击力和最终攻击力。
+- `CharacterStats` 可选择 `Auto`、`Player`、`Ally`、`Enemy` 类型；自动模式通过玩家状态机、队友状态机或 `EnemyActor` 识别角色身份，也可手动覆盖。
+- 自定义 Inspector 当前只显示通用攻击属性；尚未制造空的玩家、队友或敌人专属字段，后续有真实差异时再按当前类型展示。
+- `BaseAttackPower` 表示角色未经临时修正的基础攻击力；`AttackPower` 表示参与伤害计算的最终攻击力，第一版两者相同。
+- 角色生命上限和当前生命仍由生命组件负责，不放入 `CharacterStats`。
+- 需要使用攻击力倍率的角色，应在角色根物体挂载 `CharacterStats`；没有该组件时，动作仍会造成固定伤害，但攻击力倍率部分按 0 计算。
+
+对应脚本：
+- `Assets/_EndLink/Combat/Stats/CharacterStats.cs`
+- `Assets/_EndLink/Combat/Stats/ICharacterStatsTypeProvider.cs`
+- `Assets/_EndLink/Editor/CharacterStatsEditor.cs`
+
+</details>
+
 <a id="feature-combat-action"></a>
 
 ### Feature：战斗动作配置
@@ -395,7 +418,8 @@
 - `CombatActionType` 描述动作性质，不描述释放者来源。
 - 当前动作类型包括 `BasicAttack`、`Skill`、`LinkAttack`、`Ultimate`。
 - 主控、队友和敌人后续可以共用同一套动作类型，释放者来源应由后续战斗事件数据携带。
-- 动作配置包含伤害、伤害类型、击退、`CombatTagDefinition` 命中标签、标签持续时间、标签层数、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置和 AI 有效攻击距离。
+- 动作配置包含固定伤害 `FlatDamage`、攻击力倍率 `AtkPowerMultiplier`、伤害类型、击退、`CombatTagDefinition` 命中标签、标签持续时间、标签层数、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置和 AI 有效攻击距离。
+- 动作伤害基础公式为 `FlatDamage + AttackPower × AtkPowerMultiplier`，因此可配置纯固定伤害、纯倍率伤害或两者混合。
 
 对应脚本：
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
@@ -424,7 +448,8 @@
 - `CombatDamageType` 现在定义在 `DamageContext.cs` 中，当前包含 `StructuralDamage` 和 `RuntimeDamage`。
 - `DamageContext` 是伤害计算输入上下文，包含来源、目标、动作配置、Hitbox 命中信息、基础伤害、伤害类型、战斗标签、命中点和命中方向。
 - `DamageResult` 是伤害计算输出结果，包含最终伤害、伤害类型、战斗标签、来源、目标、命中点、命中方向，以及暴击、格挡、闪避等预留结果字段。
-- `DamageCalculator` 是统一伤害计算入口。第一版只把基础伤害取整为最终伤害，后续会在这里接入攻击者数值、受击者防御、动作倍率、暴击、抗性、易伤和标签修正。
+- `DamageCalculator` 是统一伤害计算入口。当前会读取来源角色的 `CharacterStats.AttackPower`，按 `FlatDamage + AttackPower × AtkPowerMultiplier` 计算动作伤害；后续会继续接入受击者防御、暴击、抗性、易伤和标签修正。
+- 没有 `CombatActionDefinition` 的标签反应、环境伤害和直接伤害不会读取攻击力倍率，只使用伤害上下文中的固定伤害。
 - `IDamageModifier` 是预留扩展接口，后续 Buff、Debuff、装备、被动和场地效果可以实现它参与伤害修正。
 - `HitboxHitInfo` 现在携带 `CombatActionDefinition`，用于让伤害上下文知道命中来自哪个动作。
 - `CharacterHealth`、正式敌人生命组件和木桩受击都通过 `DamageContext -> DamageCalculator -> DamageResult` 后再扣血。
@@ -435,6 +460,7 @@
 - `Assets/_EndLink/Combat/Damage/DamageResult.cs`
 - `Assets/_EndLink/Combat/Damage/DamageCalculator.cs`
 - `Assets/_EndLink/Combat/Damage/IDamageModifier.cs`
+- `Assets/_EndLink/Combat/Stats/CharacterStats.cs`
 - `Assets/_EndLink/Combat/Hitbox/HitboxHitInfo.cs`
 - `Assets/_EndLink/Combat/CharacterHealth.cs`
 
@@ -1070,7 +1096,7 @@
 
 关键配置：
 - `targetLayerMask`：允许命中的目标 Layer，默认 Enemy
-- `damageAmount`：伤害值
+- `damageAmount`：Hitbox 携带的固定伤害部分；完整动作伤害由伤害结算管线计算
 - `knockbackForce`：击退力
 - `combatTagToApply`：命中战斗标签资产
 - `combatTagDuration`：命中战斗标签持续时间，小于等于 0 表示永久标签

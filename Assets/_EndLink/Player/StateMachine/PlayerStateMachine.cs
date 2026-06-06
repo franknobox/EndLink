@@ -12,7 +12,7 @@ namespace EndLink.Core
     [RequireComponent(typeof(PlayerInputReader))]
     [RequireComponent(typeof(PlayerController))]
     [RequireComponent(typeof(PlayerCombatDriver))]
-    public sealed class PlayerStateMachine : MonoBehaviour
+    public sealed class PlayerStateMachine : MonoBehaviour, ICharacterStatsTypeProvider
     {
         [Header("初始状态")]
         [SerializeField]
@@ -76,6 +76,9 @@ namespace EndLink.Core
         /// 当前状态标识，便于调试面板或 Inspector 观察。
         /// </summary>
         public PlayerStateId CurrentStateId => _currentState?.StateId ?? PlayerStateId.None;
+
+        /// <summary>供 CharacterStats 自动识别为玩家配置。</summary>
+        public CharacterStatsType StatsType => CharacterStatsType.Player;
 
         /// <summary>
         /// 攻击状态持续时间。

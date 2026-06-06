@@ -10,7 +10,7 @@ namespace EndLink.Enemies
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyHealth))]
     [RequireComponent(typeof(CombatTagContainer))]
-    public sealed class EnemyActor : MonoBehaviour, ICombatTarget
+    public sealed class EnemyActor : MonoBehaviour, ICombatTarget, ICharacterStatsTypeProvider
     {
         [Header("目标点")]
         [Tooltip("用于锁定、寻路和计算距离的目标点。为空时使用敌人根物体。")]
@@ -78,6 +78,9 @@ namespace EndLink.Enemies
 
         /// <summary>敌人当前是否可作为战斗目标。</summary>
         public bool IsTargetable => Health != null && Health.IsTargetable;
+
+        /// <summary>供 CharacterStats 自动识别为敌人配置。</summary>
+        public CharacterStatsType StatsType => CharacterStatsType.Enemy;
 
         private void Awake()
         {

@@ -48,7 +48,7 @@ namespace EndLink.Combat
         /// <summary>关联动作配置。非动作来源可以为空。</summary>
         public CombatActionDefinition ActionDefinition { get; }
 
-        /// <summary>伤害值。</summary>
+        /// <summary>Hitbox 携带的固定伤害部分，完整动作伤害由 DamageCalculator 计算。</summary>
         public float DamageAmount { get; }
 
         /// <summary>伤害类型。</summary>

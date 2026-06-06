@@ -60,7 +60,10 @@ namespace EndLink.Combat
         /// <summary>当前上下文是否携带有效 Hitbox 命中信息。</summary>
         public bool HasHitInfo { get; }
 
-        /// <summary>基础伤害。第一版直接作为最终伤害来源，后续会叠加攻击者数值、动作倍率、暴击等修正。</summary>
+        /// <summary>
+        /// 伤害上下文携带的固定伤害部分。
+        /// 如果关联动作配置，DamageCalculator 还会叠加攻击者数值与动作倍率。
+        /// </summary>
         public float BaseDamage { get; }
 
         /// <summary>伤害类型。</summary>

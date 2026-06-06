@@ -13,7 +13,7 @@ namespace EndLink.Ally
     [RequireComponent(typeof(AllyCombatDriver))]
     [RequireComponent(typeof(AllyFollowMotor))]
     [RequireComponent(typeof(AllyTargetSelector))]
-    public sealed class AllyStateMachine : MonoBehaviour
+    public sealed class AllyStateMachine : MonoBehaviour, ICharacterStatsTypeProvider
     {
         [Header("初始状态")]
         [Tooltip("队友启用后的初始状态。没有跟随目标时建议使用 Idle，有跟随目标时会自动进入 Follow。")]
@@ -74,6 +74,9 @@ namespace EndLink.Ally
 
         /// <summary>当前状态标识，方便 Inspector 和调试工具观察。</summary>
         public AllyStateId CurrentStateId => _currentState?.StateId ?? AllyStateId.None;
+
+        /// <summary>供 CharacterStats 自动识别为队友配置。</summary>
+        public CharacterStatsType StatsType => CharacterStatsType.Ally;
 
         /// <summary>当前绑定的队友战斗执行器。</summary>
         public AllyCombatDriver CombatDriver => _combatDriver;

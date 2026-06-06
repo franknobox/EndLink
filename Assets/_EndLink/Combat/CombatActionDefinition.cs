@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace EndLink.Combat
 {
@@ -51,9 +52,14 @@ namespace EndLink.Combat
         private CombatActionType actionType = CombatActionType.BasicAttack;
 
         [Header("伤害与标签")]
-        [Tooltip("动作造成的基础伤害值。胶囊白模阶段先使用整数伤害。")]
-        [SerializeField, Min(0)]
-        private int damageAmount = 10;
+        [Tooltip("动作直接附加的固定伤害。最终基础伤害 = Flat Damage + 释放者攻击力 × Atk Power Multiplier。")]
+        [FormerlySerializedAs("damageAmount")]
+        [SerializeField, Min(0f)]
+        private float flatDamage = 10f;
+
+        [Tooltip("释放者攻击力倍率。设为 0 表示该动作只使用固定伤害。")]
+        [SerializeField, Min(0f)]
+        private float atkPowerMultiplier;
 
         [Tooltip("动作伤害类型。结构伤害偏物理/武器，运行伤害偏协议/能量/异常数据。")]
         [SerializeField]
@@ -119,8 +125,11 @@ namespace EndLink.Combat
         /// <summary>动作类型。</summary>
         public CombatActionType ActionType => actionType;
 
-        /// <summary>基础伤害值。</summary>
-        public int DamageAmount => damageAmount;
+        /// <summary>动作直接附加的固定伤害。</summary>
+        public float FlatDamage => Mathf.Max(0f, flatDamage);
+
+        /// <summary>释放者攻击力倍率。</summary>
+        public float AtkPowerMultiplier => Mathf.Max(0f, atkPowerMultiplier);
 
         /// <summary>伤害类型。</summary>
         public CombatDamageType DamageType => damageType;
@@ -196,7 +205,8 @@ namespace EndLink.Combat
 
         private void OnValidate()
         {
-            damageAmount = Mathf.Max(0, damageAmount);
+            flatDamage = Mathf.Max(0f, flatDamage);
+            atkPowerMultiplier = Mathf.Max(0f, atkPowerMultiplier);
             knockbackForce = Mathf.Max(0f, knockbackForce);
             combatTagDuration = Mathf.Max(0f, combatTagDuration);
             combatTagStackCount = Mathf.Max(1, combatTagStackCount);
