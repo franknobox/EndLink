@@ -66,6 +66,7 @@ namespace EndLink.Party
     /// 负责把 PlayerInputReader 中的战斗输入翻译成“主控/队友/全队”的命令请求，不直接执行 Hitbox、伤害或状态机逻辑。
     /// </summary>
     [DisallowMultipleComponent]
+    [RequireComponent(typeof(PartyLinkContext))]
     public sealed class PartyCombatRouter : MonoBehaviour
     {
         [Header("组件引用")]
@@ -76,6 +77,10 @@ namespace EndLink.Party
         [Tooltip("固定小队管理器。为空时会在场景中自动查找。")]
         [SerializeField]
         private PartyManager partyManager;
+
+        [Tooltip("小队连携窗口上下文。负责判断连携是否解锁、解析目标并在成功释放后消费窗口。")]
+        [SerializeField]
+        private PartyLinkContext linkContext;
 
         [Header("主动技能键位")]
         [Tooltip("主控主动技能键位。默认 Q。")]
@@ -110,6 +115,9 @@ namespace EndLink.Party
 
         /// <summary>战斗命令请求事件。</summary>
         public static event Action<PartyCombatCommand> CommandRequested;
+
+        /// <summary>当前绑定的小队连携窗口上下文。</summary>
+        public PartyLinkContext LinkContext => linkContext;
 
         private void Awake()
         {
@@ -248,6 +256,16 @@ namespace EndLink.Party
             {
                 partyManager = FindFirstObjectByType<PartyManager>();
             }
+
+            if (linkContext == null)
+            {
+                linkContext = GetComponent<PartyLinkContext>();
+            }
+
+            if (linkContext == null && partyManager != null)
+            {
+                linkContext = partyManager.GetComponent<PartyLinkContext>();
+            }
         }
 
         private void RouteCommand(PartyCombatCommandType commandType, PartyCombatActorSlot actorSlot)
@@ -274,7 +292,7 @@ namespace EndLink.Party
                     ExecuteSkillCommand(command);
                     break;
                 case PartyCombatCommandType.LinkAttack:
-                    LogCommand($"link request queued for future link system, slot={command.ActorSlot}");
+                    ExecuteLinkAttackCommand(command);
                     break;
                 case PartyCombatCommandType.Ultimate:
                     LogCommand("ultimate request queued for future limit break system");
@@ -307,8 +325,8 @@ namespace EndLink.Party
                 return;
             }
 
-            stateMachine.RequestSkill();
-            LogCommand($"request player Skill state, actor={GetObjectName(actor)}");
+            bool requested = stateMachine.RequestSkill();
+            LogCommand($"request player Skill state result={requested}, actor={GetObjectName(actor)}");
         }
 
         private void ExecuteAllySkill(GameObject actor)
@@ -350,6 +368,74 @@ namespace EndLink.Party
             }
 
             return null;
+        }
+
+        private void ExecuteLinkAttackCommand(PartyCombatCommand command)
+        {
+            if (linkContext == null)
+            {
+                CacheReferences();
+            }
+
+            if (linkContext == null || !linkContext.IsWindowOpen)
+            {
+                LogCommand($"ignored LinkAttack for {command.ActorSlot}: link window is closed");
+                return;
+            }
+
+            Transform target = linkContext.ResolveLinkTarget();
+            if (target == null)
+            {
+                LogCommand($"ignored LinkAttack for {command.ActorSlot}: no valid reaction or soft-lock target");
+                return;
+            }
+
+            bool executed = command.ActorSlot switch
+            {
+                PartyCombatActorSlot.MainCharacter => RequestPlayerLinkAction(command.Actor, target),
+                PartyCombatActorSlot.AllySlotA => RequestAllyLinkAction(command.Actor, target),
+                PartyCombatActorSlot.AllySlotB => RequestAllyLinkAction(command.Actor, target),
+                _ => false
+            };
+
+            if (!executed)
+            {
+                LogCommand(
+                    $"LinkAttack request rejected, slot={command.ActorSlot}, actor={GetObjectName(command.Actor)}, target={GetObjectName(target)}");
+                return;
+            }
+
+            linkContext.ConsumeWindow();
+            LogCommand(
+                $"LinkAttack accepted and window consumed, slot={command.ActorSlot}, actor={GetObjectName(command.Actor)}, target={GetObjectName(target)}");
+        }
+
+        private bool RequestPlayerLinkAction(GameObject actor, Transform target)
+        {
+            if (actor == null
+                || !actor.TryGetComponent(out PlayerStateMachine stateMachine)
+                || !actor.TryGetComponent(out PlayerCombatDriver combatDriver))
+            {
+                return false;
+            }
+
+            return stateMachine.RequestAction(combatDriver.LinkAction, target);
+        }
+
+        private static bool RequestAllyLinkAction(GameObject actor, Transform target)
+        {
+            if (actor == null || !actor.TryGetComponent(out AllyStateMachine stateMachine))
+            {
+                return false;
+            }
+
+            AllyCombatDriver combatDriver = stateMachine.CombatDriver;
+            if (combatDriver == null || !combatDriver.CanExecuteAction(combatDriver.LinkAction))
+            {
+                return false;
+            }
+
+            return stateMachine.RequestAction(combatDriver.LinkAction, target);
         }
 
         private GameObject ResolveActor(PartyCombatActorSlot actorSlot)

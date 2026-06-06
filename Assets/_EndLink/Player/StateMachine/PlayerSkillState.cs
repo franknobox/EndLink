@@ -21,14 +21,14 @@ namespace EndLink.Core
         public override void Enter()
         {
             _elapsedTime = 0f;
-            _executed = Context.ExecuteSkillAction();
+            _executed = Context.ExecuteCurrentAction();
         }
 
         public override void Tick(float deltaTime)
         {
             if (!_executed)
             {
-                Context.StateMachine.ChangeState(Context.HasMoveInput ? PlayerStateId.Move : PlayerStateId.Idle);
+                Context.StateMachine.CompleteAction();
                 return;
             }
 
@@ -42,7 +42,7 @@ namespace EndLink.Core
                 return;
             }
 
-            Context.StateMachine.ChangeState(Context.HasMoveInput ? PlayerStateId.Move : PlayerStateId.Idle);
+            Context.StateMachine.CompleteAction();
         }
     }
 }

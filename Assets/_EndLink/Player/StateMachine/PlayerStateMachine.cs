@@ -69,7 +69,10 @@ namespace EndLink.Core
 
         private readonly Dictionary<PlayerStateId, IPlayerState> _states = new();
         private IPlayerState _currentState;
-        private bool _skillRequested;
+        private PlayerCombatDriver _combatDriver;
+        private CombatActionDefinition _currentAction;
+        private Transform _currentActionTarget;
+        private bool _actionRequested;
         private float _nextDodgeAllowedTime;
 
         /// <summary>
@@ -79,6 +82,12 @@ namespace EndLink.Core
 
         /// <summary>供 CharacterStats 自动识别为玩家配置。</summary>
         public CharacterStatsType StatsType => CharacterStatsType.Player;
+
+        /// <summary>当前通用技能状态准备执行的动作。</summary>
+        public CombatActionDefinition CurrentAction => _currentAction;
+
+        /// <summary>当前动作显式指定的目标。为空时由 PlayerTargeting 继续解析软锁目标。</summary>
+        public Transform CurrentActionTarget => _currentActionTarget;
 
         /// <summary>
         /// 攻击状态持续时间。
@@ -93,7 +102,9 @@ namespace EndLink.Core
         /// <summary>
         /// 技能状态持续时间。
         /// </summary>
-        public float SkillDuration => skillDuration;
+        public float SkillDuration => _currentAction != null
+            ? Mathf.Max(skillDuration, _currentAction.TotalDuration)
+            : skillDuration;
 
         /// <summary>
         /// 技能状态移动输入倍率。
@@ -139,14 +150,14 @@ namespace EndLink.Core
         {
             PlayerInputReader inputReader = GetComponent<PlayerInputReader>();
             PlayerController controller = GetComponent<PlayerController>();
-            PlayerCombatDriver combatDriver = GetComponent<PlayerCombatDriver>();
+            _combatDriver = GetComponent<PlayerCombatDriver>();
 
             PlayerStateContext context = new PlayerStateContext(
                 this,
                 transform,
                 inputReader,
                 controller,
-                combatDriver);
+                _combatDriver);
 
             RegisterState(new PlayerIdleState(context));
             RegisterState(new PlayerMoveState(context));
@@ -212,14 +223,31 @@ namespace EndLink.Core
         /// 当前项目的生成输入类里还没有 Skill action，所以先提供一个统一入口，
         /// 后续可以由输入读取器、UI、调试工具或技能栏系统调用。
         /// </summary>
-        public void RequestSkill()
+        public bool RequestSkill()
         {
-            if (CurrentStateId == PlayerStateId.Dead || CurrentStateId == PlayerStateId.Hit)
+            return RequestAction(_combatDriver != null ? _combatDriver.SkillAction : null, null);
+        }
+
+        /// <summary>
+        /// 请求玩家通过通用技能状态执行指定动作。
+        /// 主动技能和连携技共用该入口，由状态机统一处理硬直、状态窗口和动作执行。
+        /// </summary>
+        public bool RequestAction(CombatActionDefinition action, Transform target)
+        {
+            if (CurrentStateId != PlayerStateId.Idle && CurrentStateId != PlayerStateId.Move)
             {
-                return;
+                return false;
             }
 
-            _skillRequested = true;
+            if (_actionRequested || _combatDriver == null || !_combatDriver.CanExecuteAction(action))
+            {
+                return false;
+            }
+
+            _currentAction = action;
+            _currentActionTarget = target;
+            _actionRequested = true;
+            return true;
         }
 
         /// <summary>
@@ -233,7 +261,7 @@ namespace EndLink.Core
                 return;
             }
 
-            _skillRequested = false;
+            ClearCurrentAction();
             ChangeState(PlayerStateId.Hit);
         }
 
@@ -251,7 +279,7 @@ namespace EndLink.Core
         /// </summary>
         public void RequestDead()
         {
-            _skillRequested = false;
+            ClearCurrentAction();
             ChangeState(PlayerStateId.Dead);
         }
 
@@ -261,13 +289,36 @@ namespace EndLink.Core
         /// </summary>
         internal bool ConsumeSkillRequest()
         {
-            if (!_skillRequested)
+            if (!_actionRequested)
             {
                 return false;
             }
 
-            _skillRequested = false;
+            _actionRequested = false;
             return true;
+        }
+
+        /// <summary>结束当前通用动作并回到移动或待机。</summary>
+        public void CompleteAction()
+        {
+            ClearCurrentAction();
+            ChangeState(GetDefaultLocomotionState());
+        }
+
+        private void ClearCurrentAction()
+        {
+            _actionRequested = false;
+            _currentAction = null;
+            _currentActionTarget = null;
+        }
+
+        private PlayerStateId GetDefaultLocomotionState()
+        {
+            PlayerInputReader inputReader = GetComponent<PlayerInputReader>();
+            return inputReader != null
+                && inputReader.MoveInput.sqrMagnitude > PlayerStateBase.MoveInputDeadZoneSqr
+                    ? PlayerStateId.Move
+                    : PlayerStateId.Idle;
         }
 
         private void RegisterState(IPlayerState state)

@@ -27,7 +27,7 @@ namespace EndLink.Combat
         /// <summary>目标的限时战斗标签过期。</summary>
         TagExpired = 6,
 
-        /// <summary>战斗标签发生组合反应，例如 A + B 触发一组反应效果。</summary>
-        TagTransformed = 7
+        /// <summary>协议反应成功触发，例如 A + B 执行一组反应效果。</summary>
+        ReactionTriggered = 7
     }
 }

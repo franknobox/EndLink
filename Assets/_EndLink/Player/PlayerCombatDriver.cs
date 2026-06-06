@@ -90,10 +90,21 @@ namespace EndLink.Combat
         }
 
         /// <summary>
+        /// 判断指定动作当前是否具备最基础的执行条件。
+        /// 状态机可以用它决定是否接受动作请求，避免请求成功后才发现动作仍在冷却或缺少 Hitbox。
+        /// </summary>
+        public bool CanExecuteAction(CombatActionDefinition actionDefinition)
+        {
+            return actionDefinition != null
+                && actionDefinition.HitboxPrefab != null
+                && CanAttack;
+        }
+
+        /// <summary>
         /// 执行指定玩家动作。
         /// 该方法不判断玩家状态机是否允许出手，只负责动作资源、冷却和 Hitbox 执行。
         /// </summary>
-        public bool ExecuteAction(CombatActionDefinition actionDefinition)
+        public bool ExecuteAction(CombatActionDefinition actionDefinition, Transform targetOverride = null)
         {
             if (actionDefinition == null)
             {
@@ -112,7 +123,7 @@ namespace EndLink.Combat
                 return false;
             }
 
-            Vector3 attackForward = ResolveAttackForward();
+            Vector3 attackForward = ResolveAttackForward(targetOverride);
             FaceAttackDirection(attackForward);
             Vector3 hitboxForward = ResolveCurrentForward(attackForward);
             Vector3 spawnPosition = transform.position
@@ -123,7 +134,10 @@ namespace EndLink.Combat
             GameObject hitboxInstance = Instantiate(actionDefinition.HitboxPrefab, spawnPosition, spawnRotation);
             ConfigureHitbox(hitboxInstance, actionDefinition);
 
-            CombatEventsBus.RaiseActionStarted(gameObject, GetCurrentTargetObject(), actionDefinition);
+            GameObject actionTarget = targetOverride != null
+                ? targetOverride.gameObject
+                : GetCurrentTargetObject();
+            CombatEventsBus.RaiseActionStarted(gameObject, actionTarget, actionDefinition);
             _lastCooldownAction = actionDefinition;
             _lastActionCooldown = actionDefinition.Cooldown;
             _nextActionTime = Time.time + _lastActionCooldown;
@@ -164,11 +178,17 @@ namespace EndLink.Combat
                 : Vector3.forward;
         }
 
-        private Vector3 ResolveAttackForward()
+        private Vector3 ResolveAttackForward(Transform targetOverride)
         {
-            if (_targeting != null && _targeting.HasTarget && _targeting.CurrentTarget != null)
+            Transform attackTarget = targetOverride != null
+                ? targetOverride
+                : _targeting != null && _targeting.HasTarget
+                    ? _targeting.CurrentTarget
+                    : null;
+
+            if (attackTarget != null)
             {
-                Vector3 toTarget = _targeting.CurrentTarget.position - transform.position;
+                Vector3 toTarget = attackTarget.position - transform.position;
                 toTarget.y = 0f;
 
                 if (toTarget.sqrMagnitude > 0.0001f)

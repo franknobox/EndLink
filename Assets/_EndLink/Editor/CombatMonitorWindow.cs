@@ -182,7 +182,7 @@ namespace EndLink.Editor
                 CombatEventType.TagAdded => _showTagEvents,
                 CombatEventType.TagRemoved => _showTagEvents,
                 CombatEventType.TagExpired => _showTagEvents,
-                CombatEventType.TagTransformed => _showTagEvents,
+                CombatEventType.ReactionTriggered => _showTagEvents,
                 _ => true
             };
         }
@@ -195,7 +195,11 @@ namespace EndLink.Editor
                 EventType = eventData.EventType;
                 SourceName = GetObjectName(eventData.Source);
                 TargetName = GetObjectName(eventData.Target);
-                ActionId = eventData.ActionDefinition != null ? eventData.ActionDefinition.ActionId : "None";
+                ActionId = eventData.ActionDefinition != null
+                    ? eventData.ActionDefinition.ActionId
+                    : eventData.ReactionRule != null
+                        ? eventData.ReactionRule.name
+                        : "None";
                 TagId = eventData.CombatTag != null ? eventData.CombatTag.TagId : "None";
                 DamageText = eventData.DamageAmount > 0f ? eventData.DamageAmount.ToString("0.#") : "-";
                 DamageTypeText = eventData.DamageAmount > 0f ? eventData.DamageType.ToString() : "-";

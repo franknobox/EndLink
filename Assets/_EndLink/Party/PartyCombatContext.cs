@@ -127,7 +127,7 @@ namespace EndLink.Party
                 case CombatEventType.ActionStarted:
                 case CombatEventType.HitLanded:
                 case CombatEventType.TagAdded:
-                case CombatEventType.TagTransformed:
+                case CombatEventType.ReactionTriggered:
                     return ResolveValidEnemyTarget(eventData.Target);
                 case CombatEventType.Damaged:
                     return ResolveValidEnemyTarget(eventData.Target)

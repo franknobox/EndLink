@@ -112,12 +112,27 @@ namespace EndLink.Combat
         }
 
         /// <summary>
-        /// 广播标签组合转化事件。
-        /// 当前携带主要结果标签；如果反应只造成伤害或移除标签，则结果标签可以为空。
+        /// 广播协议反应触发事件。
+        /// reactionTag 是反应产生的主要结果标签；只造成伤害或移除标签时可以为空。
         /// </summary>
-        public static void RaiseTagTransformed(GameObject source, GameObject target, CombatTagDefinition reactionTag)
+        public static void RaiseReactionTriggered(
+            GameObject source,
+            GameObject target,
+            CombatTagCombinationRule reactionRule,
+            CombatTagDefinition reactionTag)
         {
-            RaiseTagEvent(CombatEventType.TagTransformed, source, target, reactionTag);
+            Raise(new CombatEvent(
+                CombatEventType.ReactionTriggered,
+                source,
+                target,
+                null,
+                reactionTag,
+                0f,
+                CombatDamageType.StructuralDamage,
+                0,
+                default,
+                false,
+                reactionRule));
         }
 
         private static void RaiseTagEvent(

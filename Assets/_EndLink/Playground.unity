@@ -249,6 +249,7 @@ GameObject:
   - component: {fileID: 45882476}
   - component: {fileID: 45882480}
   - component: {fileID: 45882481}
+  - component: {fileID: 45882482}
   m_Layer: 9
   m_Name: Ally_01
   m_TagString: Untagged
@@ -277,7 +278,7 @@ MonoBehaviour:
   targetSearchRadius: 8
   enemyLayerMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 256
   logDecisions: 1
 --- !u!114 &45882477
 MonoBehaviour:
@@ -383,6 +384,20 @@ MonoBehaviour:
   targetSearchRadius: 24
   primaryTargetScoreBonus: 10000
   logSelection: 0
+--- !u!114 &45882482
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 45882475}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd77a656c40e4cf5bf9c067ac1f0a527, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.CharacterStats
+  statsType: 0
+  baseAttackPower: 10
 --- !u!1 &71180439
 GameObject:
   m_ObjectHideFlags: 0
@@ -689,6 +704,7 @@ GameObject:
   - component: {fileID: 163565087}
   - component: {fileID: 163565089}
   - component: {fileID: 163565090}
+  - component: {fileID: 163565091}
   m_Layer: 0
   m_Name: PartyManager
   m_TagString: Untagged
@@ -780,6 +796,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Party.PartyCombatRouter
   inputReader: {fileID: 509600057}
   partyManager: {fileID: 163565087}
+  linkContext: {fileID: 0}
   playerSkillKey: 31
   allySlotASkillKey: 19
   allySlotBSkillKey: 20
@@ -801,6 +818,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Party.PartyCombatContext
   combatExitDelay: 3
   logStateChanges: 0
+--- !u!114 &163565091
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 163565086}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9dedf08a32414a2f91f3c362837453d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.Party.PartyLinkContext
+  linkWindowDuration: 4
+  partyManager: {fileID: 163565087}
+  logWindowChanges: 0
 --- !u!1 &171857034
 GameObject:
   m_ObjectHideFlags: 0
@@ -1912,6 +1944,7 @@ GameObject:
   - component: {fileID: 509600057}
   - component: {fileID: 509600064}
   - component: {fileID: 509600063}
+  - component: {fileID: 509600065}
   m_Layer: 3
   m_Name: Player_Root
   m_TagString: Untagged
@@ -2010,6 +2043,10 @@ MonoBehaviour:
   attackMoveInputScale: 0
   skillDuration: 0.65
   skillMoveInputScale: 0
+  dodgeDuration: 0.25
+  dodgeDistance: 3
+  dodgeCooldown: 0.45
+  dodgeInvincibleDuration: 0.18
   hitDuration: 0.3
   hitMoveInputScale: 0
   logStateChanges: 0
@@ -2120,6 +2157,20 @@ MonoBehaviour:
   onDead:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &509600065
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 509600055}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd77a656c40e4cf5bf9c067ac1f0a527, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.CharacterStats
+  statsType: 1
+  baseAttackPower: 10
 --- !u!1 &651892029
 GameObject:
   m_ObjectHideFlags: 0
@@ -2224,6 +2275,7 @@ GameObject:
   - component: {fileID: 698380645}
   - component: {fileID: 698380647}
   - component: {fileID: 698380649}
+  - component: {fileID: 698380650}
   m_Layer: 9
   m_Name: Ally_02
   m_TagString: Untagged
@@ -2274,7 +2326,7 @@ MonoBehaviour:
   targetSearchRadius: 8
   enemyLayerMask:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 256
   logDecisions: 1
 --- !u!114 &698380646
 MonoBehaviour:
@@ -2358,6 +2410,20 @@ MonoBehaviour:
   targetSearchRadius: 24
   primaryTargetScoreBonus: 10000
   logSelection: 0
+--- !u!114 &698380650
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 698380643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd77a656c40e4cf5bf9c067ac1f0a527, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.CharacterStats
+  statsType: 0
+  baseAttackPower: 10
 --- !u!1 &769434831
 GameObject:
   m_ObjectHideFlags: 0
@@ -2671,7 +2737,7 @@ MonoBehaviour:
   onTagRefreshed:
     m_PersistentCalls:
       m_Calls: []
-  onTagTransformed:
+  onReactionTriggered:
     m_PersistentCalls:
       m_Calls: []
 --- !u!1 &832575517
@@ -3503,7 +3569,7 @@ MonoBehaviour:
   onTagRefreshed:
     m_PersistentCalls:
       m_Calls: []
-  onTagTransformed:
+  onReactionTriggered:
     m_PersistentCalls:
       m_Calls: []
 --- !u!114 &1284033433
@@ -4388,7 +4454,7 @@ MonoBehaviour:
   onTagRefreshed:
     m_PersistentCalls:
       m_Calls: []
-  onTagTransformed:
+  onReactionTriggered:
     m_PersistentCalls:
       m_Calls: []
 --- !u!114 &2012491626

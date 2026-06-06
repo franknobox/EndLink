@@ -18,7 +18,8 @@ namespace EndLink.Combat
             CombatDamageType damageType = CombatDamageType.StructuralDamage,
             int combatTagStackCount = 0,
             HitboxHitInfo hitInfo = default,
-            bool hasHitInfo = false)
+            bool hasHitInfo = false,
+            CombatTagCombinationRule reactionRule = null)
         {
             EventType = eventType;
             Source = source;
@@ -30,6 +31,7 @@ namespace EndLink.Combat
             CombatTagStackCount = Mathf.Max(0, combatTagStackCount);
             HitInfo = hitInfo;
             HasHitInfo = hasHitInfo;
+            ReactionRule = reactionRule;
             TimeStamp = Time.time;
         }
 
@@ -62,6 +64,9 @@ namespace EndLink.Combat
 
         /// <summary>当前事件是否携带有效 Hitbox 命中信息。</summary>
         public bool HasHitInfo { get; }
+
+        /// <summary>触发本次协议反应的组合规则。非反应事件为空。</summary>
+        public CombatTagCombinationRule ReactionRule { get; }
 
         /// <summary>事件发出时的 Time.time。</summary>
         public float TimeStamp { get; }

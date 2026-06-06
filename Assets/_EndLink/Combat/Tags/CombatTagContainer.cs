@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Serialization;
 
 namespace EndLink.Combat
 {
     /// <summary>
     /// 战斗标签容器。
-    /// 挂在可被战斗规则查询的目标身上，负责保存多标签、持续时间、增删事件和组合转化。
+    /// 挂在可被战斗规则查询的目标身上，负责保存多标签、持续时间、增删事件和协议反应。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class CombatTagContainer : MonoBehaviour, ICombatTagReceiver
@@ -24,7 +25,7 @@ namespace EndLink.Combat
         private List<CombatTagCombinationRule> combinationRules = new();
 
         [Header("调试")]
-        [Tooltip("添加、移除、过期、刷新和组合转化标签时是否打印 Debug.Log。")]
+        [Tooltip("添加、移除、过期、刷新和触发协议反应时是否打印 Debug.Log。")]
         [SerializeField]
         private bool logTagChanges;
 
@@ -41,8 +42,9 @@ namespace EndLink.Combat
         [SerializeField]
         private CombatTagEvent onTagRefreshed = new();
 
+        [FormerlySerializedAs("onTagTransformed")]
         [SerializeField]
-        private CombatTagTransformEvent onTagTransformed = new();
+        private CombatTagTransformEvent onReactionTriggered = new();
 
         private readonly List<ActiveCombatTag> _activeTags = new();
 
@@ -61,8 +63,8 @@ namespace EndLink.Combat
         /// <summary>标签刷新事件。</summary>
         public CombatTagEvent OnTagRefreshed => onTagRefreshed;
 
-        /// <summary>标签组合转化事件。</summary>
-        public CombatTagTransformEvent OnTagTransformed => onTagTransformed;
+        /// <summary>协议反应触发事件。</summary>
+        public CombatTagTransformEvent OnReactionTriggered => onReactionTriggered;
 
         private void OnEnable()
         {
@@ -267,7 +269,7 @@ namespace EndLink.Combat
                 }
 
                 CombatTagDefinition reactionTag = ExecuteReactionRuleEffects(rule, source, combinationDepth);
-                NotifyTagTransformed(rule.FirstTag, rule.SecondTag, reactionTag, source);
+                NotifyReactionTriggered(rule, reactionTag, source);
                 return;
             }
         }
@@ -404,9 +406,8 @@ namespace EndLink.Combat
             onTagRefreshed.Invoke(this, tag);
         }
 
-        private void NotifyTagTransformed(
-            CombatTagDefinition firstTag,
-            CombatTagDefinition secondTag,
+        private void NotifyReactionTriggered(
+            CombatTagCombinationRule rule,
             CombatTagDefinition reactionTag,
             GameObject source)
         {
@@ -414,12 +415,12 @@ namespace EndLink.Combat
             {
                 string reactionTagId = reactionTag != null ? reactionTag.TagId : "None";
                 Debug.Log(
-                    $"CombatTagContainer transformed {firstTag.TagId} + {secondTag.TagId} => {reactionTagId}.",
+                    $"CombatTagContainer reaction triggered: {rule.FirstTag.TagId} + {rule.SecondTag.TagId} => {reactionTagId}.",
                     this);
             }
 
-            onTagTransformed.Invoke(this, firstTag, secondTag, reactionTag);
-            CombatEventsBus.RaiseTagTransformed(source, gameObject, reactionTag);
+            onReactionTriggered.Invoke(this, rule.FirstTag, rule.SecondTag, reactionTag);
+            CombatEventsBus.RaiseReactionTriggered(source, gameObject, rule, reactionTag);
         }
 
         private void LogInvalidTag(CombatTagDefinition tag)
@@ -528,7 +529,7 @@ namespace EndLink.Combat
     }
 
     /// <summary>
-    /// 标签组合转化事件。参数依次为：标签容器、输入 A、输入 B、主要反应标签。
+    /// 协议反应事件。参数依次为：标签容器、输入 A、输入 B、主要反应标签。
     /// </summary>
     [System.Serializable]
     public sealed class CombatTagTransformEvent : UnityEvent<CombatTagContainer, CombatTagDefinition, CombatTagDefinition, CombatTagDefinition>

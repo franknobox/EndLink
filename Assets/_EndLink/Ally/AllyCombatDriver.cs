@@ -95,6 +95,14 @@ namespace EndLink.Ally
         /// <summary>当前是否已经过了助战动作自己的冷却，可以执行一次助战攻击。</summary>
         public bool CanAssist => assistAction != null && _cooldowns.IsReady(assistAction, Time.time);
 
+        /// <summary>判断指定动作当前是否具备基础执行条件。</summary>
+        public bool CanExecuteAction(CombatActionDefinition actionDefinition)
+        {
+            return actionDefinition != null
+                && actionDefinition.HitboxPrefab != null
+                && _cooldowns.IsReady(actionDefinition, Time.time);
+        }
+
         /// <summary>
         /// 运行时替换助战动作。主要用于调试、队伍配置系统或简单 PlayMode 测试。
         /// </summary>

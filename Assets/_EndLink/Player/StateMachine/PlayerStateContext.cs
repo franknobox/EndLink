@@ -130,16 +130,17 @@ namespace EndLink.Core
         /// 这里先保留为固定允许；后续可以接入技能冷却、资源、禁用输入和受击硬直判断。
         /// </summary>
         public bool CanStartSkill => CombatDriver != null
-            && CombatDriver.SkillAction != null
-            && CombatDriver.CanAttack;
+            && StateMachine.CurrentAction != null
+            && CombatDriver.CanExecuteAction(StateMachine.CurrentAction);
 
         /// <summary>
         /// 执行主控主动技能动作。
         /// 状态机负责决定能否进入 Skill 状态，战斗驱动只负责实际表现和判定。
         /// </summary>
-        public bool ExecuteSkillAction()
+        public bool ExecuteCurrentAction()
         {
-            return CombatDriver != null && CombatDriver.ExecuteAction(CombatDriver.SkillAction);
+            return CombatDriver != null
+                && CombatDriver.ExecuteAction(StateMachine.CurrentAction, StateMachine.CurrentActionTarget);
         }
 
         /// <summary>

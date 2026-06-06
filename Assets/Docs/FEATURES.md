@@ -34,7 +34,7 @@
 | [玩家自动软锁定](#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按固定间隔自动选择当前战斗目标，默认优先最近敌人，并显示轻量目标点。 |
 | [战斗动作配置](#feature-combat-action) | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和大招的伤害、冷却、时序、Hitbox 和命中标签。 |
 | [伤害结算管线基础](#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
-| [战斗标签系统](#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和标签组合转化规则。 |
+| [战斗标签系统](#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和协议反应规则。 |
 | [战斗数据编辑工具](#feature-combat-data-tool) | 已完成第一版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则数据资产。 |
 | [战斗 UI 基础](#feature-combat-ui-foundation) | 已完成基础版 | 提供 HUD 总入口、小队动作栏、动作槽位冷却显示和通用血条组件。 |
 | [战斗事件总栈](#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
@@ -46,6 +46,7 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
+| [连携触发与窗口](#feature-party-link-context) | 已完成第一版 | 协议反应触发后为三人小队开启 4 秒共享连携窗口，记录反应目标并允许玩家从三个连携技中选择一个释放。 |
 | [队友助战基础组件](#feature-ally-assist) | 已完成持续助战第一版 | 提供队友事件响应大脑和队友战斗执行器，用于主控命中敌人后让队友自动接近目标并持续攻击。 |
 | [队友调试监视窗口](#feature-ally-monitor) | 已完成第一版 | 提供 Editor 窗口集中查看队友状态快照和队友行为日志，辅助排查助战、冷却、距离和目标问题。 |
 | [队友有限状态机](#feature-ally-state-machine) | 已完成通用动作状态版 | 提供 Idle、Follow、Assist、Action、Hit、Dead 外层状态，Assist 处理自动助战，Action 承载主动技能等指令动作。 |
@@ -484,8 +485,8 @@
 - 消耗源标签也通过 `RemoveTag` 反应效果配置，不再保留旧的单独输出标签或自动移除源标签字段。
 - 同一个标签重复添加时会刷新持续时间并增加层数，最终层数会被 `CombatTagDefinition.MaxStackCount` 钳制。
 - 当组合规则的两个输入标签相同时，可以表达“同一标签达到指定层数后转化为另一个标签”，例如后续的 3 层火标签转化为燃烧。
-- 容器提供 `OnTagAdded`、`OnTagRemoved`、`OnTagExpired`、`OnTagRefreshed` 和 `OnTagTransformed` 事件。
-- 标签添加、移除、过期和组合转化时会同步通过 `CombatEventsBus` 广播事件。
+- 容器提供 `OnTagAdded`、`OnTagRemoved`、`OnTagExpired`、`OnTagRefreshed` 和 `OnReactionTriggered` 事件。
+- 标签添加、移除、过期和协议反应触发时会同步通过 `CombatEventsBus` 广播事件。
 - 标签添加和移除接口支持传入 `source`，事件总线可以表达“谁给谁挂载或移除了某个标签”。
 - 对外提供 `ICombatTagReadable` 和 `ICombatTagReceiver`，后续连携规则、AI、UI 和状态效果系统应优先依赖接口。
 - `CombatActionDefinition`、`HitboxBase` 和 `HitboxHitInfo` 使用 `CombatDamageType` 区分 `RuntimeDamage` 和 `StructuralDamage`，并使用 `CombatTagDefinition` 作为标签数据。
@@ -603,11 +604,11 @@
 功能说明：
 - `CombatEventsBus` 是全局战斗事件广播入口。
 - `CombatEvent` 是一条战斗事件的数据结构，包含事件类型、来源、目标、动作配置、战斗标签、伤害、命中信息和时间戳。
-- `CombatEventType` 目前包含 `ActionStarted`、`HitLanded`、`Damaged`、`Dead`、`TagAdded`、`TagRemoved`、`TagExpired`、`TagTransformed`。
+- `CombatEventType` 目前包含 `ActionStarted`、`HitLanded`、`Damaged`、`Dead`、`TagAdded`、`TagRemoved`、`TagExpired`、`ReactionTriggered`。
 - `CombatEventLog` 是白模阶段用的 Console 日志监听器，默认不打印，必要时手动开启。
 - `CombatMonitorWindow` 是 Editor 战斗事件监视窗口，通过 `EndLink > Debug > Combat Monitor` 打开，订阅事件后以表格查看最近的战斗事件。
 - 事件总栈只广播事实，不保存状态，不决定连携规则，不直接驱动队友 AI。
-- 接入范围包括 `PlayerCombatDriver` / `AllyCombatDriver` / `EnemyCombatDriver` 的动作开始、`HitboxBase` 的命中、`CharacterHealth` / `EnemyHealth` / `EnemyDummy` 的受伤与死亡，以及 `CombatTagContainer` 的标签添加、移除、过期和组合转化。
+- 接入范围包括 `PlayerCombatDriver` / `AllyCombatDriver` / `EnemyCombatDriver` 的动作开始、`HitboxBase` 的命中、`CharacterHealth` / `EnemyHealth` / `EnemyDummy` 的受伤与死亡，以及 `CombatTagContainer` 的标签添加、移除、过期和协议反应。
 
 对应脚本：
 - `Assets/_EndLink/Combat/Events/CombatEventType.cs`
@@ -633,7 +634,7 @@
 - `CombatEventsBus.RaiseTagAdded(...)`
 - `CombatEventsBus.RaiseTagRemoved(...)`
 - `CombatEventsBus.RaiseTagExpired(...)`
-- `CombatEventsBus.RaiseTagTransformed(...)`
+- `CombatEventsBus.RaiseReactionTriggered(...)`
 
 </details>
 
@@ -768,6 +769,46 @@
 
 </details>
 
+<a id="feature-party-link-context"></a>
+
+### Feature：连携触发与窗口
+
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- 标签组合规则成功执行后会广播 `ReactionTriggered`，事件携带触发来源、反应目标、主要结果标签和对应的 `CombatTagCombinationRule`。
+- `PartyLinkContext` 监听协议反应事件，并为主控和两个队友同时开启一个全队共享的 4 秒连携窗口。
+- 窗口期内再次触发协议反应会把剩余时间刷新为完整 4 秒，并继续记录新的反应目标。
+- 玩家可以按 `1`、`2`、`3` 从主控、队友 A、队友 B 的连携技中选择一个释放；任意一个请求成功后会消费整个窗口，另外两个槽位同时锁定。
+- 只有一个有效反应目标时默认攻击该目标；记录了多个反应目标时优先攻击主控当前软锁目标。
+- 反应目标死亡或失效不会关闭窗口；没有有效反应目标时会回退到当前软锁目标，没有任何有效目标时保留窗口但拒绝本次释放。
+- 主控连携技通过玩家通用技能状态执行；队友连携技通过 `AllyActionState` 执行，不绕过角色状态机。
+- `PartyLinkContext` 暴露窗口是否开启、剩余时间、归一化剩余时间和目标解析接口，供后续连携 UI 使用。
+
+对应脚本：
+- `Assets/_EndLink/Party/PartyLinkContext.cs`
+- `Assets/_EndLink/Party/PartyCombatRouter.cs`
+- `Assets/_EndLink/Combat/Events/CombatEventType.cs`
+- `Assets/_EndLink/Combat/Events/CombatEventsBus.cs`
+- `Assets/_EndLink/Combat/Tags/CombatTagContainer.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerStateMachine.cs`
+- `Assets/_EndLink/Ally/AllyStateMachine.cs`
+
+相关物体：
+- 小队管理物体
+  - `PartyManager`
+  - `PartyCombatRouter`
+  - `PartyLinkContext`
+
+关键配置：
+- `PartyLinkContext.linkWindowDuration`：协议反应触发后的共享连携窗口，默认 4 秒
+- `PlayerCombatDriver.LinkAction`：主控连携技动作
+- `AllyCombatDriver.LinkAction`：对应队友连携技动作
+- `PartyCombatRouter` 的 `1` / `2` / `3` 键位：分别选择主控、队友 A、队友 B 的连携技
+
+</details>
+
 <a id="feature-party-combat-context"></a>
 
 ### Feature：小队战斗状态上下文
@@ -884,11 +925,11 @@
 - `PartyManager` 持有 `PartyCombatRouter` 引用，供战斗 UI 和后续小队系统读取当前键位路由。
 - `PartyCombatContext` 作为小队战斗状态上下文，供队友目标选择、战斗 UI 和后续连携系统读取当前主目标、已知敌人和战斗状态。
 - `PartyCombatRouter` 负责把 `PlayerInputReader` 中的战斗输入翻译成主控、队友 A、队友 B 或全队的命令请求。
-- `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害、标签或动作执行。
+- `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害或标签；它只校验连携窗口并把技能/连携请求转发给对应角色状态机。
 - 当前第一版中，主控 `Skill` 命令会由 `PartyCombatRouter` 转发给 `PlayerStateMachine.RequestSkill()`，由玩家状态机决定能否进入 `Skill` 状态并执行动作。
 - 队友 `Skill` 命令会由 `PartyCombatRouter` 转发给对应 `AllyStateMachine.RequestAction(...)`，进入 `Action` 状态后再由 `AllyCombatDriver` 执行 `SkillAction`。
 - `PartyCombatRouter` Inspector 中可以覆盖 Q/E/F 和 1/2/3 对应的技能与连携请求键位，V 键全队极限技暂时固定。
-- `LinkAttack` 命令只表示玩家请求使用连携槽位，不能被普通动作执行层直接当成可释放技能处理。
+- `LinkAttack` 命令只有在 `PartyLinkContext` 窗口开启时才会被接受；请求成功后由对应角色状态机执行 `LinkAction` 并消费共享窗口。
 - 后续队友 AI、连携规则或调试工具需要知道“谁是主控，谁是队友”时，可以从 `PartyManager` 查询。
 
 对应脚本：
@@ -897,6 +938,7 @@
 - `Assets/_EndLink/Party/PartyFollowSettings.cs`
 - `Assets/_EndLink/Party/PartyCombatRouter.cs`
 - `Assets/_EndLink/Party/PartyCombatContext.cs`
+- `Assets/_EndLink/Party/PartyLinkContext.cs`
 - `Assets/_EndLink/Ally/AllyFollowMotor.cs`
 - `Assets/_EndLink/Ally/AllyStateMachine.cs`
 
@@ -904,6 +946,7 @@
 - 场景管理物体
   - `PartyManager`
   - `PartyCombatRouter`
+  - `PartyLinkContext`
 - 主控角色根物体
   - 拖入 `mainCharacter`
 - 两个队友根物体
@@ -935,7 +978,7 @@
 
 功能说明：
 - `EnemyActor` 是正式敌人的根入口组件，只暴露敌人身份、目标点和生命组件引用。
-- `EnemyActor` 要求同物体挂载 `CombatTagContainer`，保证正式敌人天然支持战斗标签、持续标签和组合转化。
+- `EnemyActor` 要求同物体挂载 `CombatTagContainer`，保证正式敌人天然支持战斗标签、持续标签和协议反应。
 - `EnemyHealth` 负责正式敌人的血量、受击、死亡、死亡事件和白模调试反馈。
 - `EnemyHealth` 同时实现 `IHitReceiver`、`IDamageable` 和 `ICombatTarget`。
 - `ICombatTarget` 是战斗目标有效性接口，当前用于判断目标死亡后是否还能被锁定、搜索或命中。
@@ -1014,7 +1057,7 @@
 - `EnemyMotorBase.collisionPushMultiplier`：敌人本帧移动量转换为推挤位移的倍率
 - `EnemyMotorBase.maxCollisionPushDistance`：单次碰撞最多传递给玩家或队友的位移
 - `initialTags`：敌人启用时默认拥有的战斗标签
-- `combinationRules`：敌人身上标签组合转化使用的规则
+- `combinationRules`：敌人身上触发协议反应使用的规则
 - `untargetableOnDeath`：死亡后是否不再作为有效战斗目标
 - `disableCollidersOnDeath`：死亡后是否禁用非 Trigger Collider
 - `feedbackRenderer`：受击和死亡变色使用的 MeshRenderer
