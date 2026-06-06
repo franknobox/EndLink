@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using EndLink.Core;
 using UnityEngine;
 
@@ -8,7 +9,7 @@ namespace EndLink.Combat
     /// 只保存玩家可释放的动作槽位，并按照 CombatActionDefinition 执行动作表现和 Hitbox 判定。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class PlayerCombatDriver : MonoBehaviour
+    public sealed class PlayerCombatDriver : MonoBehaviour, ICombatActionExecutor
     {
         [Header("动作槽位")]
         [Tooltip("玩家普攻动作。鼠标左键会由玩家状态机触发该动作。")]
@@ -25,9 +26,8 @@ namespace EndLink.Combat
 
         private PlayerTargeting _targeting;
         private PlayerController _playerController;
-        private float _nextActionTime;
-        private float _lastActionCooldown;
-        private CombatActionDefinition _lastCooldownAction;
+        private readonly Dictionary<CombatActionDefinition, float> _nextReadyTimes = new();
+        private CombatActionDefinition _lastExecutedAction;
 
         /// <summary>玩家普攻动作。</summary>
         public CombatActionDefinition BasicAttackAction => basicAttackAction;
@@ -39,21 +39,23 @@ namespace EndLink.Combat
         public CombatActionDefinition LinkAction => linkAction;
 
         /// <summary>当前是否可以释放下一次动作。</summary>
-        public bool CanAttack => Time.time >= _nextActionTime;
+        public bool CanAttack => CanExecute(basicAttackAction);
 
         /// <summary>当前动作冷却剩余时间，单位秒。</summary>
-        public float ActionCooldownRemaining => Mathf.Max(0f, _nextActionTime - Time.time);
+        public float ActionCooldownRemaining => GetCooldownRemaining(_lastExecutedAction);
 
         /// <summary>最近一次成功执行动作写入的冷却总时长，单位秒。</summary>
-        public float ActionCooldownDuration => _lastActionCooldown;
+        public float ActionCooldownDuration => _lastExecutedAction != null
+            ? Mathf.Max(0f, _lastExecutedAction.Cooldown)
+            : 0f;
 
         /// <summary>当前动作冷却归一化进度，1 表示刚进入冷却，0 表示冷却结束。</summary>
         public float ActionCooldownNormalized
         {
             get
             {
-                return _lastActionCooldown > 0f
-                    ? Mathf.Clamp01(ActionCooldownRemaining / _lastActionCooldown)
+                return ActionCooldownDuration > 0f
+                    ? Mathf.Clamp01(ActionCooldownRemaining / ActionCooldownDuration)
                     : 0f;
             }
         }
@@ -63,16 +65,19 @@ namespace EndLink.Combat
 
         /// <summary>
         /// 查询指定动作当前的冷却归一化进度。
-        /// 当前第一版玩家只有一个动作锁，但 UI 需要知道“这个槽位自己的动作”是否在冷却，避免普攻冷却染灰技能槽。
+        /// 玩家按动作资产独立记录冷却，普攻、技能和连携技不会互相覆盖冷却。
         /// </summary>
-        public float GetActionCooldownNormalized(CombatActionDefinition actionDefinition)
+        public float GetCooldownNormalized(CombatActionDefinition actionDefinition)
         {
-            if (actionDefinition == null || _lastCooldownAction != actionDefinition)
+            if (actionDefinition == null)
             {
                 return 0f;
             }
 
-            return ActionCooldownNormalized;
+            float cooldown = Mathf.Max(0f, actionDefinition.Cooldown);
+            return cooldown > 0f
+                ? Mathf.Clamp01(GetCooldownRemaining(actionDefinition) / cooldown)
+                : 0f;
         }
 
         private void Awake()
@@ -86,25 +91,25 @@ namespace EndLink.Combat
         /// </summary>
         public bool ExecuteAttack()
         {
-            return ExecuteAction(basicAttackAction);
+            return TryExecute(basicAttackAction);
         }
 
         /// <summary>
         /// 判断指定动作当前是否具备最基础的执行条件。
         /// 状态机可以用它决定是否接受动作请求，避免请求成功后才发现动作仍在冷却或缺少 Hitbox。
         /// </summary>
-        public bool CanExecuteAction(CombatActionDefinition actionDefinition)
+        public bool CanExecute(CombatActionDefinition actionDefinition)
         {
             return actionDefinition != null
                 && actionDefinition.HitboxPrefab != null
-                && CanAttack;
+                && GetCooldownRemaining(actionDefinition) <= 0f;
         }
 
         /// <summary>
         /// 执行指定玩家动作。
         /// 该方法不判断玩家状态机是否允许出手，只负责动作资源、冷却和 Hitbox 执行。
         /// </summary>
-        public bool ExecuteAction(CombatActionDefinition actionDefinition, Transform targetOverride = null)
+        public bool TryExecute(CombatActionDefinition actionDefinition, Transform targetOverride = null)
         {
             if (actionDefinition == null)
             {
@@ -112,14 +117,14 @@ namespace EndLink.Combat
                 return false;
             }
 
-            if (!CanAttack)
-            {
-                return false;
-            }
-
             if (actionDefinition.HitboxPrefab == null)
             {
                 Debug.LogWarning($"PlayerCombatDriver 的动作 {actionDefinition.ActionId} 缺少 Hitbox Prefab。", this);
+                return false;
+            }
+
+            if (!CanExecute(actionDefinition))
+            {
                 return false;
             }
 
@@ -138,10 +143,22 @@ namespace EndLink.Combat
                 ? targetOverride.gameObject
                 : GetCurrentTargetObject();
             CombatEventsBus.RaiseActionStarted(gameObject, actionTarget, actionDefinition);
-            _lastCooldownAction = actionDefinition;
-            _lastActionCooldown = actionDefinition.Cooldown;
-            _nextActionTime = Time.time + _lastActionCooldown;
+            _lastExecutedAction = actionDefinition;
+            _nextReadyTimes[actionDefinition] = Time.time + Mathf.Max(0f, actionDefinition.Cooldown);
             return true;
+        }
+
+        /// <inheritdoc />
+        public float GetCooldownRemaining(CombatActionDefinition actionDefinition)
+        {
+            if (actionDefinition == null)
+            {
+                return 0f;
+            }
+
+            return _nextReadyTimes.TryGetValue(actionDefinition, out float nextReadyTime)
+                ? Mathf.Max(0f, nextReadyTime - Time.time)
+                : 0f;
         }
 
         private void FaceAttackDirection(Vector3 attackForward)

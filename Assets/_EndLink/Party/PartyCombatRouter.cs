@@ -430,7 +430,8 @@ namespace EndLink.Party
             }
 
             AllyCombatDriver combatDriver = stateMachine.CombatDriver;
-            if (combatDriver == null || !combatDriver.CanExecuteAction(combatDriver.LinkAction))
+            ICombatActionExecutor actionExecutor = combatDriver;
+            if (actionExecutor == null || !actionExecutor.CanExecute(combatDriver.LinkAction))
             {
                 return false;
             }

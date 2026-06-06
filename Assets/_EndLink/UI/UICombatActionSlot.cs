@@ -253,14 +253,8 @@ namespace EndLink.UI
         private float ResolveCooldownNormalized()
         {
             CombatActionDefinition currentAction = ResolveAction();
-
-            return ActorSlot switch
-            {
-                PartyCombatActorSlot.MainCharacter => ResolvePlayerCombatDriver()?.GetActionCooldownNormalized(currentAction) ?? 0f,
-                PartyCombatActorSlot.AllySlotA => ResolveAllyCombatDriver(PartyCombatActorSlot.AllySlotA)?.GetActionCooldownNormalized(currentAction) ?? 0f,
-                PartyCombatActorSlot.AllySlotB => ResolveAllyCombatDriver(PartyCombatActorSlot.AllySlotB)?.GetActionCooldownNormalized(currentAction) ?? 0f,
-                _ => 0f
-            };
+            ICombatActionExecutor actionExecutor = ResolveActionExecutor();
+            return actionExecutor?.GetCooldownNormalized(currentAction) ?? 0f;
         }
 
         private string ResolveKeyLabel()
@@ -311,6 +305,17 @@ namespace EndLink.UI
             };
 
             return stateMachine != null ? stateMachine.CombatDriver : null;
+        }
+
+        private ICombatActionExecutor ResolveActionExecutor()
+        {
+            return ActorSlot switch
+            {
+                PartyCombatActorSlot.MainCharacter => ResolvePlayerCombatDriver(),
+                PartyCombatActorSlot.AllySlotA => ResolveAllyCombatDriver(PartyCombatActorSlot.AllySlotA),
+                PartyCombatActorSlot.AllySlotB => ResolveAllyCombatDriver(PartyCombatActorSlot.AllySlotB),
+                _ => null
+            };
         }
 
         private static PartyCombatCommandType ResolveCommandType(UICombatActionSlotId uiSlot)

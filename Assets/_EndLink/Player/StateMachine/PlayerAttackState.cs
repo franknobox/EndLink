@@ -1,4 +1,5 @@
 using UnityEngine;
+using EndLink.Combat;
 
 namespace EndLink.Core
 {
@@ -20,7 +21,8 @@ namespace EndLink.Core
         public override void Enter()
         {
             _elapsedTime = 0f;
-            Context.CombatDriver.ExecuteAttack();
+            ICombatActionExecutor executor = Context.ActionExecutor;
+            executor?.TryExecute(Context.CombatDriver.BasicAttackAction);
         }
 
         public override void Tick(float deltaTime)

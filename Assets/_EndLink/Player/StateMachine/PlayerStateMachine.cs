@@ -240,7 +240,8 @@ namespace EndLink.Core
                 return false;
             }
 
-            if (_actionRequested || _combatDriver == null || !_combatDriver.CanExecuteAction(action))
+            ICombatActionExecutor actionExecutor = _combatDriver;
+            if (_actionRequested || actionExecutor == null || !actionExecutor.CanExecute(action))
             {
                 return false;
             }

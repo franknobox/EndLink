@@ -10,7 +10,7 @@ namespace EndLink.Ally
     /// 自动助战、主动技能、连携技共享执行逻辑，但各自按动作资产独立计算冷却。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class AllyCombatDriver : MonoBehaviour
+    public sealed class AllyCombatDriver : MonoBehaviour, ICombatActionExecutor
     {
         [Header("动作配置")]
         [Tooltip("队友自动助战使用的动作配置。当前用于主控命中敌人后，队友自动接近并持续攻击。")]
@@ -55,10 +55,10 @@ namespace EndLink.Ally
         public bool HasAssistAction => assistAction != null;
 
         /// <summary>当前助战动作自己的冷却剩余时间，单位秒。</summary>
-        public float AssistCooldownRemaining => GetActionCooldownRemaining(assistAction);
+        public float AssistCooldownRemaining => GetCooldownRemaining(assistAction);
 
         /// <summary>最近一次成功执行动作的冷却剩余时间，单位秒。主要用于调试窗口。</summary>
-        public float ActionCooldownRemaining => GetActionCooldownRemaining(_lastExecutedAction);
+        public float ActionCooldownRemaining => GetCooldownRemaining(_lastExecutedAction);
 
         /// <summary>最近一次成功执行动作的冷却总时长，单位秒。主要用于调试窗口。</summary>
         public float ActionCooldownDuration => _lastExecutedAction != null ? Mathf.Max(0f, _lastExecutedAction.Cooldown) : 0f;
@@ -81,7 +81,7 @@ namespace EndLink.Ally
         /// 查询指定动作当前的冷却归一化进度。
         /// UI 使用这个接口读取队友主动技能槽，避免自动助战动作把主动技能 UI 染灰。
         /// </summary>
-        public float GetActionCooldownNormalized(CombatActionDefinition actionDefinition)
+        public float GetCooldownNormalized(CombatActionDefinition actionDefinition)
         {
             if (actionDefinition == null)
             {
@@ -89,14 +89,14 @@ namespace EndLink.Ally
             }
 
             float cooldown = Mathf.Max(0f, actionDefinition.Cooldown);
-            return cooldown > 0f ? Mathf.Clamp01(GetActionCooldownRemaining(actionDefinition) / cooldown) : 0f;
+            return cooldown > 0f ? Mathf.Clamp01(GetCooldownRemaining(actionDefinition) / cooldown) : 0f;
         }
 
         /// <summary>当前是否已经过了助战动作自己的冷却，可以执行一次助战攻击。</summary>
-        public bool CanAssist => assistAction != null && _cooldowns.IsReady(assistAction, Time.time);
+        public bool CanAssist => CanExecute(assistAction);
 
         /// <summary>判断指定动作当前是否具备基础执行条件。</summary>
-        public bool CanExecuteAction(CombatActionDefinition actionDefinition)
+        public bool CanExecute(CombatActionDefinition actionDefinition)
         {
             return actionDefinition != null
                 && actionDefinition.HitboxPrefab != null
@@ -116,28 +116,19 @@ namespace EndLink.Ally
         /// </summary>
         public bool ExecuteAssist(Transform target)
         {
-            return ExecuteAction(assistAction, target);
+            return TryExecute(assistAction, target);
         }
 
         /// <summary>
         /// 执行指定队友动作。
         /// 调用者负责判断动作来自自动助战、玩家命令技能，还是连携机制授权的连携攻击。
         /// </summary>
-        public bool ExecuteAction(CombatActionDefinition actionDefinition, Transform target)
+        public bool TryExecute(CombatActionDefinition actionDefinition, Transform target = null)
         {
             if (actionDefinition == null)
             {
                 AllyDebugLog.Raise(gameObject, AllyDebugCategory.Combat, "execute action failed: missing action definition");
                 LogFailure("AllyCombatDriver 缺少动作配置，无法执行动作。");
-                return false;
-            }
-
-            if (!_cooldowns.IsReady(actionDefinition, Time.time))
-            {
-                AllyDebugLog.Raise(
-                    gameObject,
-                    AllyDebugCategory.Combat,
-                    $"execute action skipped: action={actionDefinition.ActionId}, cooldown remaining={GetActionCooldownRemaining(actionDefinition):F2}");
                 return false;
             }
 
@@ -150,6 +141,15 @@ namespace EndLink.Ally
                     AllyDebugCategory.Combat,
                     $"execute action failed: action={actionDefinition.ActionId} missing hitbox prefab");
                 LogFailure($"AllyCombatDriver 的动作 {actionDefinition.ActionId} 缺少 Hitbox Prefab。");
+                return false;
+            }
+
+            if (!CanExecute(actionDefinition))
+            {
+                AllyDebugLog.Raise(
+                    gameObject,
+                    AllyDebugCategory.Combat,
+                    $"execute action skipped: action={actionDefinition.ActionId}, cooldown remaining={GetCooldownRemaining(actionDefinition):F2}");
                 return false;
             }
 
@@ -203,7 +203,7 @@ namespace EndLink.Ally
             return true;
         }
 
-        private float GetActionCooldownRemaining(CombatActionDefinition actionDefinition)
+        public float GetCooldownRemaining(CombatActionDefinition actionDefinition)
         {
             return _cooldowns.GetRemaining(actionDefinition, Time.time);
         }

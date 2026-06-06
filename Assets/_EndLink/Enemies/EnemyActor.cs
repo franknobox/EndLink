@@ -65,6 +65,9 @@ namespace EndLink.Enemies
         /// <summary>敌人的战斗执行器。没有攻击能力的敌人可以为空。</summary>
         public EnemyCombatDriver CombatDriver => combatDriver;
 
+        /// <summary>敌人的统一战斗动作执行接口。没有攻击能力时为空。</summary>
+        public ICombatActionExecutor ActionExecutor => combatDriver;
+
         /// <summary>敌人的统一战斗目标身份。</summary>
         public CombatTarget CombatTarget
         {

@@ -32,6 +32,9 @@ namespace EndLink.Ally
         /// <summary>队友战斗执行器，只负责生成 Hitbox 和执行动作。</summary>
         public AllyCombatDriver CombatDriver { get; }
 
+        /// <summary>队友战斗动作的统一执行接口。</summary>
+        public ICombatActionExecutor ActionExecutor => CombatDriver;
+
         /// <summary>队友移动器，负责跟随、接近目标和局部避让。</summary>
         public AllyFollowMotor FollowMotor { get; }
 

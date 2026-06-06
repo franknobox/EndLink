@@ -11,7 +11,7 @@ namespace EndLink.Enemies
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyActor))]
-    public sealed class EnemyCombatDriver : MonoBehaviour
+    public sealed class EnemyCombatDriver : MonoBehaviour, ICombatActionExecutor
     {
         [Header("动作配置")]
         [Tooltip("敌人普通攻击动作。后续近战敌人的 Combat 行为会优先调用它。")]
@@ -49,10 +49,10 @@ namespace EndLink.Enemies
         public bool HasBasicAttackAction => basicAttackAction != null;
 
         /// <summary>普通攻击是否已经冷却完成。</summary>
-        public bool CanBasicAttack => CanExecuteAction(basicAttackAction);
+        public bool CanBasicAttack => CanExecute(basicAttackAction);
 
         /// <summary>最近一次成功执行动作的冷却剩余时间。</summary>
-        public float ActionCooldownRemaining => GetActionCooldownRemaining(_lastExecutedAction);
+        public float ActionCooldownRemaining => GetCooldownRemaining(_lastExecutedAction);
 
         /// <summary>最近一次成功执行动作的冷却总时长。</summary>
         public float ActionCooldownDuration => _lastExecutedAction != null ? Mathf.Max(0f, _lastExecutedAction.Cooldown) : 0f;
@@ -74,7 +74,7 @@ namespace EndLink.Enemies
         /// <summary>
         /// 查询指定动作当前的冷却剩余时间。
         /// </summary>
-        public float GetActionCooldownRemaining(CombatActionDefinition actionDefinition)
+        public float GetCooldownRemaining(CombatActionDefinition actionDefinition)
         {
             if (actionDefinition == null)
             {
@@ -89,7 +89,7 @@ namespace EndLink.Enemies
         /// <summary>
         /// 查询指定动作当前的归一化冷却进度。
         /// </summary>
-        public float GetActionCooldownNormalized(CombatActionDefinition actionDefinition)
+        public float GetCooldownNormalized(CombatActionDefinition actionDefinition)
         {
             if (actionDefinition == null)
             {
@@ -97,15 +97,17 @@ namespace EndLink.Enemies
             }
 
             float cooldown = Mathf.Max(0f, actionDefinition.Cooldown);
-            return cooldown > 0f ? Mathf.Clamp01(GetActionCooldownRemaining(actionDefinition) / cooldown) : 0f;
+            return cooldown > 0f ? Mathf.Clamp01(GetCooldownRemaining(actionDefinition) / cooldown) : 0f;
         }
 
         /// <summary>
         /// 指定动作当前是否可以执行。
         /// </summary>
-        public bool CanExecuteAction(CombatActionDefinition actionDefinition)
+        public bool CanExecute(CombatActionDefinition actionDefinition)
         {
-            return actionDefinition != null && GetActionCooldownRemaining(actionDefinition) <= 0f;
+            return actionDefinition != null
+                && actionDefinition.HitboxPrefab != null
+                && GetCooldownRemaining(actionDefinition) <= 0f;
         }
 
         /// <summary>
@@ -114,14 +116,14 @@ namespace EndLink.Enemies
         /// </summary>
         public bool ExecuteBasicAttack(Transform target)
         {
-            return ExecuteAction(basicAttackAction, target);
+            return TryExecute(basicAttackAction, target);
         }
 
         /// <summary>
         /// 执行指定敌人动作。
         /// 当前只做 Hitbox 生成、运行时参数配置、冷却记录和事件播报。
         /// </summary>
-        public bool ExecuteAction(CombatActionDefinition actionDefinition, Transform target)
+        public bool TryExecute(CombatActionDefinition actionDefinition, Transform target = null)
         {
             if (actionDefinition == null)
             {
@@ -129,14 +131,14 @@ namespace EndLink.Enemies
                 return false;
             }
 
-            if (!CanExecuteAction(actionDefinition))
-            {
-                return false;
-            }
-
             if (actionDefinition.HitboxPrefab == null)
             {
                 LogFailure($"EnemyCombatDriver 的动作 {actionDefinition.ActionId} 缺少 Hitbox Prefab。");
+                return false;
+            }
+
+            if (!CanExecute(actionDefinition))
+            {
                 return false;
             }
 

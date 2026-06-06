@@ -1,3 +1,4 @@
+using EndLink.Combat;
 using UnityEngine;
 
 namespace EndLink.Enemies
@@ -34,6 +35,9 @@ namespace EndLink.Enemies
 
         /// <summary>敌人的战斗执行器。当前基础 Combat 状态不会自动调用它。</summary>
         public EnemyCombatDriver CombatDriver => Actor != null ? Actor.CombatDriver : null;
+
+        /// <summary>敌人的统一战斗动作执行接口。</summary>
+        public ICombatActionExecutor ActionExecutor => Actor != null ? Actor.ActionExecutor : null;
 
         /// <summary>敌人根 Transform。</summary>
         public Transform Transform { get; }

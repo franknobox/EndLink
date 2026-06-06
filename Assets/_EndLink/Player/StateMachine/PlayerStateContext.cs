@@ -50,6 +50,9 @@ namespace EndLink.Core
         /// </summary>
         public PlayerCombatDriver CombatDriver { get; }
 
+        /// <summary>玩家战斗动作的统一执行接口。</summary>
+        public ICombatActionExecutor ActionExecutor => CombatDriver;
+
         /// <summary>
         /// 玩家通用生命组件。用于闪避临时免伤等和生命系统有关的轻量接线。
         /// </summary>
@@ -123,15 +126,16 @@ namespace EndLink.Core
         /// 当前是否允许开始一次攻击。
         /// 这里先只检查攻击冷却；后续可以继续加入硬直、受击、禁用输入等条件。
         /// </summary>
-        public bool CanStartAttack => CombatDriver.CanAttack;
+        public bool CanStartAttack => ActionExecutor != null
+            && ActionExecutor.CanExecute(CombatDriver.BasicAttackAction);
 
         /// <summary>
         /// 当前是否允许开始一次技能。
         /// 这里先保留为固定允许；后续可以接入技能冷却、资源、禁用输入和受击硬直判断。
         /// </summary>
-        public bool CanStartSkill => CombatDriver != null
+        public bool CanStartSkill => ActionExecutor != null
             && StateMachine.CurrentAction != null
-            && CombatDriver.CanExecuteAction(StateMachine.CurrentAction);
+            && ActionExecutor.CanExecute(StateMachine.CurrentAction);
 
         /// <summary>
         /// 执行主控主动技能动作。
@@ -139,8 +143,8 @@ namespace EndLink.Core
         /// </summary>
         public bool ExecuteCurrentAction()
         {
-            return CombatDriver != null
-                && CombatDriver.ExecuteAction(StateMachine.CurrentAction, StateMachine.CurrentActionTarget);
+            return ActionExecutor != null
+                && ActionExecutor.TryExecute(StateMachine.CurrentAction, StateMachine.CurrentActionTarget);
         }
 
         /// <summary>

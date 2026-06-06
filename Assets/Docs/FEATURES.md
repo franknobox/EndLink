@@ -8,7 +8,7 @@
 
 ### 当前情况概览
 
-项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party`、`Assets/_EndLink/Enemies` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、统一 Combat Target、玩家 Animator 桥接、基础攻击驱动、基础 Hitbox 配置、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动与动态站位第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架和战斗 UI 基础。
+项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party`、`Assets/_EndLink/Enemies` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、统一 Combat Target、统一 Action 执行接口、玩家 Animator 桥接、基础攻击驱动、基础 Hitbox 配置、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动与动态站位第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架和战斗 UI 基础。
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
@@ -34,6 +34,7 @@
 | [角色战斗数值基础](#feature-character-stats) | 已完成第一版 | 提供玩家、队友和敌人共用的攻击力入口，并支持动作按固定伤害与攻击力倍率组合计算伤害。 |
 | [玩家自动软锁定](#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按固定间隔自动选择当前战斗目标，默认优先最近敌人，并显示轻量目标点。 |
 | [战斗动作配置](#feature-combat-action) | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和大招的伤害、冷却、时序、Hitbox 和命中标签。 |
+| [统一 Action 执行接口](#feature-combat-action-executor) | 已完成第一版 | 统一玩家、队友和敌人的动作可执行检查、执行请求、目标传入和冷却查询，保留各 Driver 的具体表现实现。 |
 | [伤害结算管线基础](#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
 | [战斗标签系统](#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和协议反应规则。 |
 | [战斗数据编辑工具](#feature-combat-data-tool) | 已完成第一版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则数据资产。 |
@@ -472,6 +473,29 @@
 - `Skill`：普通技能
 - `LinkAttack`：连携攻击
 - `Ultimate`：大招
+
+</details>
+
+<a id="feature-combat-action-executor"></a>
+
+### Feature：统一 Action 执行接口
+
+<details>
+<summary>展开详情</summary>
+功能说明：
+- `ICombatActionExecutor` 统一提供 `CanExecute`、`TryExecute`、`GetCooldownRemaining` 和 `GetCooldownNormalized`。
+- `PlayerCombatDriver`、`AllyCombatDriver`、`EnemyCombatDriver` 均实现该接口，具体 Hitbox 生成、朝向、日志和事件播报仍由各自 Driver 负责。
+- 状态机负责角色当前是否允许进入动作状态；执行接口只检查动作配置、Hitbox 资源和动作自身冷却。
+- 玩家、队友和敌人都按 `CombatActionDefinition` 独立记录冷却，普攻、技能和连携技不会互相覆盖冷却。
+- 玩家和队友状态机在接受动作请求前先检查 `CanExecute`，避免进入状态后才发现动作仍在冷却或缺少资源。
+- 战斗 UI 通过统一接口查询对应动作槽位的冷却，不再分别调用不同 Driver 的冷却方法。
+
+对应脚本：
+- `Assets/_EndLink/Combat/ICombatActionExecutor.cs`
+- `Assets/_EndLink/Player/PlayerCombatDriver.cs`
+- `Assets/_EndLink/Ally/AllyCombatDriver.cs`
+- `Assets/_EndLink/Enemies/Abilities/EnemyCombatDriver.cs`
+- `Assets/_EndLink/UI/UICombatActionSlot.cs`
 
 </details>
 
@@ -1118,14 +1142,16 @@
 - 支持通过 `CombatActionDefinition` 配置普攻、主动技能、连携技的伤害、击退、`CombatTagDefinition` 标签、标签持续时间、冷却、Hitbox 和生成参数。
 - `PlayerCombatDriver` 执行的动作必须来自 `CombatActionDefinition`。
 - 当前执行内容是生成指定 Hitbox prefab；有自动软锁目标时先让玩家正面瞬间转向目标，再按玩家正前方生成，没有目标时按角色当前正前方生成。
-- 支持动作冷却，防止动作过快触发。
+- 普攻、主动技能和连携技按各自 `CombatActionDefinition` 独立记录冷却。
 - 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 区分普攻、技能和连携槽。
+- 实现 `ICombatActionExecutor`，状态机通过统一 `CanExecute` / `TryExecute` 入口检查和执行动作。
 - 支持通过动作资产中的 `Hitbox Spawn Distance` 和 `Hitbox Spawn Height` 调整 Hitbox 生成位置。
 - 生成 Hitbox 后会调用 `HitboxBase.Initialize(gameObject)` 传入攻击者。
 - Hitbox 会在指定生命周期后自动销毁。
 - 成功执行攻击后会通过 `CombatEventsBus` 广播 `ActionStarted`。
 对应脚本：
 - `Assets/_EndLink/Player/PlayerCombatDriver.cs`
+- `Assets/_EndLink/Combat/ICombatActionExecutor.cs`
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
 - `Assets/_EndLink/Combat/Hitbox/HitboxBase.cs`
 相关物体/资产：

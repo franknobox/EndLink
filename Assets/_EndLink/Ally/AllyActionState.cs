@@ -32,7 +32,7 @@ namespace EndLink.Ally
                 return;
             }
 
-            _executed = Context.CombatDriver.ExecuteAction(action, Context.CurrentActionTarget);
+            _executed = Context.ActionExecutor.TryExecute(action, Context.CurrentActionTarget);
             AllyDebugLog.Raise(
                 Context.Transform.gameObject,
                 AllyDebugCategory.Combat,

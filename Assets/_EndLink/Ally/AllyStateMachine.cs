@@ -333,6 +333,13 @@ namespace EndLink.Ally
                 return false;
             }
 
+            ICombatActionExecutor actionExecutor = _combatDriver;
+            if (actionExecutor == null || !actionExecutor.CanExecute(action))
+            {
+                LogActionRequestRejected($"action unavailable: {action.ActionId}");
+                return false;
+            }
+
             _currentAction = action;
             _currentActionTarget = target;
             _returnStateAfterAction = CurrentStateId == AllyStateId.Assist ? AllyStateId.Assist : GetDefaultLocomotionState();
