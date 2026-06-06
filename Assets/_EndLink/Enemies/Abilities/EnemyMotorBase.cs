@@ -12,7 +12,7 @@ namespace EndLink.Enemies
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
-    public class EnemyMotorBase : MonoBehaviour
+    public class EnemyMotorBase : MonoBehaviour, ICombatKnockbackReceiver
     {
         [Header("移动")]
         [Tooltip("敌人的基础移动速度。实际速度会乘以 Move Speed Multiplier。")]
@@ -200,6 +200,27 @@ namespace EndLink.Enemies
                 transform.rotation,
                 targetRotation,
                 rotationSpeed * Mathf.Max(0f, deltaTime));
+        }
+
+        /// <summary>
+        /// 接收攻击命中的瞬时水平击退。
+        /// 该入口与普通移动碰撞推挤分离，因此不会让玩家或队友通过接触反向顶动敌人。
+        /// </summary>
+        public virtual void ApplyCombatKnockback(Vector3 displacement)
+        {
+            displacement.y = 0f;
+            if (displacement.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            if (_characterController != null && _characterController.enabled)
+            {
+                MovePlanar(displacement);
+                return;
+            }
+
+            transform.position += displacement;
         }
 
         private void MovePlanar(Vector3 displacement)

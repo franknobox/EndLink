@@ -54,7 +54,7 @@ namespace EndLink.Combat
         /// <summary>伤害类型。</summary>
         public CombatDamageType DamageType { get; }
 
-        /// <summary>击退力。</summary>
+        /// <summary>动作或 Hitbox 配置的基础瞬时击退距离。</summary>
         public float KnockbackForce { get; }
 
         /// <summary>命中时附加的战斗标签资产。</summary>

@@ -1,5 +1,6 @@
 using EndLink.Party;
 using EndLink.Core;
+using EndLink.Combat;
 using UnityEngine;
 
 namespace EndLink.Ally
@@ -25,7 +26,7 @@ namespace EndLink.Ally
     /// 状态机只在 Follow 状态中调用 TickFollow，不在这里判断队友当前是否允许跟随。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class AllyFollowMotor : MonoBehaviour, IExternalDisplacementReceiver
+    public sealed class AllyFollowMotor : MonoBehaviour, IExternalDisplacementReceiver, ICombatKnockbackReceiver
     {
         [SerializeField, HideInInspector]
         private Transform followTarget;
@@ -617,6 +618,15 @@ namespace EndLink.Ally
 
             Move(displacement);
             SyncFollowDeadZoneAnchorToCurrentPosition();
+        }
+
+        /// <summary>
+        /// 接收攻击命中的瞬时击退。
+        /// 被击退后同步跟随死区圆心，避免跟随系统立刻把队友拉回击退前的位置。
+        /// </summary>
+        public void ApplyCombatKnockback(Vector3 displacement)
+        {
+            AddExternalDisplacement(displacement);
         }
 
         private void Move(Vector3 displacement)

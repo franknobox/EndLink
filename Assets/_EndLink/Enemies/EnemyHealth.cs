@@ -122,7 +122,11 @@ namespace EndLink.Enemies
         public void ReceiveHit(HitboxHitInfo hitInfo)
         {
             DamageContext context = DamageContext.FromHit(hitInfo, gameObject);
-            ApplyDamage(DamageCalculator.Calculate(context));
+            int appliedDamage = ApplyDamage(DamageCalculator.Calculate(context));
+            if (appliedDamage > 0)
+            {
+                CombatKnockback.TryApply(gameObject, hitInfo.HitDirection, hitInfo.KnockbackForce);
+            }
         }
 
         /// <summary>
@@ -188,17 +192,17 @@ namespace EndLink.Enemies
             ApplyDamage(DamageCalculator.Calculate(context));
         }
 
-        private void ApplyDamage(DamageResult damageResult)
+        private int ApplyDamage(DamageResult damageResult)
         {
             if (_isDead)
             {
-                return;
+                return 0;
             }
 
             int appliedDamage = Mathf.Max(0, damageResult.FinalDamage);
             if (appliedDamage <= 0)
             {
-                return;
+                return 0;
             }
 
             _currentHealth = Mathf.Max(0, _currentHealth - appliedDamage);
@@ -222,10 +226,11 @@ namespace EndLink.Enemies
             if (_currentHealth <= 0)
             {
                 Die(damageResult.Source);
-                return;
+                return appliedDamage;
             }
 
             PlayHitFlash();
+            return appliedDamage;
         }
 
         private void Die(GameObject source)

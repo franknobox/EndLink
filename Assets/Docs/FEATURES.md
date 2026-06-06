@@ -31,11 +31,12 @@
 | --- | --- | --- |
 | [通用生命值与角色受击接线](#feature-character-health) | 已完成桥接版 | 提供可复用的血量、受击、治疗和死亡；玩家、队友通过薄桥接层接入各自状态机。 |
 | [统一 Combat Target](#feature-combat-target) | 已完成第一版 | 为玩家、队友和敌人统一提供唯一根身份、存活/可选状态、锁定点、Collider 表面点和水平表面距离。 |
-| [角色战斗数值基础](#feature-character-stats) | 已完成第一版 | 提供玩家、队友和敌人共用的攻击力入口，并支持动作按固定伤害与攻击力倍率组合计算伤害。 |
+| [角色战斗数值基础](#feature-character-stats) | 已完成第一版 | 提供玩家、队友和敌人共用的攻击力与承受击退倍率，并支持动作按固定伤害与攻击力倍率组合计算伤害。 |
 | [玩家自动软锁定](#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按固定间隔自动选择当前战斗目标，默认优先最近敌人，并显示轻量目标点。 |
 | [战斗动作配置](#feature-combat-action) | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和大招的伤害、冷却、时序、Hitbox 和命中标签。 |
 | [统一 Action 执行接口](#feature-combat-action-executor) | 已完成第一版 | 统一玩家、队友和敌人的动作可执行检查、执行请求、目标传入和冷却查询，保留各 Driver 的具体表现实现。 |
 | [伤害结算管线基础](#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
+| [受击规则基础](#feature-hit-response) | 已完成瞬时击退第一版 | Hitbox 实际造成伤害后，按动作基础击退距离与受击者倍率对玩家、队友和敌人施加水平瞬时击退。 |
 | [战斗标签系统](#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和协议反应规则。 |
 | [战斗数据编辑工具](#feature-combat-data-tool) | 已完成第一版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则数据资产。 |
 | [战斗 UI 基础](#feature-combat-ui-foundation) | 已完成基础版 | 提供 HUD 总入口、小队动作栏、动作槽位冷却显示和通用血条组件。 |
@@ -268,7 +269,7 @@
 - `Assets/_EndLink/Combat/CharacterHealth.cs`
 - `Assets/_EndLink/Combat/Hitbox/IHitReceiver.cs`
 - `Assets/_EndLink/Combat/Damage/IDamageable.cs`
-- `Assets/_EndLink/Combat/ICombatTargetLifeState.cs`
+- `Assets/_EndLink/Combat/Target/ICombatTargetLifeState.cs`
 - `Assets/_EndLink/Player/PlayerHealth.cs`
 - `Assets/_EndLink/Ally/AllyHealth.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerStateMachine.cs`
@@ -316,10 +317,10 @@
 - 玩家软锁和 AI 主动选敌要求目标具有 `CombatTarget`；没有该组件但实现 `IHitReceiver` 的可破坏物仍可被 Hitbox 命中。
 
 对应脚本：
-- `Assets/_EndLink/Combat/ICombatTarget.cs`
-- `Assets/_EndLink/Combat/ICombatTargetLifeState.cs`
-- `Assets/_EndLink/Combat/CombatTarget.cs`
-- `Assets/_EndLink/Combat/CombatTargetUtility.cs`
+- `Assets/_EndLink/Combat/Target/ICombatTarget.cs`
+- `Assets/_EndLink/Combat/Target/ICombatTargetLifeState.cs`
+- `Assets/_EndLink/Combat/Target/CombatTarget.cs`
+- `Assets/_EndLink/Combat/Target/CombatTargetUtility.cs`
 
 相关物体：
 - 玩家根物体：`CombatTarget`
@@ -395,7 +396,7 @@
 
 对应脚本：
 - `Assets/_EndLink/Player/PlayerTargeting.cs`
-- `Assets/_EndLink/Combat/CombatTarget.cs`
+- `Assets/_EndLink/Combat/Target/CombatTarget.cs`
 
 相关物体：
 - 玩家根物体
@@ -432,10 +433,12 @@
 <summary>展开详情</summary>
 
 功能说明：
-- `CharacterStats` 是玩家、队友和敌人共用的战斗数值入口，第一版只提供基础攻击力和最终攻击力。
+- `CharacterStats` 是玩家、队友和敌人共用的战斗数值入口，第一版提供攻击力和承受击退倍率。
 - `CharacterStats` 可选择 `Auto`、`Player`、`Ally`、`Enemy` 类型；自动模式通过玩家状态机、队友状态机或 `EnemyActor` 识别角色身份，也可手动覆盖。
-- 自定义 Inspector 当前只显示通用攻击属性；尚未制造空的玩家、队友或敌人专属字段，后续有真实差异时再按当前类型展示。
+- 自定义 Inspector 当前只显示通用战斗属性；尚未制造空的玩家、队友或敌人专属字段，后续有真实差异时再按当前类型展示。
 - `BaseAttackPower` 表示角色未经临时修正的基础攻击力；`AttackPower` 表示参与伤害计算的最终攻击力，第一版两者相同。
+- `KnockbackTakenMultiplier` 表示角色承受攻击击退时的倍率：`0` 为免疫击退，`1` 为标准击退，大于 `1` 表示更容易被击退。
+- 承受击退倍率只影响 Hitbox 命中的战斗击退，不影响敌人正常移动碰撞造成的角色推挤。
 - 角色生命上限和当前生命仍由生命组件负责，不放入 `CharacterStats`。
 - 需要使用攻击力倍率的角色，应在角色根物体挂载 `CharacterStats`；没有该组件时，动作仍会造成固定伤害，但攻击力倍率部分按 0 计算。
 
@@ -526,6 +529,31 @@
 - `Assets/_EndLink/Combat/Stats/CharacterStats.cs`
 - `Assets/_EndLink/Combat/Hitbox/HitboxHitInfo.cs`
 - `Assets/_EndLink/Combat/CharacterHealth.cs`
+
+</details>
+
+<a id="feature-hit-response"></a>
+
+### Feature：受击规则基础
+
+<details>
+<summary>展开详情</summary>
+功能说明：
+- Hitbox 实际造成伤害后，通过 `CombatKnockback` 统一计算并分发瞬时击退；免伤、无伤害和击退距离为 `0` 时不会产生位移。
+- 第一版最终击退距离为 `基础击退距离 × CharacterStats.KnockbackTakenMultiplier`，未挂载 `CharacterStats` 的目标默认按 `1` 倍处理。
+- `ICombatKnockbackReceiver` 只负责攻击命中的战斗击退，与敌人移动碰撞使用的外部推挤接口保持分离。
+- `PlayerController`、`AllyFollowMotor` 和 `EnemyMotorBase` 已接入统一击退协议，第一版只产生 XZ 平面的瞬时位移，不处理击飞和持续受力。
+- 当前不新增硬直等级、可打断规则或额外受击组件；现有 Hit 状态行为保持不变。
+- 死亡后的 Collider 开关逻辑保持现状，本次没有修改。
+
+对应脚本：
+- `Assets/_EndLink/Combat/Hitbox/CombatKnockback.cs`
+- `Assets/_EndLink/Combat/Stats/CharacterStats.cs`
+- `Assets/_EndLink/Combat/CharacterHealth.cs`
+- `Assets/_EndLink/Enemies/EnemyHealth.cs`
+- `Assets/_EndLink/Control/PlayerController.cs`
+- `Assets/_EndLink/Ally/AllyFollowMotor.cs`
+- `Assets/_EndLink/Enemies/Abilities/EnemyMotorBase.cs`
 
 </details>
 
@@ -731,7 +759,7 @@
 - `Assets/_EndLink/Ally/AllyTargetSelector.cs`
 - `Assets/_EndLink/Party/PartyCombatContext.cs`
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
-- `Assets/_EndLink/Combat/CombatTargetUtility.cs`
+- `Assets/_EndLink/Combat/Target/CombatTargetUtility.cs`
 - `Assets/_EndLink/Combat/Events/CombatEventsBus.cs`
 
 相关物体：
@@ -1079,9 +1107,9 @@
 - `Assets/_EndLink/Enemies/StateMachine/EnemyHitState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyDeadState.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagContainer.cs`
-- `Assets/_EndLink/Combat/ICombatTarget.cs`
-- `Assets/_EndLink/Combat/CombatTarget.cs`
-- `Assets/_EndLink/Combat/CombatTargetUtility.cs`
+- `Assets/_EndLink/Combat/Target/ICombatTarget.cs`
+- `Assets/_EndLink/Combat/Target/CombatTarget.cs`
+- `Assets/_EndLink/Combat/Target/CombatTargetUtility.cs`
 - `Assets/_EndLink/Combat/Hitbox/IHitReceiver.cs`
 - `Assets/_EndLink/Combat/Damage/IDamageable.cs`
 
@@ -1195,8 +1223,8 @@
 - `Assets/_EndLink/Combat/Hitbox/HitboxProjectile.cs`
 - `Assets/_EndLink/Combat/Hitbox/HitboxHitInfo.cs`
 - `Assets/_EndLink/Combat/Hitbox/IHitReceiver.cs`
-- `Assets/_EndLink/Combat/ICombatTarget.cs`
-- `Assets/_EndLink/Combat/CombatTargetUtility.cs`
+- `Assets/_EndLink/Combat/Target/ICombatTarget.cs`
+- `Assets/_EndLink/Combat/Target/CombatTargetUtility.cs`
 
 相关资产：
 - `Assets/_EndLink/Combat/Hitbox_Base.prefab`
@@ -1207,7 +1235,7 @@
 关键配置：
 - `targetLayerMask`：允许命中的目标 Layer，默认 Enemy
 - `damageAmount`：Hitbox 携带的固定伤害部分；完整动作伤害由伤害结算管线计算
-- `knockbackForce`：击退力
+- `knockbackForce`：基础瞬时击退距离，最终位移会乘以受击者 `CharacterStats.KnockbackTakenMultiplier`
 - `combatTagToApply`：命中战斗标签资产
 - `combatTagDuration`：命中战斗标签持续时间，小于等于 0 表示永久标签
 - `combatTagStackCount`：命中时添加的战斗标签层数

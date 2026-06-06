@@ -17,7 +17,7 @@ namespace EndLink.Combat
     /// <summary>
     /// 角色战斗数值的统一入口。
     /// 玩家、队友和敌人可以共用该组件，生命值仍由 CharacterHealth 或敌人生命组件负责。
-    /// 第一版只承载攻击力，后续可以在这里继续接入成长、装备、Buff 和 Debuff 修正。
+    /// 第一版承载攻击力与承受击退倍率，后续可以在这里继续接入成长、装备、Buff 和 Debuff 修正。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class CharacterStats : MonoBehaviour
@@ -31,6 +31,11 @@ namespace EndLink.Combat
         [Tooltip("角色未经任何临时修正的基础攻击力。")]
         [SerializeField, Min(0f)]
         private float baseAttackPower = 10f;
+
+        [Header("受击属性")]
+        [Tooltip("承受战斗命中击退时使用的倍率。0 表示免疫击退，1 表示标准击退，大于 1 表示更容易被击退。只影响攻击命中的击退，不影响敌人移动碰撞造成的推挤。")]
+        [SerializeField, Min(0f)]
+        private float knockbackTakenMultiplier = 1f;
 
         /// <summary>Inspector 中选择的类型模式。</summary>
         public CharacterStatsType ConfiguredType => statsType;
@@ -55,6 +60,13 @@ namespace EndLink.Combat
         /// 第一版等于基础攻击力；后续可在这里汇总装备、Buff、Debuff 等临时修正。
         /// </summary>
         public float AttackPower => BaseAttackPower;
+
+        /// <summary>
+        /// 角色承受战斗命中击退时使用的倍率。
+        /// 0 表示免疫击退，1 表示承受动作配置的标准击退距离。
+        /// 该属性不影响敌人正常移动碰撞带来的外部推挤。
+        /// </summary>
+        public float KnockbackTakenMultiplier => Mathf.Max(0f, knockbackTakenMultiplier);
 
         /// <summary>
         /// 从当前物体和父物体上的角色身份组件识别数值类型。
@@ -83,6 +95,7 @@ namespace EndLink.Combat
         private void OnValidate()
         {
             baseAttackPower = Mathf.Max(0f, baseAttackPower);
+            knockbackTakenMultiplier = Mathf.Max(0f, knockbackTakenMultiplier);
         }
     }
 }

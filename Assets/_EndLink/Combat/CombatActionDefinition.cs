@@ -65,7 +65,7 @@ namespace EndLink.Combat
         [SerializeField]
         private CombatDamageType damageType = CombatDamageType.StructuralDamage;
 
-        [Tooltip("动作命中时附带的击退力度。具体如何应用由受击方或后续击退系统决定。")]
+        [Tooltip("动作命中时附带的基础瞬时击退距离。最终位移还会乘以受击者 CharacterStats 的承受击退倍率。")]
         [SerializeField, Min(0f)]
         private float knockbackForce = 3f;
 
@@ -134,7 +134,7 @@ namespace EndLink.Combat
         /// <summary>伤害类型。</summary>
         public CombatDamageType DamageType => damageType;
 
-        /// <summary>击退力度。</summary>
+        /// <summary>基础瞬时击退距离。</summary>
         public float KnockbackForce => knockbackForce;
 
         /// <summary>命中时施加的战斗标签资产。</summary>

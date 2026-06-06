@@ -1,3 +1,4 @@
+using EndLink.Combat;
 using UnityEngine;
 
 namespace EndLink.Core
@@ -9,7 +10,7 @@ namespace EndLink.Core
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
-    public sealed class PlayerController : MonoBehaviour, IExternalDisplacementReceiver
+    public sealed class PlayerController : MonoBehaviour, IExternalDisplacementReceiver, ICombatKnockbackReceiver
     {
         private const float MoveInputDeadZoneSqr = 0.0001f;
 
@@ -215,6 +216,15 @@ namespace EndLink.Core
             }
 
             transform.position += displacement;
+        }
+
+        /// <summary>
+        /// 接收攻击命中的瞬时击退。
+        /// 第一版复用 CharacterController 的水平外部位移入口，不处理击飞或持续受力。
+        /// </summary>
+        public void ApplyCombatKnockback(Vector3 displacement)
+        {
+            AddExternalDisplacement(displacement);
         }
 
         private void OnValidate()

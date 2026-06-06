@@ -25,11 +25,13 @@ namespace EndLink.Editor
 
         private SerializedProperty _statsTypeProperty;
         private SerializedProperty _baseAttackPowerProperty;
+        private SerializedProperty _knockbackTakenMultiplierProperty;
 
         private void OnEnable()
         {
             _statsTypeProperty = serializedObject.FindProperty("statsType");
             _baseAttackPowerProperty = serializedObject.FindProperty("baseAttackPower");
+            _knockbackTakenMultiplierProperty = serializedObject.FindProperty("knockbackTakenMultiplier");
         }
 
         public override void OnInspectorGUI()
@@ -56,6 +58,11 @@ namespace EndLink.Editor
             EditorGUILayout.PropertyField(
                 _baseAttackPowerProperty,
                 new GUIContent("基础攻击力", "角色未经成长、装备、Buff 或 Debuff 修正的攻击力。"));
+            EditorGUILayout.PropertyField(
+                _knockbackTakenMultiplierProperty,
+                new GUIContent(
+                    "承受击退倍率",
+                    "0 表示免疫攻击击退，1 表示标准击退，大于 1 表示更容易被击退。不会影响敌人移动碰撞造成的推挤。"));
 
             serializedObject.ApplyModifiedProperties();
         }

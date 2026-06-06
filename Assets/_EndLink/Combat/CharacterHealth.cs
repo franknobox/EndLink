@@ -153,7 +153,11 @@ namespace EndLink.Combat
         public void ReceiveHit(HitboxHitInfo hitInfo)
         {
             DamageContext context = DamageContext.FromHit(hitInfo, gameObject);
-            ApplyDamage(DamageCalculator.Calculate(context));
+            int appliedDamage = ApplyDamage(DamageCalculator.Calculate(context));
+            if (appliedDamage > 0)
+            {
+                CombatKnockback.TryApply(gameObject, hitInfo.HitDirection, hitInfo.KnockbackForce);
+            }
         }
 
         /// <summary>
