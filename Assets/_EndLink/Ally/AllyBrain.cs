@@ -163,7 +163,11 @@ namespace EndLink.Ally
 
         private void HandleTargetDead(GameObject deadTarget)
         {
-            if (deadTarget == null || _currentTarget == null || deadTarget.transform != _currentTarget)
+            Transform deadRoot = deadTarget != null
+                ? CombatTargetUtility.ResolveRoot(deadTarget.transform)
+                : null;
+
+            if (deadRoot == null || _currentTarget == null || deadRoot != _currentTarget)
             {
                 return;
             }
@@ -203,8 +207,9 @@ namespace EndLink.Ally
 
             if (eventData.Target != null && eventData.Target != gameObject)
             {
-                target = eventData.Target.transform;
-                return target != null && IsCombatTargetValid(target);
+                return CombatTargetUtility.TryResolveTargetableRoot(
+                    eventData.Target.transform,
+                    out target);
             }
 
             return searchNearestEnemyWhenNoEventTarget && TryFindNearestEnemy(out target);
@@ -239,16 +244,13 @@ namespace EndLink.Ally
                     continue;
                 }
 
-                Transform candidateTarget = ResolveTargetTransform(hit);
-                if (candidateTarget == null || !IsCombatTargetValid(candidateTarget))
+                if (!CombatTargetUtility.TryResolveTargetableRoot(hit, out Transform candidateTarget))
                 {
                     continue;
                 }
 
-                Vector3 toTarget = candidateTarget.position - origin;
-                toTarget.y = 0f;
-
-                float sqrDistance = toTarget.sqrMagnitude;
+                float surfaceDistance = CombatTargetUtility.GetSurfaceDistance(candidateTarget, origin);
+                float sqrDistance = surfaceDistance * surfaceDistance;
                 if (sqrDistance < bestSqrDistance)
                 {
                     bestSqrDistance = sqrDistance;
@@ -257,23 +259,6 @@ namespace EndLink.Ally
             }
 
             return target != null;
-        }
-
-        private static Transform ResolveTargetTransform(Collider hit)
-        {
-            IHitReceiver receiver = hit.GetComponentInParent<IHitReceiver>();
-            if (receiver is Component receiverComponent)
-            {
-                return receiverComponent.transform;
-            }
-
-            return hit.transform;
-        }
-
-        private static bool IsCombatTargetValid(Transform target)
-        {
-            ICombatTarget combatTarget = target.GetComponentInParent<ICombatTarget>();
-            return combatTarget == null || combatTarget.IsTargetable;
         }
 
         private string GetAssistRejectReason(Transform target)

@@ -13,6 +13,7 @@ namespace EndLink.Ally
     [RequireComponent(typeof(AllyCombatDriver))]
     [RequireComponent(typeof(AllyFollowMotor))]
     [RequireComponent(typeof(AllyTargetSelector))]
+    [RequireComponent(typeof(CombatTarget))]
     public sealed class AllyStateMachine : MonoBehaviour, ICharacterStatsTypeProvider
     {
         [Header("初始状态")]

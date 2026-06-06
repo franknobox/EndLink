@@ -383,13 +383,7 @@ namespace EndLink.Enemies
 
         private static bool IsTargetValid(Transform target)
         {
-            if (target == null || !target.gameObject.activeInHierarchy)
-            {
-                return false;
-            }
-
-            ICombatTarget combatTarget = target.GetComponentInParent<ICombatTarget>();
-            return combatTarget == null || combatTarget.IsTargetable;
+            return CombatTargetUtility.IsTargetable(target);
         }
 
         private static string GetTransformName(Transform target)

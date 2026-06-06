@@ -1,4 +1,5 @@
 using EndLink.Core;
+using EndLink.Combat;
 using UnityEngine;
 
 namespace EndLink.Enemies
@@ -144,6 +145,11 @@ namespace EndLink.Enemies
             if (target == null)
             {
                 return;
+            }
+
+            if (CombatTargetUtility.TryResolve(target, out ICombatTarget combatTarget))
+            {
+                target = combatTarget.LockPoint;
             }
 
             Vector3 direction = GetPlanarDirection(transform.position, target.position);

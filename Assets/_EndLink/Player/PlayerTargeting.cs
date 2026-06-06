@@ -108,16 +108,19 @@ namespace EndLink.Combat
         private bool logTargetChanges;
 
         private readonly Collider[] _targetBuffer = new Collider[MaxTargetBufferSize];
-        private Transform _currentTarget;
+        private CombatTarget _currentTarget;
         private GameObject _targetIndicatorInstance;
         private Material _runtimeIndicatorMaterial;
         private float _nextTargetRefreshTime;
 
         /// <summary>当前自动软锁定目标。</summary>
-        public Transform CurrentTarget => _currentTarget;
+        public Transform CurrentTarget => HasTarget ? _currentTarget.RootTransform : null;
+
+        /// <summary>当前软锁目标的锁定参考点。</summary>
+        public Transform CurrentLockPoint => HasTarget ? _currentTarget.LockPoint : null;
 
         /// <summary>当前是否持有有效软锁目标。</summary>
-        public bool HasTarget => _currentTarget != null;
+        public bool HasTarget => _currentTarget != null && _currentTarget.IsTargetable;
 
         /// <summary>目标搜索半径。</summary>
         public float SearchRadius => searchRadius;
@@ -207,17 +210,27 @@ namespace EndLink.Combat
         /// </summary>
         public void SetCurrentTarget(Transform target)
         {
-            if (_currentTarget == target)
+            CombatTarget resolvedTarget = null;
+            if (target != null
+                && CombatTargetUtility.TryResolve(target, out ICombatTarget combatTarget)
+                && combatTarget.IsTargetable)
+            {
+                resolvedTarget = combatTarget as CombatTarget;
+            }
+
+            if (_currentTarget == resolvedTarget)
             {
                 return;
             }
 
-            _currentTarget = target;
+            _currentTarget = resolvedTarget;
             UpdateTargetIndicator();
 
             if (logTargetChanges)
             {
-                Debug.Log($"PlayerTargeting current target: {(_currentTarget != null ? _currentTarget.name : "None")}", this);
+                Debug.Log(
+                    $"PlayerTargeting current target: {(_currentTarget != null ? _currentTarget.RootTransform.name : "None")}",
+                    this);
             }
         }
 
@@ -242,7 +255,7 @@ namespace EndLink.Combat
 
         private bool RefreshTarget()
         {
-            Transform bestTarget = FindBestTarget();
+            CombatTarget bestTarget = FindBestTarget();
 
             if (bestTarget == null)
             {
@@ -250,11 +263,11 @@ namespace EndLink.Combat
                 return false;
             }
 
-            SetCurrentTarget(bestTarget);
+            SetResolvedTarget(bestTarget);
             return true;
         }
 
-        private Transform FindBestTarget()
+        private CombatTarget FindBestTarget()
         {
             Transform origin = GetSearchOrigin();
             Vector3 originPosition = origin.position;
@@ -267,14 +280,14 @@ namespace EndLink.Combat
                 targetLayerMask,
                 QueryTriggerInteraction.Ignore);
 
-            Transform bestTarget = null;
+            CombatTarget bestTarget = null;
             float bestScore = float.NegativeInfinity;
 
             for (int i = 0; i < hitCount; i++)
             {
-                Transform candidate = ResolveTargetTransform(_targetBuffer[i]);
-
-                if (candidate == null || !IsCombatTargetValid(candidate))
+                if (!CombatTargetUtility.TryResolve(_targetBuffer[i], out ICombatTarget resolvedTarget)
+                    || !resolvedTarget.IsTargetable
+                    || resolvedTarget is not CombatTarget candidate)
                 {
                     continue;
                 }
@@ -295,29 +308,33 @@ namespace EndLink.Combat
         }
 
         private bool TryCalculateTargetScore(
-            Transform candidate,
+            ICombatTarget candidate,
             Vector3 originPosition,
             Vector3 referenceForward,
             out float score)
         {
             score = 0f;
 
-            Vector3 toTarget = candidate.position - originPosition;
+            Vector3 targetPosition = candidate.LockPoint != null
+                ? candidate.LockPoint.position
+                : candidate.RootTransform.position;
+            Vector3 toTarget = targetPosition - originPosition;
             toTarget.y = 0f;
-            float distanceSqr = toTarget.sqrMagnitude;
+            float centerDistanceSqr = toTarget.sqrMagnitude;
+            float surfaceDistance = candidate.GetSurfaceDistance(originPosition);
 
-            if (distanceSqr <= 0.000001f || distanceSqr > searchRadius * searchRadius)
+            if (centerDistanceSqr <= 0.000001f || surfaceDistance > searchRadius)
             {
                 return false;
             }
 
             if (selectionMode == PlayerTargetSelectionMode.Nearest)
             {
-                score = -distanceSqr;
+                score = -(surfaceDistance * surfaceDistance);
                 return true;
             }
 
-            float distance = Mathf.Sqrt(distanceSqr);
+            float distance = Mathf.Sqrt(centerDistanceSqr);
             Vector3 directionToTarget = toTarget / distance;
             float angle = Vector3.Angle(referenceForward, directionToTarget);
 
@@ -327,49 +344,26 @@ namespace EndLink.Combat
             }
 
             float normalizedAngleScore = 1f - Mathf.Clamp01(angle / Mathf.Max(0.001f, maxTargetAngle));
-            float normalizedDistanceScore = 1f - Mathf.Clamp01(distance / searchRadius);
+            float normalizedDistanceScore = 1f - Mathf.Clamp01(surfaceDistance / searchRadius);
             score = normalizedAngleScore * angleScoreWeight + normalizedDistanceScore * distanceScoreWeight;
             return true;
         }
 
-        private bool IsTargetStillValid(Transform target)
+        private bool IsTargetStillValid(CombatTarget target)
         {
-            if (target == null)
+            if (target == null || !target.IsTargetable)
             {
                 return false;
             }
 
-            if (((1 << target.gameObject.layer) & targetLayerMask.value) == 0)
-            {
-                return false;
-            }
-
-            if (!IsCombatTargetValid(target))
+            Transform root = target.RootTransform;
+            if (root == null || ((1 << root.gameObject.layer) & targetLayerMask.value) == 0)
             {
                 return false;
             }
 
             Transform origin = GetSearchOrigin();
-            Vector3 toTarget = target.position - origin.position;
-            toTarget.y = 0f;
-            return toTarget.sqrMagnitude <= searchRadius * searchRadius;
-        }
-
-        private Transform ResolveTargetTransform(Collider targetCollider)
-        {
-            if (targetCollider == null)
-            {
-                return null;
-            }
-
-            IHitReceiver receiver = targetCollider.GetComponentInParent<IHitReceiver>();
-            return receiver is Component receiverComponent ? receiverComponent.transform : targetCollider.transform;
-        }
-
-        private static bool IsCombatTargetValid(Transform target)
-        {
-            ICombatTarget combatTarget = target.GetComponentInParent<ICombatTarget>();
-            return combatTarget == null || combatTarget.IsTargetable;
+            return target.GetSurfaceDistance(origin.position) <= searchRadius;
         }
 
         private Transform GetSearchOrigin()
@@ -440,26 +434,22 @@ namespace EndLink.Combat
             }
         }
 
-        private Vector3 GetTargetIndicatorPosition(Transform target)
+        private Vector3 GetTargetIndicatorPosition(ICombatTarget target)
         {
-            if (TryGetTargetBounds(target, out Bounds bounds))
+            Vector3 viewerPosition = GetTargetIndicatorViewerPosition();
+            Vector3 referencePosition = target.LockPoint != null
+                ? target.LockPoint.position
+                : target.RootTransform.position;
+            Vector3 toViewer = Vector3.ProjectOnPlane(viewerPosition - referencePosition, Vector3.up);
+
+            if (toViewer.sqrMagnitude <= 0.0001f)
             {
-                Vector3 viewerPosition = GetTargetIndicatorViewerPosition();
-                Vector3 toViewer = Vector3.ProjectOnPlane(viewerPosition - bounds.center, Vector3.up);
-
-                if (toViewer.sqrMagnitude <= 0.0001f)
-                {
-                    toViewer = -GetReferenceForward();
-                }
-
-                toViewer.Normalize();
-
-                float probeDistance = Mathf.Max(bounds.extents.x, bounds.extents.z) + 1f;
-                Vector3 surfacePoint = bounds.ClosestPoint(bounds.center + toViewer * probeDistance);
-                return surfacePoint + toViewer * targetIndicatorSurfaceOffset + targetIndicatorOffset;
+                toViewer = -GetReferenceForward();
             }
 
-            return target.position + targetIndicatorOffset;
+            toViewer.Normalize();
+            Vector3 surfacePoint = target.GetClosestPoint(viewerPosition);
+            return surfacePoint + toViewer * targetIndicatorSurfaceOffset + targetIndicatorOffset;
         }
 
         private Quaternion GetTargetIndicatorRotation(Vector3 indicatorPosition)
@@ -489,56 +479,6 @@ namespace EndLink.Combat
 
             Camera mainCamera = Camera.main;
             return mainCamera != null ? mainCamera.transform : null;
-        }
-
-        private static bool TryGetTargetBounds(Transform target, out Bounds bounds)
-        {
-            Renderer[] renderers = target.GetComponentsInChildren<Renderer>();
-
-            for (int i = 0; i < renderers.Length; i++)
-            {
-                if (renderers[i] == null || !renderers[i].enabled)
-                {
-                    continue;
-                }
-
-                bounds = renderers[i].bounds;
-
-                for (int j = i + 1; j < renderers.Length; j++)
-                {
-                    if (renderers[j] != null && renderers[j].enabled)
-                    {
-                        bounds.Encapsulate(renderers[j].bounds);
-                    }
-                }
-
-                return true;
-            }
-
-            Collider[] colliders = target.GetComponentsInChildren<Collider>();
-
-            for (int i = 0; i < colliders.Length; i++)
-            {
-                if (colliders[i] == null || !colliders[i].enabled)
-                {
-                    continue;
-                }
-
-                bounds = colliders[i].bounds;
-
-                for (int j = i + 1; j < colliders.Length; j++)
-                {
-                    if (colliders[j] != null && colliders[j].enabled)
-                    {
-                        bounds.Encapsulate(colliders[j].bounds);
-                    }
-                }
-
-                return true;
-            }
-
-            bounds = default;
-            return false;
         }
 
         private Material CreateRuntimeIndicatorMaterial()
@@ -608,6 +548,24 @@ namespace EndLink.Combat
         {
             int enemyLayer = LayerMask.NameToLayer(EnemyLayerName);
             return enemyLayer >= 0 ? 1 << enemyLayer : 0;
+        }
+
+        private void SetResolvedTarget(CombatTarget target)
+        {
+            if (_currentTarget == target)
+            {
+                return;
+            }
+
+            _currentTarget = target;
+            UpdateTargetIndicator();
+
+            if (logTargetChanges)
+            {
+                Debug.Log(
+                    $"PlayerTargeting current target: {(_currentTarget != null ? _currentTarget.RootTransform.name : "None")}",
+                    this);
+            }
         }
     }
 }

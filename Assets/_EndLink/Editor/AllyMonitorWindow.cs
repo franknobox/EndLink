@@ -17,7 +17,6 @@ namespace EndLink.Editor
         private static readonly Vector2 DefaultMinSize = new(900f, 460f);
 
         private readonly List<AllyDebugRecord> _records = new(DefaultCapacity);
-        private readonly List<Collider> _colliderBuffer = new();
         private Vector2 _statusScroll;
         private Vector2 _logScroll;
         private bool _isPaused;
@@ -267,10 +266,9 @@ namespace EndLink.Editor
                 return "-";
             }
 
-            float distance = Mathf.Sqrt(AllyTargetSelector.GetHorizontalSqrDistanceToTarget(
+            float distance = CombatTargetUtility.GetSurfaceDistance(
                 target,
-                from.position,
-                _colliderBuffer));
+                from.position);
 
             return distance.ToString("F2");
         }

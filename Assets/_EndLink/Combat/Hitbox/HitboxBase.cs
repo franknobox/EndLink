@@ -57,6 +57,7 @@ namespace EndLink.Combat
         private HitboxUnityEvent onHit = new();
 
         private readonly HashSet<Collider> _hitColliders = new();
+        private readonly HashSet<Transform> _hitTargets = new();
         private Collider _triggerCollider;
         private GameObject _owner;
         private CombatActionDefinition _actionDefinition;
@@ -172,6 +173,7 @@ namespace EndLink.Combat
         public void ResetHitCache()
         {
             _hitColliders.Clear();
+            _hitTargets.Clear();
         }
 
         /// <summary>
@@ -196,6 +198,10 @@ namespace EndLink.Combat
             }
 
             _hitColliders.Add(other);
+            if (CombatTargetUtility.TryResolve(other, out ICombatTarget combatTarget))
+            {
+                _hitTargets.Add(combatTarget.RootTransform);
+            }
 
             HitboxHitInfo hitInfo = BuildHitInfo(other);
             CombatEventsBus.RaiseHitLanded(_owner, ResolveHitTarget(receiver, other), hitInfo);
@@ -219,7 +225,13 @@ namespace EndLink.Combat
                 return false;
             }
 
-            return !_hitColliders.Contains(other);
+            if (_hitColliders.Contains(other))
+            {
+                return false;
+            }
+
+            return !CombatTargetUtility.TryResolve(other, out ICombatTarget combatTarget)
+                || !_hitTargets.Contains(combatTarget.RootTransform);
         }
 
         /// <summary>
@@ -237,8 +249,19 @@ namespace EndLink.Combat
         protected virtual HitboxHitInfo BuildHitInfo(Collider other)
         {
             Vector3 hitPoint = other.ClosestPoint(transform.position);
-            Vector3 targetCenter = other.bounds.center;
-            Vector3 hitDirection = Vector3.ProjectOnPlane(targetCenter - transform.position, Vector3.up);
+            Vector3 targetPoint = other.bounds.center;
+
+            if (CombatTargetUtility.TryResolve(other, out ICombatTarget combatTarget))
+            {
+                hitPoint = combatTarget.GetClosestPoint(transform.position);
+                targetPoint = combatTarget.LockPoint != null
+                    ? combatTarget.LockPoint.position
+                    : combatTarget.RootTransform.position;
+            }
+
+            Vector3 hitDirection = Vector3.ProjectOnPlane(
+                targetPoint - transform.position,
+                Vector3.up);
 
             if (hitDirection.sqrMagnitude <= 0.0001f)
             {
@@ -299,6 +322,12 @@ namespace EndLink.Combat
 
         private static GameObject ResolveHitTarget(IHitReceiver receiver, Collider fallbackCollider)
         {
+            if (CombatTargetUtility.TryResolve(fallbackCollider, out ICombatTarget combatTarget)
+                && combatTarget.RootTransform != null)
+            {
+                return combatTarget.RootTransform.gameObject;
+            }
+
             if (receiver is Component receiverComponent)
             {
                 return receiverComponent.gameObject;
@@ -309,8 +338,8 @@ namespace EndLink.Combat
 
         private static bool IsCombatTargetable(Collider other)
         {
-            ICombatTarget combatTarget = other.GetComponentInParent<ICombatTarget>();
-            return combatTarget == null || combatTarget.IsTargetable;
+            return !CombatTargetUtility.TryResolve(other, out ICombatTarget combatTarget)
+                || combatTarget.IsTargetable;
         }
     }
 

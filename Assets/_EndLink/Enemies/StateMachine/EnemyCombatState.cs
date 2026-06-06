@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using EndLink.Combat;
 using UnityEngine;
 
 namespace EndLink.Enemies
@@ -9,10 +9,7 @@ namespace EndLink.Enemies
     /// </summary>
     public sealed class EnemyCombatState : EnemyStateBase
     {
-        private readonly List<Collider> _radiusColliderBuffer = new();
-        private Transform _cachedRadiusTarget;
         private float _selfPlanarRadius;
-        private float _targetPlanarRadius;
 
         public EnemyCombatState(EnemyStateContext context) : base(context)
         {
@@ -24,8 +21,7 @@ namespace EndLink.Enemies
         /// <inheritdoc />
         public override void Enter()
         {
-            _selfPlanarRadius = EstimatePlanarRadius(Context.Transform);
-            RefreshTargetRadiusIfNeeded(Context.CurrentTarget);
+            _selfPlanarRadius = EstimateSelfPlanarRadius();
 
             if (!Context.HasValidTarget)
             {
@@ -37,8 +33,6 @@ namespace EndLink.Enemies
         public override void Exit()
         {
             Context.Motor?.Stop();
-            _cachedRadiusTarget = null;
-            _targetPlanarRadius = 0f;
         }
 
         /// <inheritdoc />
@@ -60,38 +54,18 @@ namespace EndLink.Enemies
                 return;
             }
 
-            float stopDistance = CalculateCollisionAwareStopDistance(target);
-            Context.Motor?.MoveTo(target.position, stopDistance, deltaTime);
+            Vector3 approachPoint = CombatTargetUtility.GetClosestPoint(
+                target,
+                Context.Transform.position);
+            float stopDistance = _selfPlanarRadius + Mathf.Max(0f, Context.CombatChaseStopDistance);
+            Context.Motor?.MoveTo(approachPoint, stopDistance, deltaTime);
+
             Context.Motor?.FaceTarget(target, deltaTime);
         }
 
-        private float CalculateCollisionAwareStopDistance(Transform target)
+        private float EstimateSelfPlanarRadius()
         {
-            RefreshTargetRadiusIfNeeded(target);
-
-            float surfaceGap = Mathf.Max(0f, Context.CombatChaseStopDistance);
-            return _selfPlanarRadius + _targetPlanarRadius + surfaceGap;
-        }
-
-        private void RefreshTargetRadiusIfNeeded(Transform target)
-        {
-            if (_cachedRadiusTarget == target)
-            {
-                return;
-            }
-
-            _cachedRadiusTarget = target;
-            _targetPlanarRadius = EstimatePlanarRadius(target);
-        }
-
-        private float EstimatePlanarRadius(Transform root)
-        {
-            if (root == null)
-            {
-                return 0f;
-            }
-
-            CharacterController characterController = root.GetComponentInParent<CharacterController>();
+            CharacterController characterController = Context.Transform.GetComponent<CharacterController>();
             if (characterController != null)
             {
                 float scale = Mathf.Max(
@@ -101,24 +75,7 @@ namespace EndLink.Enemies
                 return Mathf.Max(0f, characterController.radius * scale);
             }
 
-            _radiusColliderBuffer.Clear();
-            root.GetComponentsInChildren(false, _radiusColliderBuffer);
-
-            float radius = 0f;
-            for (int i = 0; i < _radiusColliderBuffer.Count; i++)
-            {
-                Collider candidate = _radiusColliderBuffer[i];
-                if (candidate == null || !candidate.enabled || candidate.isTrigger)
-                {
-                    continue;
-                }
-
-                Bounds bounds = candidate.bounds;
-                Vector3 extents = bounds.extents;
-                radius = Mathf.Max(radius, extents.x, extents.z);
-            }
-
-            return radius;
+            return 0f;
         }
 
         private bool IsTargetBeyondLeash(Transform target)
@@ -128,9 +85,9 @@ namespace EndLink.Enemies
                 return false;
             }
 
-            Vector3 offset = target.position - Context.Transform.position;
-            offset.y = 0f;
-            return offset.sqrMagnitude > Context.CombatLeashDistance * Context.CombatLeashDistance;
+            return CombatTargetUtility.GetSurfaceDistance(
+                target,
+                Context.Transform.position) > Context.CombatLeashDistance;
         }
     }
 }

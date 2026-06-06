@@ -7,11 +7,11 @@ namespace EndLink.Combat
 {
     /// <summary>
     /// 通用角色生命组件。
-    /// 只负责生命值、受击、死亡、目标有效性、基础受击反馈和战斗事件播报。
+    /// 只负责生命值、受击、死亡、基础受击反馈和战斗事件播报。
     /// 不直接切换玩家、队友或敌人的状态机，具体角色通过各自的桥接脚本订阅事件。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class CharacterHealth : MonoBehaviour, IHitReceiver, IDamageable, ICombatTarget
+    public sealed class CharacterHealth : MonoBehaviour, IHitReceiver, IDamageable, ICombatTargetLifeState
     {
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
@@ -24,11 +24,7 @@ namespace EndLink.Combat
         [SerializeField]
         private bool resetHealthOnEnable = true;
 
-        [Header("目标有效性")]
-        [Tooltip("死亡后是否不再作为锁定、AI 搜索和 Hitbox 命中的有效目标。")]
-        [SerializeField]
-        private bool untargetableOnDeath = true;
-
+        [Header("死亡处理")]
         [Tooltip("死亡后是否禁用自身和子物体上的非 Trigger Collider。默认关闭，避免影响死亡表现观察。")]
         [SerializeField]
         private bool disableCollidersOnDeath;
@@ -84,7 +80,6 @@ namespace EndLink.Combat
         private int _currentHealth;
         private int _ownedColliderCount;
         private bool _isDead;
-        private bool _isTargetable = true;
         private bool _componentsCached;
         private float _temporaryInvincibleUntilTime;
 
@@ -97,14 +92,11 @@ namespace EndLink.Combat
         /// <summary>是否已经死亡。</summary>
         public bool IsDead => _isDead;
 
-        /// <summary>当前是否可作为战斗目标。</summary>
-        public bool IsTargetable => _isTargetable;
+        /// <summary>供 CombatTarget 读取的存活状态。</summary>
+        public bool IsAlive => !_isDead;
 
         /// <summary>当前是否处于临时免伤窗口。</summary>
         public bool IsTemporaryInvincible => Time.time < _temporaryInvincibleUntilTime;
-
-        /// <summary>用于锁定、AI 和距离计算的目标 Transform。</summary>
-        public Transform TargetTransform => transform;
 
         /// <summary>生命值变化 UnityEvent。</summary>
         public CharacterHealthChangedEvent OnHealthChanged => onHealthChanged;
@@ -208,7 +200,7 @@ namespace EndLink.Combat
         /// </summary>
         public int ApplyDamage(DamageResult damageResult)
         {
-            if (_isDead || !_isTargetable || IsTemporaryInvincible)
+            if (_isDead || IsTemporaryInvincible)
             {
                 return 0;
             }
@@ -289,7 +281,7 @@ namespace EndLink.Combat
         }
 
         /// <summary>
-        /// 重置生命值、死亡状态和目标有效性。
+        /// 重置生命值和死亡状态。
         /// </summary>
         public void ResetHealth()
         {
@@ -297,7 +289,6 @@ namespace EndLink.Combat
 
             _currentHealth = maxHealth;
             _isDead = false;
-            _isTargetable = true;
             _temporaryInvincibleUntilTime = 0f;
 
             if (_flashCoroutine != null)
@@ -311,14 +302,6 @@ namespace EndLink.Combat
             NotifyHealthChanged(null);
         }
 
-        /// <summary>
-        /// 手动设置目标有效性。后续锁定和 AI 搜索会读取该值。
-        /// </summary>
-        public void SetTargetable(bool isTargetable)
-        {
-            _isTargetable = isTargetable && !_isDead;
-        }
-
         private void Die(GameObject source)
         {
             if (_isDead)
@@ -327,11 +310,6 @@ namespace EndLink.Combat
             }
 
             _isDead = true;
-
-            if (untargetableOnDeath)
-            {
-                _isTargetable = false;
-            }
 
             if (_flashCoroutine != null)
             {

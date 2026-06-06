@@ -32,7 +32,7 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 
 - 角色数值系统：已建立轻量 `CharacterStats` 攻击力入口和 Action 倍率计算。
 - 伤害结算管线：已建立基础，后续持续优化完善。
-- Combat Target 标准化：扩展目标接口/组件，统一表达目标是否可选、是否存活、目标点、锁定点、受击点和 Collider 表面距离，供锁定、队友 AI、Hitbox 和 UI 共用。
+- Combat Target 标准化：已建立第一版，玩家、队友和敌人统一使用独立 `CombatTarget` 表达唯一根身份、存活/可选状态、锁定点和 Collider 表面距离。
 - 受击规则：建立轻量受击策略，定义是否可被打断、Hit 硬直、击退倍率、死亡后的目标失效和碰撞处理边界。
 - Action 执行统一接口：抽象玩家、队友、敌人的动作执行能力，统一 `CanExecute`、`TryExecute`、冷却查询和目标传入方式，减少 UI、AI、连携系统直接依赖具体 Driver。
 

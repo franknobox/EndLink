@@ -10,7 +10,7 @@ namespace EndLink.Enemies
     /// 复用木桩敌人的血量、受伤、死亡、事件广播和白模调试反馈逻辑。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class EnemyHealth : MonoBehaviour, IHitReceiver, IDamageable, ICombatTarget
+    public sealed class EnemyHealth : MonoBehaviour, IHitReceiver, IDamageable, ICombatTargetLifeState
     {
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
@@ -23,11 +23,7 @@ namespace EndLink.Enemies
         [SerializeField]
         private bool resetHealthOnEnable = true;
 
-        [Header("目标有效性")]
-        [Tooltip("死亡后是否不再作为锁定、AI 搜索和 Hitbox 命中的有效目标。")]
-        [SerializeField]
-        private bool untargetableOnDeath = true;
-
+        [Header("死亡处理")]
         [Tooltip("死亡后是否禁用自身及子物体上的非 Trigger Collider。第一版默认关闭，避免影响死亡表现观察。")]
         [SerializeField]
         private bool disableCollidersOnDeath;
@@ -75,7 +71,6 @@ namespace EndLink.Enemies
         private int _currentHealth;
         private int _ownedColliderCount;
         private bool _isDead;
-        private bool _isTargetable = true;
         private bool _componentsCached;
 
         /// <summary>最大生命值。</summary>
@@ -87,11 +82,8 @@ namespace EndLink.Enemies
         /// <summary>是否已经死亡。</summary>
         public bool IsDead => _isDead;
 
-        /// <summary>当前是否可作为战斗目标。</summary>
-        public bool IsTargetable => _isTargetable;
-
-        /// <summary>用于锁定、寻路和计算距离的目标 Transform。</summary>
-        public Transform TargetTransform => transform;
+        /// <summary>供 CombatTarget 读取的存活状态。</summary>
+        public bool IsAlive => !_isDead;
 
         /// <summary>受伤事件。</summary>
         public EnemyHealthDamagedEvent OnDamaged => onDamaged;
@@ -150,7 +142,7 @@ namespace EndLink.Enemies
         }
 
         /// <summary>
-        /// 重置生命值、死亡状态和目标有效性。
+        /// 重置生命值和死亡状态。
         /// </summary>
         public void ResetHealth()
         {
@@ -158,7 +150,6 @@ namespace EndLink.Enemies
 
             _currentHealth = maxHealth;
             _isDead = false;
-            _isTargetable = true;
 
             if (_flashCoroutine != null)
             {
@@ -199,7 +190,7 @@ namespace EndLink.Enemies
 
         private void ApplyDamage(DamageResult damageResult)
         {
-            if (_isDead || !_isTargetable)
+            if (_isDead)
             {
                 return;
             }
@@ -245,11 +236,6 @@ namespace EndLink.Enemies
             }
 
             _isDead = true;
-
-            if (untargetableOnDeath)
-            {
-                _isTargetable = false;
-            }
 
             if (_flashCoroutine != null)
             {

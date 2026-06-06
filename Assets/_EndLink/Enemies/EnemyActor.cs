@@ -10,13 +10,10 @@ namespace EndLink.Enemies
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyHealth))]
     [RequireComponent(typeof(CombatTagContainer))]
-    public sealed class EnemyActor : MonoBehaviour, ICombatTarget, ICharacterStatsTypeProvider
+    [RequireComponent(typeof(CombatTarget))]
+    public sealed class EnemyActor : MonoBehaviour, ICharacterStatsTypeProvider
     {
-        [Header("目标点")]
-        [Tooltip("用于锁定、寻路和计算距离的目标点。为空时使用敌人根物体。")]
-        [SerializeField]
-        private Transform targetTransform;
-
+        [Header("视觉")]
         [Tooltip("视觉根节点。当前只作为后续动画/表现预留引用。")]
         [SerializeField]
         private Transform bodyRoot;
@@ -32,6 +29,7 @@ namespace EndLink.Enemies
 
         private EnemyHealth _health;
         private CombatTagContainer _tagContainer;
+        private CombatTarget _combatTarget;
 
         /// <summary>敌人生命组件。</summary>
         public EnemyHealth Health
@@ -61,23 +59,28 @@ namespace EndLink.Enemies
             }
         }
 
-        /// <summary>用于锁定、寻路和计算距离的目标点。</summary>
         /// <summary>敌人的移动能力组件，由 EnemyActor 统一承载配置。允许为空。</summary>
         public EnemyMotorBase Motor => motor;
 
         /// <summary>敌人的战斗执行器。没有攻击能力的敌人可以为空。</summary>
         public EnemyCombatDriver CombatDriver => combatDriver;
 
-        public Transform TargetTransform => targetTransform != null ? targetTransform : transform;
+        /// <summary>敌人的统一战斗目标身份。</summary>
+        public CombatTarget CombatTarget
+        {
+            get
+            {
+                if (_combatTarget == null)
+                {
+                    _combatTarget = GetComponent<CombatTarget>();
+                }
+
+                return _combatTarget;
+            }
+        }
 
         /// <summary>视觉根节点。</summary>
         public Transform BodyRoot => bodyRoot;
-
-        /// <summary>敌人是否存活。</summary>
-        public bool IsAlive => Health != null && !Health.IsDead;
-
-        /// <summary>敌人当前是否可作为战斗目标。</summary>
-        public bool IsTargetable => Health != null && Health.IsTargetable;
 
         /// <summary>供 CharacterStats 自动识别为敌人配置。</summary>
         public CharacterStatsType StatsType => CharacterStatsType.Enemy;
@@ -86,13 +89,14 @@ namespace EndLink.Enemies
         {
             _health = GetComponent<EnemyHealth>();
             _tagContainer = GetComponent<CombatTagContainer>();
+            _combatTarget = GetComponent<CombatTarget>();
         }
 
         private void Reset()
         {
             _health = GetComponent<EnemyHealth>();
             _tagContainer = GetComponent<CombatTagContainer>();
-            targetTransform = transform;
+            _combatTarget = GetComponent<CombatTarget>();
             bodyRoot = transform;
         }
     }

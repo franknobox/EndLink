@@ -33,7 +33,6 @@ namespace EndLink.Ally
         private bool logSelection;
 
         private readonly List<Transform> _knownEnemies = new();
-        private readonly List<Collider> _colliderBuffer = new();
 
         /// <summary>当前绑定的小队战斗上下文。</summary>
         public PartyCombatContext CombatContext => combatContext;
@@ -99,10 +98,10 @@ namespace EndLink.Ally
                     continue;
                 }
 
-                float sqrDistance = GetHorizontalSqrDistanceToTarget(
+                float surfaceDistance = CombatTargetUtility.GetSurfaceDistance(
                     candidate,
-                    transform.position,
-                    _colliderBuffer);
+                    transform.position);
+                float sqrDistance = surfaceDistance * surfaceDistance;
 
                 if (targetSearchRadius > 0f && sqrDistance > targetSearchRadius * targetSearchRadius)
                 {
@@ -136,72 +135,7 @@ namespace EndLink.Ally
         /// </summary>
         public static bool IsTargetSelectable(Transform target)
         {
-            if (target == null || !target.gameObject.activeInHierarchy)
-            {
-                return false;
-            }
-
-            ICombatTarget combatTarget = target.GetComponentInParent<ICombatTarget>();
-            return combatTarget == null || combatTarget.IsTargetable;
-        }
-
-        /// <summary>
-        /// 获取目标身上距离 fromPosition 最近的 Collider 表面点。
-        /// 如果目标没有可用 Collider，则回退到目标 Transform 位置。
-        /// </summary>
-        public static Vector3 GetClosestPointOnTarget(
-            Transform target,
-            Vector3 fromPosition,
-            List<Collider> colliderBuffer)
-        {
-            if (target == null)
-            {
-                return fromPosition;
-            }
-
-            if (colliderBuffer == null)
-            {
-                return target.position;
-            }
-
-            colliderBuffer.Clear();
-            target.GetComponentsInChildren(false, colliderBuffer);
-
-            Vector3 bestPoint = target.position;
-            float bestSqrDistance = GetHorizontalSqrDistance(fromPosition, bestPoint);
-
-            for (int i = 0; i < colliderBuffer.Count; i++)
-            {
-                Collider targetCollider = colliderBuffer[i];
-                if (targetCollider == null || !targetCollider.enabled || !targetCollider.gameObject.activeInHierarchy)
-                {
-                    continue;
-                }
-
-                Vector3 closestPoint = targetCollider.ClosestPoint(fromPosition);
-                float sqrDistance = GetHorizontalSqrDistance(fromPosition, closestPoint);
-
-                if (sqrDistance < bestSqrDistance)
-                {
-                    bestSqrDistance = sqrDistance;
-                    bestPoint = closestPoint;
-                }
-            }
-
-            return bestPoint;
-        }
-
-        /// <summary>
-        /// 计算 fromPosition 到目标 Collider 表面的水平距离平方。
-        /// 如果目标没有可用 Collider，则回退到目标 Transform 位置。
-        /// </summary>
-        public static float GetHorizontalSqrDistanceToTarget(
-            Transform target,
-            Vector3 fromPosition,
-            List<Collider> colliderBuffer)
-        {
-            Vector3 closestPoint = GetClosestPointOnTarget(target, fromPosition, colliderBuffer);
-            return GetHorizontalSqrDistance(fromPosition, closestPoint);
+            return CombatTargetUtility.IsTargetable(target);
         }
 
         private void CacheReferences()
@@ -231,13 +165,6 @@ namespace EndLink.Ally
         private static string GetTransformName(Transform target)
         {
             return target != null ? target.name : "None";
-        }
-
-        private static float GetHorizontalSqrDistance(Vector3 fromPosition, Vector3 toPosition)
-        {
-            Vector3 offset = toPosition - fromPosition;
-            offset.y = 0f;
-            return offset.sqrMagnitude;
         }
     }
 }

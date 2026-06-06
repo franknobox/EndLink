@@ -12,6 +12,7 @@ namespace EndLink.Core
     [RequireComponent(typeof(PlayerInputReader))]
     [RequireComponent(typeof(PlayerController))]
     [RequireComponent(typeof(PlayerCombatDriver))]
+    [RequireComponent(typeof(CombatTarget))]
     public sealed class PlayerStateMachine : MonoBehaviour, ICharacterStatsTypeProvider
     {
         [Header("初始状态")]

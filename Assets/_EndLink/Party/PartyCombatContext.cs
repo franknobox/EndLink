@@ -107,7 +107,9 @@ namespace EndLink.Party
         {
             if (eventData.EventType == CombatEventType.Dead)
             {
-                RemoveKnownEnemy(eventData.Target != null ? eventData.Target.transform : null);
+                RemoveKnownEnemy(eventData.Target != null
+                    ? CombatTargetUtility.ResolveRoot(eventData.Target.transform)
+                    : null);
                 return;
             }
 
@@ -144,10 +146,9 @@ namespace EndLink.Party
                 return null;
             }
 
-            Transform target = targetObject.transform;
-            ICombatTarget combatTarget = target.GetComponentInParent<ICombatTarget>();
-
-            if (combatTarget != null && !combatTarget.IsTargetable)
+            if (!CombatTargetUtility.TryResolveTargetableRoot(
+                    targetObject.transform,
+                    out Transform target))
             {
                 return null;
             }
@@ -157,9 +158,7 @@ namespace EndLink.Party
                 return null;
             }
 
-            return combatTarget is Component combatTargetComponent
-                ? combatTargetComponent.transform
-                : target;
+            return target;
         }
 
         private void RegisterCombatTarget(Transform target)
@@ -237,8 +236,7 @@ namespace EndLink.Party
                 return false;
             }
 
-            ICombatTarget combatTarget = target.GetComponentInParent<ICombatTarget>();
-            return combatTarget == null || combatTarget.IsTargetable;
+            return CombatTargetUtility.IsTargetable(target);
         }
 
         private bool IsPartyMember(Transform target)

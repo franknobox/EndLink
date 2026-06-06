@@ -180,11 +180,11 @@ namespace EndLink.Combat
 
         private Vector3 ResolveAttackForward(Transform targetOverride)
         {
-            Transform attackTarget = targetOverride != null
-                ? targetOverride
-                : _targeting != null && _targeting.HasTarget
-                    ? _targeting.CurrentTarget
-                    : null;
+            Transform attackTarget = ResolveLockPoint(targetOverride);
+            if (attackTarget == null && _targeting != null && _targeting.HasTarget)
+            {
+                attackTarget = _targeting.CurrentLockPoint;
+            }
 
             if (attackTarget != null)
             {
@@ -203,6 +203,14 @@ namespace EndLink.Combat
             return forward.sqrMagnitude > 0.0001f
                 ? forward.normalized
                 : Vector3.forward;
+        }
+
+        private static Transform ResolveLockPoint(Transform target)
+        {
+            return target != null
+                && CombatTargetUtility.TryResolve(target, out ICombatTarget combatTarget)
+                    ? combatTarget.LockPoint
+                    : target;
         }
 
         private void ConfigureHitbox(GameObject hitboxInstance, CombatActionDefinition actionDefinition)

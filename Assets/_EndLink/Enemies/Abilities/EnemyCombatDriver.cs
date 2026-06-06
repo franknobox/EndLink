@@ -187,6 +187,12 @@ namespace EndLink.Enemies
 
         private Vector3 ResolveAttackForward(Transform target)
         {
+            if (target != null
+                && CombatTargetUtility.TryResolve(target, out ICombatTarget combatTarget))
+            {
+                target = combatTarget.LockPoint;
+            }
+
             if (target != null)
             {
                 Vector3 toTarget = Vector3.ProjectOnPlane(target.position - transform.position, Vector3.up);

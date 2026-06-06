@@ -153,8 +153,10 @@ namespace EndLink.Party
             }
 
             if (eventData.Target == null
-                || eventData.Target.GetComponentInParent<ICombatTarget>() == null
-                || IsPartyMember(eventData.Target.transform))
+                || !CombatTargetUtility.TryResolveTargetableRoot(
+                    eventData.Target.transform,
+                    out Transform reactionTarget)
+                || IsPartyMember(reactionTarget))
             {
                 return;
             }
@@ -233,9 +235,10 @@ namespace EndLink.Party
                 return null;
             }
 
-            ICombatTarget combatTarget = targetObject.GetComponentInParent<ICombatTarget>();
-            return combatTarget != null && combatTarget.IsTargetable
-                ? combatTarget.TargetTransform
+            return CombatTargetUtility.TryResolveTargetableRoot(
+                targetObject.transform,
+                out Transform root)
+                ? root
                 : null;
         }
 
@@ -246,8 +249,7 @@ namespace EndLink.Party
                 return false;
             }
 
-            ICombatTarget combatTarget = target.GetComponentInParent<ICombatTarget>();
-            return combatTarget == null || combatTarget.IsTargetable;
+            return CombatTargetUtility.IsTargetable(target);
         }
 
         private bool IsPartyMember(Transform target)

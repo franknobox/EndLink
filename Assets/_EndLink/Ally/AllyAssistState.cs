@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using EndLink.Combat;
 using UnityEngine;
 
 namespace EndLink.Ally
@@ -19,7 +19,6 @@ namespace EndLink.Ally
     /// </summary>
     public sealed class AllyAssistState : AllyStateBase
     {
-        private readonly List<Collider> _targetColliders = new();
         private AllyAssistPhase _phase;
         private float _elapsedTime;
         private bool _loggedCooldownWait;
@@ -92,10 +91,9 @@ namespace EndLink.Ally
                 return;
             }
 
-            Vector3 approachPosition = AllyTargetSelector.GetClosestPointOnTarget(
+            Vector3 approachPosition = CombatTargetUtility.GetClosestPoint(
                 target,
-                Context.Transform.position,
-                _targetColliders);
+                Context.Transform.position);
 
             Context.FollowMotor.TickMoveToPosition(approachPosition, Context.AssistApproachStopDistance, deltaTime);
         }
@@ -183,24 +181,21 @@ namespace EndLink.Ally
         private bool IsTargetInAttackRange(Transform target)
         {
             float attackEnterDistance = Context.AssistAttackEnterDistance;
-            float sqrAttackRange = attackEnterDistance * attackEnterDistance;
-            float sqrDistanceToTarget = AllyTargetSelector.GetHorizontalSqrDistanceToTarget(
+            float surfaceDistance = CombatTargetUtility.GetSurfaceDistance(
                 target,
-                Context.Transform.position,
-                _targetColliders);
+                Context.Transform.position);
 
-            return sqrDistanceToTarget <= sqrAttackRange;
+            return surfaceDistance <= attackEnterDistance;
         }
 
         private bool IsTargetOutOfRange(Transform target)
         {
             float reengageRange = Mathf.Max(Context.AssistAttackEnterDistance, Context.AssistReengageRange);
-            float sqrDistanceToTarget = AllyTargetSelector.GetHorizontalSqrDistanceToTarget(
+            float surfaceDistance = CombatTargetUtility.GetSurfaceDistance(
                 target,
-                Context.Transform.position,
-                _targetColliders);
+                Context.Transform.position);
 
-            return sqrDistanceToTarget > reengageRange * reengageRange;
+            return surfaceDistance > reengageRange;
         }
 
         private bool IsMainCharacterTooFar()
@@ -223,10 +218,9 @@ namespace EndLink.Ally
                 return 0f;
             }
 
-            return Mathf.Sqrt(AllyTargetSelector.GetHorizontalSqrDistanceToTarget(
+            return CombatTargetUtility.GetSurfaceDistance(
                 target,
-                Context.Transform.position,
-                _targetColliders));
+                Context.Transform.position);
         }
 
         private static string GetTransformName(Transform target)

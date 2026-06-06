@@ -10,7 +10,8 @@ namespace EndLink.Combat
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(MeshRenderer))]
-    public sealed class EnemyDummy : MonoBehaviour, IHitReceiver, IDamageable
+    [RequireComponent(typeof(CombatTarget))]
+    public sealed class EnemyDummy : MonoBehaviour, IHitReceiver, IDamageable, ICombatTargetLifeState
     {
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
@@ -71,6 +72,9 @@ namespace EndLink.Combat
 
         /// <summary>是否已经死亡。</summary>
         public bool IsDead => _isDead;
+
+        /// <summary>供 CombatTarget 读取的存活状态。</summary>
+        public bool IsAlive => !_isDead;
 
         /// <summary>受击事件。</summary>
         public EnemyDummyDamagedEvent OnDamaged => onDamaged;

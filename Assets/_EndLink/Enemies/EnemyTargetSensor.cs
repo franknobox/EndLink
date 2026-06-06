@@ -140,7 +140,7 @@ namespace EndLink.Enemies
         {
             if (ExplicitTarget != null)
             {
-                Transform target = ResolveTargetTransform(ExplicitTarget);
+                Transform target = CombatTargetUtility.ResolveRoot(ExplicitTarget);
                 return IsTargetInRange(target) && IsTargetValid(target) ? target : null;
             }
 
@@ -163,14 +163,18 @@ namespace EndLink.Enemies
 
             for (int i = 0; i < hitCount; i++)
             {
-                Transform candidate = ResolveTargetTransform(_targetBuffer[i]);
-
-                if (!IsTargetValid(candidate) || !IsTargetInRange(candidate))
+                if (!CombatTargetUtility.TryResolveTargetableRoot(
+                        _targetBuffer[i],
+                        out Transform candidate)
+                    || !IsTargetInRange(candidate))
                 {
                     continue;
                 }
 
-                float distanceSqr = GetPlanarDistanceSqr(origin.position, candidate.position);
+                float surfaceDistance = CombatTargetUtility.GetSurfaceDistance(
+                    candidate,
+                    origin.position);
+                float distanceSqr = surfaceDistance * surfaceDistance;
 
                 if (distanceSqr < bestDistanceSqr)
                 {
@@ -227,47 +231,14 @@ namespace EndLink.Enemies
                 return false;
             }
 
-            return GetPlanarDistanceSqr(GetDetectionOrigin().position, target.position)
-                <= DetectionRadius * DetectionRadius;
+            return CombatTargetUtility.GetSurfaceDistance(
+                target,
+                GetDetectionOrigin().position) <= DetectionRadius;
         }
 
         private static bool IsTargetValid(Transform target)
         {
-            if (target == null || !target.gameObject.activeInHierarchy)
-            {
-                return false;
-            }
-
-            ICombatTarget combatTarget = target.GetComponentInParent<ICombatTarget>();
-            return combatTarget == null || combatTarget.IsTargetable;
-        }
-
-        private Transform ResolveTargetTransform(Transform target)
-        {
-            if (target == null)
-            {
-                return null;
-            }
-
-            ICombatTarget combatTarget = target.GetComponentInParent<ICombatTarget>();
-            return combatTarget?.TargetTransform != null ? combatTarget.TargetTransform : target;
-        }
-
-        private Transform ResolveTargetTransform(Collider targetCollider)
-        {
-            if (targetCollider == null)
-            {
-                return null;
-            }
-
-            ICombatTarget combatTarget = targetCollider.GetComponentInParent<ICombatTarget>();
-            if (combatTarget?.TargetTransform != null)
-            {
-                return combatTarget.TargetTransform;
-            }
-
-            PlayerHealth playerHealth = targetCollider.GetComponentInParent<PlayerHealth>();
-            return playerHealth != null ? playerHealth.transform : targetCollider.transform;
+            return CombatTargetUtility.IsTargetable(target);
         }
 
         private Transform GetDetectionOrigin()
@@ -326,13 +297,5 @@ namespace EndLink.Enemies
                 : new Color(0.2f, 0.6f, 1f, 1f);
             Gizmos.DrawWireSphere(origin.position, radius);
         }
-
-        private static float GetPlanarDistanceSqr(Vector3 from, Vector3 to)
-        {
-            Vector3 offset = to - from;
-            offset.y = 0f;
-            return offset.sqrMagnitude;
-        }
-
     }
 }
