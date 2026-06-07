@@ -17,14 +17,16 @@
 
 body {
   margin: 0;
-  min-width: 1160px;
+  min-width: 1280px;
   background: var(--bg);
   color: var(--text);
   font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -37,18 +39,36 @@ button {
   cursor: pointer;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   border-color: var(--accent);
 }
 
-input {
+button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+input,
+select,
+textarea {
   min-width: 0;
-  height: 32px;
   border: 1px solid var(--line);
   border-radius: 5px;
-  padding: 0 9px;
   background: #111411;
   color: var(--text);
+}
+
+input,
+select {
+  height: 32px;
+  padding: 0 9px;
+}
+
+textarea {
+  width: 100%;
+  min-height: 74px;
+  resize: vertical;
+  padding: 8px 9px;
 }
 
 .app-shell {
@@ -58,7 +78,7 @@ input {
 
 .workbench {
   display: grid;
-  grid-template-columns: 300px minmax(570px, 1fr) 330px;
+  grid-template-columns: 350px minmax(620px, 1fr) 320px;
   gap: 12px;
   min-height: calc(100vh - 36px);
 }
@@ -72,6 +92,7 @@ input {
 
 .side-panel {
   padding: 14px;
+  overflow: auto;
 }
 
 .side-panel h2,
@@ -79,6 +100,12 @@ input {
   margin: 0 0 10px;
   font-size: 15px;
   font-weight: 650;
+}
+
+.panel-section-title {
+  margin-top: 18px !important;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .center-panel {
@@ -143,11 +170,38 @@ input {
   margin-top: 14px;
 }
 
+.compact-form {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
 .target-fields label,
-.rule-form label {
+.compact-form label {
   display: grid;
   gap: 5px;
   color: var(--muted);
+  font-size: 13px;
+}
+
+.definition-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.definition-grid label:nth-child(5) {
+  grid-column: span 2;
+}
+
+.rule-grid {
+  display: grid;
+  grid-template-columns: 1fr 72px;
+  gap: 8px;
+}
+
+.rule-grid label:nth-child(5) {
+  grid-column: span 2;
 }
 
 .target-tags {
@@ -155,7 +209,8 @@ input {
 }
 
 .tag-list,
-.rules-list {
+.rules-list,
+.definition-list {
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
@@ -166,8 +221,19 @@ input {
   min-height: 34px;
 }
 
+.definition-list {
+  max-height: 132px;
+  overflow: auto;
+}
+
+.rules-list {
+  max-height: calc(100vh - 570px);
+  overflow: auto;
+}
+
 .tag-chip,
-.rule-chip {
+.rule-chip,
+.definition-chip {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -176,6 +242,12 @@ input {
   border-radius: 5px;
   padding: 0 10px;
   background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+}
+
+.definition-chip {
+  font-size: 12px;
 }
 
 .tag-chip {
@@ -191,6 +263,12 @@ input {
   border: 0;
   background: transparent;
   color: var(--muted);
+}
+
+.rule-chip {
+  background: #2d2632;
+  border-color: #5a4965;
+  font-size: 12px;
 }
 
 .empty-text {
@@ -219,15 +297,24 @@ input {
   font-weight: 650;
 }
 
+.actor-attack {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 8px;
+  align-items: center;
+  color: var(--muted);
+}
+
 .action-line {
   display: grid;
-  grid-template-columns: 44px 68px 1fr 58px;
-  gap: 8px;
+  grid-template-columns: 40px 58px 58px 58px minmax(86px, 1fr) 54px;
+  gap: 6px;
   align-items: center;
 }
 
 .action-line span {
   color: var(--muted);
+  font-size: 13px;
 }
 
 .skill-button {
@@ -240,24 +327,23 @@ input {
   background: #4a3818;
 }
 
-.rule-form {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 12px;
+.link-status {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 8px 10px;
+  background: #171b18;
+  color: var(--muted);
 }
 
-.rules-list {
-  max-height: calc(100vh - 173px);
-  overflow: auto;
-}
-
-.rule-chip {
-  background: #2d2632;
-  border-color: #5a4965;
+.link-status-open {
+  border-color: #6a5730;
+  background: #3d3119;
+  color: var(--accent);
 }
 
 .timeline {
-  height: calc(100vh - 96px);
+  height: calc(100vh - 164px);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -283,7 +369,8 @@ input {
 }
 
 .event-damage strong,
-.event-dead strong {
+.event-dead strong,
+.event-blocked strong {
   color: var(--red);
 }
 
@@ -291,7 +378,8 @@ input {
   color: var(--green);
 }
 
-.event-reaction strong {
+.event-reaction strong,
+.event-link strong {
   color: var(--accent);
 }
 
@@ -313,5 +401,14 @@ input {
   .actor-row {
     border-right: 0;
     border-top: 1px solid var(--line);
+  }
+
+  .action-line {
+    grid-template-columns: 40px 1fr 1fr 58px;
+  }
+
+  .action-line input:nth-of-type(3),
+  .action-line button {
+    grid-column: span 2;
   }
 }

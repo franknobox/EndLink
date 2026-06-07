@@ -1,115 +1,100 @@
 const assert = require("assert");
 const {
+  CombatDamageType,
+  ReactionEffectType,
   createInitialState,
-  addRule,
+  createTagDefinition,
+  addReactionRule,
   applyAction,
+  advanceTime,
 } = require("../reaction-engine");
 
 const state = createInitialState();
 state.target = {
   name: "Enemy Dummy",
-  maxHealth: 100,
-  currentHealth: 100,
+  maxHealth: 200,
+  currentHealth: 200,
 };
-state.targetTags = ["Break"];
+state.tagDefinitions = [
+  createTagDefinition("ovl", "超频", 1, 6, 3),
+  createTagDefinition("meltdown", "核心熔毁", 2, 4, 1),
+  createTagDefinition("nos", "噪声", 1, 5, 3),
+];
 state.rules = [
-  addRule("Break", "Shock", "Stun"),
+  addReactionRule({
+    firstTag: "ovl",
+    secondTag: "ovl",
+    requiredFirstStack: 3,
+    requiredSecondStack: 3,
+    priority: 10,
+    reactionEffects: [
+      { type: ReactionEffectType.ApplyTag, tag: "meltdown", stackCount: 1 },
+      { type: ReactionEffectType.DealDamage, damageAmount: 35, damageType: CombatDamageType.RuntimeDamage },
+      { type: ReactionEffectType.RemoveTag, tag: "ovl" },
+    ],
+  }),
 ];
 
-const nextState = applyAction(state, {
-  name: "Test Shock Hit",
-  damage: 25,
-  tags: ["Shock"],
-});
+const reactionState = applyAction(
+  state,
+  { name: "Player", atkPower: 20 },
+  {
+    name: "Test Skill",
+    actionType: "Skill",
+    flatDamage: 10,
+    atkPowerMultiplier: 1.5,
+    damageType: CombatDamageType.StructuralDamage,
+    tags: ["ovl:5"],
+  }
+);
 
-assert.strictEqual(nextState.target.currentHealth, 75);
-assert.deepStrictEqual(nextState.targetTags, [
-  { name: "Stun", stacks: 1 },
+assert.strictEqual(reactionState.target.currentHealth, 125);
+assert.deepStrictEqual(reactionState.targetTags, [
+  { id: "meltdown", displayName: "核心熔毁", level: 2, stacks: 1, duration: 4 },
 ]);
-assert.strictEqual(nextState.timeline.length, 4);
-assert.strictEqual(nextState.timeline[0].type, "action");
-assert.strictEqual(nextState.timeline[1].type, "damage");
-assert.strictEqual(nextState.timeline[1].message, "Deal 25 damage");
-assert.strictEqual(nextState.timeline[2].type, "tag");
-assert.strictEqual(nextState.timeline[3].type, "reaction");
-assert.strictEqual(nextState.timeline[3].message, "Break + Shock => Stun");
+assert.strictEqual(reactionState.linkWindow.remaining, 4);
+assert.strictEqual(reactionState.timeline[1].message, "Deal 40 StructuralDamage");
+assert.strictEqual(reactionState.timeline[2].message, "Apply 超频 x3 (6s)");
+assert.strictEqual(reactionState.timeline[3].message, "Reaction ovl + ovl");
+assert.strictEqual(reactionState.timeline[4].message, "Apply 核心熔毁 (4s)");
+assert.strictEqual(reactionState.timeline[5].message, "Deal 35 RuntimeDamage");
+assert.strictEqual(reactionState.timeline[6].message, "Remove 超频");
 
-const lethalState = applyAction(nextState, {
-  name: "Finisher",
-  damage: 999,
-  tags: [],
-});
+const linkState = applyAction(
+  reactionState,
+  { name: "Ally 01", atkPower: 12 },
+  {
+    name: "Ally Link",
+    actionType: "LinkAttack",
+    flatDamage: 20,
+    atkPowerMultiplier: 1,
+    damageType: CombatDamageType.RuntimeDamage,
+    tags: ["nos"],
+  }
+);
 
-assert.strictEqual(lethalState.target.currentHealth, 0);
-assert.strictEqual(lethalState.timeline[lethalState.timeline.length - 1].type, "dead");
+assert.strictEqual(linkState.target.currentHealth, 93);
+assert.strictEqual(linkState.linkWindow.remaining, 0);
+assert.strictEqual(linkState.targetTags[1].duration, 5);
 
-const stackState = createInitialState();
-stackState.rules = [
-  addRule("Fire:3", "", "Burning"),
-];
+const blockedLinkState = applyAction(
+  linkState,
+  { name: "Ally 02", atkPower: 10 },
+  {
+    name: "Blocked Link",
+    actionType: "LinkAttack",
+    flatDamage: 999,
+    atkPowerMultiplier: 0,
+    damageType: CombatDamageType.RuntimeDamage,
+    tags: [],
+  }
+);
 
-const burnState = applyAction(stackState, {
-  name: "Triple Fire",
-  damage: 0,
-  tags: ["Fire:3"],
-});
+assert.strictEqual(blockedLinkState.target.currentHealth, 93);
+assert.strictEqual(blockedLinkState.timeline[blockedLinkState.timeline.length - 1].type, "blocked");
 
-assert.deepStrictEqual(burnState.targetTags, [
-  { name: "Burning", stacks: 1 },
-]);
-assert.strictEqual(burnState.timeline[burnState.timeline.length - 1].message, "Fire x3 => Burning");
-
-const durationState = applyAction(createInitialState(), {
-  name: "Timed Fire",
-  damage: 0,
-  tags: [
-    { name: "Fire", stacks: 1, duration: 2.5 },
-    { name: "Fire", stacks: 2, duration: 1.5 },
-  ],
-});
-
-assert.deepStrictEqual(durationState.targetTags, [
-  { name: "Fire", stacks: 3, duration: 2.5 },
-]);
-
-const priorityState = createInitialState();
-priorityState.targetTags = [
-  { name: "Break", stacks: 1, duration: 4 },
-  { name: "Shock", stacks: 1, duration: 3 },
-  { name: "Fire", stacks: 3, duration: 5 },
-];
-priorityState.rules = [
-  { requirements: [{ name: "Break", stacks: 1 }, { name: "Shock", stacks: 1 }], result: { name: "Stun", stacks: 1 }, priority: 1 },
-  { requirements: [{ name: "Fire", stacks: 3 }], result: { name: "Burning", stacks: 1, duration: 6 }, priority: 10 },
-];
-
-const priorityResult = applyAction(priorityState, {
-  name: "Priority Probe",
-  damage: 0,
-  tags: [],
-});
-
-assert.strictEqual(priorityResult.timeline[1].message, "Fire x3 => Burning (6s)");
-assert.deepStrictEqual(priorityResult.targetTags, [
-  { name: "Burning", stacks: 1, duration: 6 },
-  { name: "Stun", stacks: 1 },
-]);
-
-const consumeOnlyState = createInitialState();
-consumeOnlyState.targetTags = [
-  { name: "Shield", stacks: 3, duration: 8 },
-];
-consumeOnlyState.rules = [
-  { requirements: [{ name: "Shield", stacks: 3 }], result: null, priority: 1 },
-];
-
-const consumeOnlyResult = applyAction(consumeOnlyState, {
-  name: "Strip Shield",
-  damage: 0,
-  tags: [],
-});
-
-assert.deepStrictEqual(consumeOnlyResult.targetTags, []);
-assert.strictEqual(consumeOnlyResult.timeline[1].message, "Shield x3 => Clear");
+const timeoutState = advanceTime(reactionState, 4.1);
+assert.strictEqual(timeoutState.linkWindow.remaining, 0);
+assert.strictEqual(timeoutState.timeline[timeoutState.timeline.length - 1].type, "link");
 
 console.log("reaction-engine tests passed");

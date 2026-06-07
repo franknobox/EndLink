@@ -29,6 +29,11 @@ namespace EndLink.Combat
         [SerializeField, Min(1)]
         private int requiredSecondStack = 1;
 
+        [Header("匹配优先级")]
+        [Tooltip("多条规则同时满足时，优先级更高的规则先触发。数值相同则保持列表顺序。")]
+        [SerializeField]
+        private int priority;
+
         [Header("反应效果")]
         [Tooltip("组合成功后执行的反应效果列表。至少需要配置一条有效效果。")]
         [SerializeField]
@@ -45,6 +50,9 @@ namespace EndLink.Combat
 
         /// <summary>触发规则所需的输入标签 B 层数。</summary>
         public int RequiredSecondStack => Mathf.Max(1, requiredSecondStack);
+
+        /// <summary>多条规则同时满足时使用的匹配优先级。</summary>
+        public int Priority => priority;
 
         /// <summary>组合成功后执行的反应效果列表。</summary>
         public IReadOnlyList<CombatTagReactionEffect> ReactionEffects => reactionEffects;

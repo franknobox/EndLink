@@ -261,6 +261,8 @@ namespace EndLink.Combat
 
         private void TryApplyCombinationRules(CombatTagDefinition addedTag, GameObject source, int combinationDepth)
         {
+            CombatTagCombinationRule matchedRule = null;
+
             foreach (CombatTagCombinationRule rule in combinationRules)
             {
                 if (rule == null || !rule.CanApply(addedTag, this))
@@ -268,10 +270,19 @@ namespace EndLink.Combat
                     continue;
                 }
 
-                CombatTagDefinition reactionTag = ExecuteReactionRuleEffects(rule, source, combinationDepth);
-                NotifyReactionTriggered(rule, reactionTag, source);
+                if (matchedRule == null || rule.Priority > matchedRule.Priority)
+                {
+                    matchedRule = rule;
+                }
+            }
+
+            if (matchedRule == null)
+            {
                 return;
             }
+
+            CombatTagDefinition reactionTag = ExecuteReactionRuleEffects(matchedRule, source, combinationDepth);
+            NotifyReactionTriggered(matchedRule, reactionTag, source);
         }
 
         private CombatTagDefinition ExecuteReactionRuleEffects(

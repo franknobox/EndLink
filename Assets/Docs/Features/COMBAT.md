@@ -241,7 +241,8 @@
 - 标签合法检查当前要求标签资产非空且 `tagId` 非空。
 - `CombatTagContainer` 挂在目标身上，负责保存多标签、层数、持续时间、添加、移除、过期和清空。
 - `CombatTagContainer` 支持永久标签和限时标签；添加标签时如果没有显式传入持续时间，会使用标签定义里的默认持续时间，默认持续时间小于等于 0 时才视为永久标签。
-- `CombatTagCombinationRule` 描述 A + B 触发反应效果的规则，可配置源标签所需层数，以及一组 `CombatTagReactionEffect`。
+- `CombatTagCombinationRule` 描述 A + B 触发反应效果的规则，可配置源标签所需层数、规则优先级，以及一组 `CombatTagReactionEffect`。
+- 多条规则同时满足时，`CombatTagContainer` 会选择优先级最高的规则触发；优先级相同时保持配置列表顺序。
 - `CombatTagReactionEffect` 支持 `ApplyTag`、`RemoveTag`、`DealDamage`，并预留 `SpreadTag`、`ApplyControl`、`InterruptAction`、`ModifyResource` 和 `CustomEvent`。
 - 消耗源标签也通过 `RemoveTag` 反应效果配置，不再保留旧的单独输出标签或自动移除源标签字段。
 - 同一个标签重复添加时会刷新持续时间并增加层数，最终层数会被 `CombatTagDefinition.MaxStackCount` 钳制。
