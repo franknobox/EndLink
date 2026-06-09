@@ -24,9 +24,17 @@ namespace EndLink.Enemies
         private bool resetHealthOnEnable = true;
 
         [Header("死亡处理")]
-        [Tooltip("死亡后是否禁用自身及子物体上的非 Trigger Collider。第一版默认关闭，避免影响死亡表现观察。")]
+        [Tooltip("死亡后是否禁用自身及子物体上的非 Trigger Collider。用于让死亡敌人不再阻挡玩家、队友和其他敌人。")]
         [SerializeField]
-        private bool disableCollidersOnDeath;
+        private bool disableCollidersOnDeath = true;
+
+        [Tooltip("死亡后是否自动隐藏整个敌人根物体。当前没有死亡动画时，用它完成最小退场流程。")]
+        [SerializeField]
+        private bool deactivateOnDeath = true;
+
+        [Tooltip("死亡事件触发后等待多久隐藏敌人。保留一小段时间可以让死亡变色、命中反馈和调试日志被看见。")]
+        [SerializeField, Min(0f)]
+        private float deathDeactivateDelay = 0.8f;
 
         [Header("受击反馈")]
         [Tooltip("受击时闪烁的 MeshRenderer。为空时会自动查找自身或子物体。")]
@@ -67,9 +75,11 @@ namespace EndLink.Enemies
         private MaterialPropertyBlock _propertyBlock;
         private Color _originalColor = Color.white;
         private Coroutine _flashCoroutine;
+        private Coroutine _deathCleanupCoroutine;
         private string _originalName;
         private int _currentHealth;
         private int _ownedColliderCount;
+        private GameObject _lastDamageSource;
         private bool _isDead;
         private bool _componentsCached;
 
@@ -84,6 +94,9 @@ namespace EndLink.Enemies
 
         /// <summary>供 CombatTarget 读取的存活状态。</summary>
         public bool IsAlive => !_isDead;
+
+        /// <summary>最近一次造成有效伤害的来源对象。用于敌人状态机在受击后接管当前战斗目标。</summary>
+        public GameObject LastDamageSource => _lastDamageSource;
 
         /// <summary>受伤事件。</summary>
         public EnemyHealthDamagedEvent OnDamaged => onDamaged;
@@ -114,6 +127,7 @@ namespace EndLink.Enemies
         {
             maxHealth = Mathf.Max(1, maxHealth);
             hitFlashDuration = Mathf.Max(0.01f, hitFlashDuration);
+            deathDeactivateDelay = Mathf.Max(0f, deathDeactivateDelay);
         }
 
         /// <summary>
@@ -154,6 +168,7 @@ namespace EndLink.Enemies
 
             _currentHealth = maxHealth;
             _isDead = false;
+            _lastDamageSource = null;
 
             if (_flashCoroutine != null)
             {
@@ -161,6 +176,7 @@ namespace EndLink.Enemies
                 _flashCoroutine = null;
             }
 
+            StopDeathCleanup();
             RestoreColliders();
             SetBaseColor(_originalColor);
             UpdateDebugDisplay();
@@ -205,6 +221,7 @@ namespace EndLink.Enemies
                 return 0;
             }
 
+            _lastDamageSource = damageResult.Source;
             _currentHealth = Mathf.Max(0, _currentHealth - appliedDamage);
 
             if (logHits)
@@ -263,6 +280,53 @@ namespace EndLink.Enemies
 
             onDead.Invoke();
             CombatEventsBus.RaiseDead(source, gameObject);
+            StartDeathCleanup();
+        }
+
+        private void StartDeathCleanup()
+        {
+            StopDeathCleanup();
+
+            if (!deactivateOnDeath)
+            {
+                return;
+            }
+
+            if (deathDeactivateDelay <= 0f)
+            {
+                DeactivateDeadEnemy();
+                return;
+            }
+
+            _deathCleanupCoroutine = StartCoroutine(DeactivateAfterDeathDelay());
+        }
+
+        private void StopDeathCleanup()
+        {
+            if (_deathCleanupCoroutine == null)
+            {
+                return;
+            }
+
+            StopCoroutine(_deathCleanupCoroutine);
+            _deathCleanupCoroutine = null;
+        }
+
+        private IEnumerator DeactivateAfterDeathDelay()
+        {
+            yield return new WaitForSeconds(deathDeactivateDelay);
+            _deathCleanupCoroutine = null;
+            DeactivateDeadEnemy();
+        }
+
+        private void DeactivateDeadEnemy()
+        {
+            if (!_isDead || !gameObject.activeSelf)
+            {
+                return;
+            }
+
+            gameObject.SetActive(false);
         }
 
         private IEnumerator FlashHitColor()

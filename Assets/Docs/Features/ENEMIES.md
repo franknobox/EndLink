@@ -19,6 +19,7 @@
 - `EnemyHealth` 负责正式敌人的血量、受击、死亡、死亡事件和白模调试反馈。
 - `EnemyHealth` 实现 `IHitReceiver`、`IDamageable` 和 `ICombatTargetLifeState`，不再重复实现目标身份。
 - `CombatTarget` 统一提供敌人的根身份、存活/可选状态、锁定点和 Collider 表面距离；敌人死亡后会自动失效。
+- `EnemyHealth` 死亡后会立即让目标失效，可选禁用非 Trigger Collider，并在延迟后隐藏敌人根物体，作为当前无死亡动画阶段的最小退场流程。
 - `EnemyDummy` 保留为早期轻量命中测试对象，用于快速验证 Hitbox、扣血和死亡显示；正式敌人能力以本节敌人基底为准。
 
 对应脚本：
@@ -47,7 +48,9 @@
 - `maxHealth`：敌人最大生命值
 - `initialTags`：敌人启用时默认拥有的战斗标签
 - `combinationRules`：敌人身上触发协议反应使用的规则
-- `disableCollidersOnDeath`：死亡后是否禁用非 Trigger Collider
+- `disableCollidersOnDeath`：死亡后是否禁用非 Trigger Collider，让死亡敌人不再阻挡角色
+- `deactivateOnDeath`：死亡后是否自动隐藏敌人根物体
+- `deathDeactivateDelay`：死亡事件触发后等待多久隐藏敌人
 - `feedbackRenderer`：受击和死亡变色使用的 MeshRenderer
 - `showHealthInName`：是否在 GameObject 名字上显示血量
 
@@ -68,6 +71,8 @@
 - `Combat` 当前只做基础追击和面向目标；追击位置取自目标 Collider 最近表面点，停止距离只保留自身半径和配置间隔，避免持续挤入目标中心。
 - `Combat` 后续作为行为树的外层挂载点，内部再承载站位、攻击、技能等细节行为。
 - `Hit` 作为独立大状态处理受击打断，不放进 Combat 行为树，方便后续加入硬直、霸体、击倒等规则。
+- 敌人受到有效伤害时，会优先把当前战斗目标切换为伤害来源；轻击只让敌人接战，重击才进入 `Hit` 状态并短暂停止移动。
+- `Hit` 状态触发带有短冷却，避免多段 Hitbox 在极短时间内反复刷新受击打断。
 
 对应脚本：
 - `Assets/_EndLink/Enemies/EnemyTargetSensor.cs`
@@ -99,6 +104,9 @@
 - `EnemyStateMachine.logSensorChanges`：是否打印索敌发现、丢失和进入 Combat 的日志
 - `EnemyStateMachine.drawDetectionGizmo`：是否绘制索敌范围 Gizmo
 - `hitDuration`：`Hit` 受击硬直时间
+- `retargetOnDamage`：受到有效伤害时是否把当前目标切换为伤害来源
+- `heavyHitDamageThreshold`：实际伤害达到多少才触发 `Hit` 状态；小于等于 0 表示所有有效伤害都会触发
+- `hitReactCooldown`：两次 `Hit` 触发之间的最短间隔
 - `combatChaseStopDistance`：Combat 追击时保留的目标表面间隔，实际停止距离会额外加上敌人自身碰撞半径
 
 </details>

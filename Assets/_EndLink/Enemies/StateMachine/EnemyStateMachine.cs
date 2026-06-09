@@ -61,6 +61,18 @@ namespace EndLink.Enemies
         [SerializeField, Min(0.01f)]
         private float hitDuration = 0.25f;
 
+        [Tooltip("受到有效伤害时，是否把当前战斗目标切换为伤害来源。")]
+        [SerializeField]
+        private bool retargetOnDamage = true;
+
+        [Tooltip("实际伤害达到该值时才进入 Hit 状态。小于等于 0 表示任何有效伤害都会触发 Hit。低于阈值的轻击只会让敌人接战，不会打断当前状态。")]
+        [SerializeField, Min(0f)]
+        private float heavyHitDamageThreshold = 8f;
+
+        [Tooltip("两次 Hit 状态触发之间的最短间隔，避免多段 Hitbox 在极短时间内反复打断敌人。")]
+        [SerializeField, Min(0f)]
+        private float hitReactCooldown = 0.12f;
+
         [Header("Combat 移动")]
         [Tooltip("基础敌人追击目标时，和目标表面之间保留的很近间隔。实际中心停止距离会自动加上敌人和目标的碰撞半径。")]
         [SerializeField, Min(0f)]
@@ -92,6 +104,7 @@ namespace EndLink.Enemies
         private Material _stateIndicatorMaterial;
         private Renderer _stateIndicatorRenderer;
         private bool _alertTransitionExternallyControlled;
+        private float _nextHitReactTime;
 
         /// <summary>当前状态标识，方便 Inspector 和调试工具观察。</summary>
         public EnemyStateId CurrentStateId => _currentState?.StateId ?? EnemyStateId.None;
@@ -203,6 +216,8 @@ namespace EndLink.Enemies
             detectionRadius = Mathf.Max(0.1f, detectionRadius);
             requiredAlertTime = Mathf.Max(0.01f, requiredAlertTime);
             hitDuration = Mathf.Max(0.01f, hitDuration);
+            heavyHitDamageThreshold = Mathf.Max(0f, heavyHitDamageThreshold);
+            hitReactCooldown = Mathf.Max(0f, hitReactCooldown);
             combatChaseStopDistance = Mathf.Max(0f, combatChaseStopDistance);
             combatLeashDistance = Mathf.Max(0f, combatLeashDistance);
             EnsureDetectionDefaults();
@@ -363,7 +378,26 @@ namespace EndLink.Enemies
                 return;
             }
 
-            RequestHit();
+            bool acquiredTarget = TryRetargetFromDamageSource();
+            float currentTime = Time.time;
+
+            if (ShouldTriggerHitReaction(
+                    damage,
+                    heavyHitDamageThreshold,
+                    currentTime,
+                    _nextHitReactTime))
+            {
+                _nextHitReactTime = currentTime + hitReactCooldown;
+                RequestHit();
+                return;
+            }
+
+            if (acquiredTarget
+                && CurrentStateId != EnemyStateId.Combat
+                && CurrentStateId != EnemyStateId.Hit)
+            {
+                RequestCombat(_currentTarget);
+            }
         }
 
         private void HandleDead()
@@ -374,6 +408,48 @@ namespace EndLink.Enemies
         private bool CanAcceptNonDeadRequest()
         {
             return CurrentStateId != EnemyStateId.Dead && (_health == null || !_health.IsDead);
+        }
+
+        private bool TryRetargetFromDamageSource()
+        {
+            if (!retargetOnDamage
+                || _health == null
+                || !TryResolveDamageSourceTarget(_health.LastDamageSource, out Transform damageSourceTarget))
+            {
+                return false;
+            }
+
+            SetTarget(damageSourceTarget);
+            return true;
+        }
+
+        public static bool ShouldTriggerHitReaction(
+            int damage,
+            float heavyHitDamageThreshold,
+            float currentTime,
+            float nextAllowedTime)
+        {
+            if (damage <= 0 || currentTime < nextAllowedTime)
+            {
+                return false;
+            }
+
+            return heavyHitDamageThreshold <= 0f || damage >= heavyHitDamageThreshold;
+        }
+
+        public static bool TryResolveDamageSourceTarget(GameObject damageSource, out Transform target)
+        {
+            target = null;
+
+            if (damageSource == null
+                || !CombatTargetUtility.TryResolve(damageSource, out ICombatTarget combatTarget)
+                || !combatTarget.IsTargetable)
+            {
+                return false;
+            }
+
+            target = combatTarget.RootTransform;
+            return target != null;
         }
 
         private void RegisterState(IEnemyState state)
