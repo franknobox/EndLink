@@ -1,7 +1,9 @@
 namespace EndLink.Ally
 {
     /// <summary>
-    /// 闃熷弸鍙楀嚮鐘舵€併€?    /// 褰撳墠鐢ㄤ簬鐭殏鎵撴柇鍔╂垬鎴栬窡闅忥紝鍚庣画鍙帴鍙楀嚮鍔ㄧ敾銆佺‖鐩淬€佸嚮閫€鍜屾姉鎬ц鍒欍€?    /// </summary>
+    /// 队友受击状态。
+    /// 当前用于短暂打断跟随、助战或通用动作；结束后的恢复目标由 AllyStateMachine 决定。
+    /// </summary>
     public sealed class AllyHitState : AllyStateBase
     {
         private float _elapsedTime;
@@ -26,8 +28,7 @@ namespace EndLink.Ally
                 return;
             }
 
-            Context.StateMachine.ChangeState(Context.FollowTarget != null ? AllyStateId.Follow : AllyStateId.Idle);
+            Context.StateMachine.CompleteHit();
         }
     }
 }
-

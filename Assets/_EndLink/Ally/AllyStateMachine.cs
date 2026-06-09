@@ -72,6 +72,7 @@ namespace EndLink.Ally
         private CombatActionDefinition _currentAction;
         private Transform _currentActionTarget;
         private AllyStateId _returnStateAfterAction = AllyStateId.None;
+        private AllyStateId _returnStateAfterHit = AllyStateId.None;
 
         /// <summary>当前状态标识，方便 Inspector 和调试工具观察。</summary>
         public AllyStateId CurrentStateId => _currentState?.StateId ?? AllyStateId.None;
@@ -399,7 +400,7 @@ namespace EndLink.Ally
 
         /// <summary>
         /// 请求进入受击状态。
-        /// 受击可以打断 Follow 和 Assist，但不能覆盖 LinkDown。
+        /// 受击可以打断 Follow、Assist 和 Action，但不能覆盖 LinkDown。
         /// </summary>
         public void RequestHit()
         {
@@ -408,9 +409,34 @@ namespace EndLink.Ally
                 return;
             }
 
-            _currentAssistTarget = null;
+            if (CurrentStateId == AllyStateId.Hit)
+            {
+                return;
+            }
+
+            CaptureHitReturnState();
             ClearCurrentAction();
             ChangeState(AllyStateId.Hit);
+        }
+
+        /// <summary>
+        /// 完成受击状态，并尽量回到被打断前的合理行为。
+        /// </summary>
+        public void CompleteHit()
+        {
+            AllyStateId returnState = ResolveReturnStateAfterHit();
+            if (returnState != AllyStateId.Assist)
+            {
+                _currentAssistTarget = null;
+            }
+
+            AllyDebugLog.Raise(
+                gameObject,
+                AllyDebugCategory.State,
+                $"hit completed, return={returnState}, assist={GetTransformName(_currentAssistTarget)}");
+
+            _returnStateAfterHit = AllyStateId.None;
+            ChangeState(returnState);
         }
 
         /// <summary>
@@ -461,6 +487,78 @@ namespace EndLink.Ally
             }
 
             return GetDefaultLocomotionState();
+        }
+
+        private void CaptureHitReturnState()
+        {
+            _returnStateAfterHit = CurrentStateId switch
+            {
+                AllyStateId.Assist => AllyStateId.Assist,
+                AllyStateId.Action when _returnStateAfterAction == AllyStateId.Assist => AllyStateId.Assist,
+                AllyStateId.Follow => AllyStateId.Follow,
+                AllyStateId.Idle => AllyStateId.Idle,
+                _ => GetDefaultLocomotionState()
+            };
+
+            AllyDebugLog.Raise(
+                gameObject,
+                AllyDebugCategory.State,
+                $"hit requested, return={_returnStateAfterHit}, assist={GetTransformName(_currentAssistTarget)}");
+        }
+
+        private AllyStateId ResolveReturnStateAfterHit()
+        {
+            if (_returnStateAfterHit == AllyStateId.Assist && CanResumeAssistAfterHit())
+            {
+                return AllyStateId.Assist;
+            }
+
+            if (_returnStateAfterHit == AllyStateId.Follow && followTarget != null)
+            {
+                return AllyStateId.Follow;
+            }
+
+            if (_returnStateAfterHit == AllyStateId.Idle && followTarget == null)
+            {
+                return AllyStateId.Idle;
+            }
+
+            return GetDefaultLocomotionState();
+        }
+
+        private bool CanResumeAssistAfterHit()
+        {
+            if (_combatDriver == null || !_combatDriver.HasAssistAction || IsMainCharacterTooFarForAssist())
+            {
+                return false;
+            }
+
+            if (AllyTargetSelector.IsTargetSelectable(_currentAssistTarget))
+            {
+                return true;
+            }
+
+            if (_targetSelector != null
+                && _targetSelector.TrySelectTarget(_currentAssistTarget, out Transform nextTarget)
+                && TrySwitchAssistTarget(nextTarget))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool IsMainCharacterTooFarForAssist()
+        {
+            if (followTarget == null || assistBreakOffDistance <= 0f)
+            {
+                return false;
+            }
+
+            Vector3 toMain = followTarget.position - transform.position;
+            toMain.y = 0f;
+
+            return toMain.sqrMagnitude >= assistBreakOffDistance * assistBreakOffDistance;
         }
 
         private AllyStateId GetDefaultLocomotionState()
