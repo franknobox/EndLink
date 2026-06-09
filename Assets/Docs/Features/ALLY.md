@@ -69,7 +69,7 @@
 
 功能说明：
 - `AllyStateMachine` 是队友专用有限状态机，不依赖玩家输入系统。
-- 当前包含 `Idle`、`Follow`、`Assist`、`Action`、`Hit`、`Dead` 六个外层状态。
+- 当前包含 `Idle`、`Follow`、`Assist`、`Action`、`Hit`、`LinkDown` 六个外层状态。
 - `Idle` 表示没有跟随目标的待机状态。
 - `Follow` 在有跟随目标时每帧调用 `AllyFollowMotor.TickFollow(deltaTime)`，实际移动由跟随移动组件负责。
 - `Assist` 是队友助战大状态，内部先接近目标，进入攻击距离后持续攻击；目标拉开距离后在 Assist 内部回到接近阶段。
@@ -77,7 +77,7 @@
 - `Action` 是队友通用动作状态，当前用于 E/F 主动技能；进入时执行一次 `CombatActionDefinition`，动作窗口结束后回到 Assist 或 Follow / Idle。
 - 目标死亡、目标丢失或主控距离过远时，助战流程会取消并回到 Follow / Idle。
 - `Hit` 表示队友受击硬直状态，可打断 Follow、Assist 和 Action。
-- `Dead` 是终止状态，不再响应跟随、助战和受击请求。
+- `LinkDown` 是队友生命归零后的链接中断状态，不再响应跟随、助战、动作和受击请求；队友不按普通死亡消失，后续会接救助交互和半透明漂浮表现。
 - `AllyBrain` 判断事件是否值得响应，`AllyStateMachine` 判断当前能否进入 Assist，`AllyCombatDriver` 只执行动作和 Hitbox。
 对应脚本：
 - `Assets/_EndLink/Ally/AllyStateMachine.cs`
@@ -91,7 +91,7 @@
 - `Assets/_EndLink/Ally/AllyAssistState.cs`
 - `Assets/_EndLink/Ally/AllyActionState.cs`
 - `Assets/_EndLink/Ally/AllyHitState.cs`
-- `Assets/_EndLink/Ally/AllyDeadState.cs`
+- `Assets/_EndLink/Ally/AllyLinkDownState.cs`
 相关物体：
 - 队友根物体
   - `AllyStateMachine`
@@ -121,7 +121,7 @@
 - 支持使用 `CharacterController.Move` 移动；如果队友没有 `CharacterController`，则直接修改 `Transform.position`。
 - `AllyStateMachine` 负责保存跟随目标并同步给 `AllyFollowMotor`。
 - `PartyManager` 通过 `PartyFollowSettings` 统一配置两个队友的跟随参数，并在初始化时写入各自的 `AllyFollowMotor`。
-- `AllyFollowState` 每帧调用 `TickFollow(deltaTime)`，因此 Assist、Hit、Dead 状态不会继续抢跟随移动。
+- `AllyFollowState` 每帧调用 `TickFollow(deltaTime)`，因此 Assist、Action、Hit、LinkDown 状态不会继续抢跟随移动。
 - 助战接近状态会调用 `TickMoveToPosition(position, arriveDistance, deltaTime)`，让队友临时移动到敌人附近而不修改主控跟随目标。
 - 队友会移动到主控的本地队形偏移范围，移动时面向移动方向，停下后的朝向由 `idleFacingMode` 决定。
 - 支持 `arrivalSmoothTime` 平滑加减速，降低接近队形点时的机械感。

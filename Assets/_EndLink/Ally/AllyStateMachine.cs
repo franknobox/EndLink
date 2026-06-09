@@ -6,7 +6,7 @@ namespace EndLink.Ally
 {
     /// <summary>
     /// 队友有限状态机。
-    /// 当前负责 Idle、Follow、Assist、Hit、Dead 的大状态切换，不读取玩家输入。
+    /// 当前负责 Idle、Follow、Assist、Action、Hit、LinkDown 的大状态切换，不读取玩家输入。
     /// Assist 内部再处理接近、攻击和后续行为树细节。
     /// </summary>
     [DisallowMultipleComponent]
@@ -166,7 +166,7 @@ namespace EndLink.Ally
             RegisterState(new AllyAssistState(context));
             RegisterState(new AllyActionState(context));
             RegisterState(new AllyHitState(context));
-            RegisterState(new AllyDeadState(context));
+            RegisterState(new AllyLinkDownState(context));
         }
 
         private void Start()
@@ -236,7 +236,7 @@ namespace EndLink.Ally
             followTarget = target;
             _followMotor.SetFollowTarget(target);
 
-            if (CurrentStateId == AllyStateId.Dead
+            if (CurrentStateId == AllyStateId.LinkDown
                 || CurrentStateId == AllyStateId.Assist
                 || CurrentStateId == AllyStateId.Action
                 || CurrentStateId == AllyStateId.Hit)
@@ -259,7 +259,7 @@ namespace EndLink.Ally
                 return false;
             }
 
-            if (CurrentStateId == AllyStateId.Dead
+            if (CurrentStateId == AllyStateId.LinkDown
                 || CurrentStateId == AllyStateId.Hit
                 || CurrentStateId == AllyStateId.Action
                 || CurrentStateId == AllyStateId.Assist)
@@ -325,7 +325,7 @@ namespace EndLink.Ally
                 return false;
             }
 
-            if (CurrentStateId == AllyStateId.Dead
+            if (CurrentStateId == AllyStateId.LinkDown
                 || CurrentStateId == AllyStateId.Hit
                 || CurrentStateId == AllyStateId.Action)
             {
@@ -399,11 +399,11 @@ namespace EndLink.Ally
 
         /// <summary>
         /// 请求进入受击状态。
-        /// 受击可以打断 Follow 和 Assist，但不能覆盖 Dead。
+        /// 受击可以打断 Follow 和 Assist，但不能覆盖 LinkDown。
         /// </summary>
         public void RequestHit()
         {
-            if (CurrentStateId == AllyStateId.Dead)
+            if (CurrentStateId == AllyStateId.LinkDown)
             {
                 return;
             }
@@ -414,14 +414,23 @@ namespace EndLink.Ally
         }
 
         /// <summary>
-        /// 请求进入死亡状态。
-        /// 死亡是队友状态机最高优先级的终止状态。
+        /// 请求进入链接中断状态。
+        /// 链接中断是队友状态机最高优先级的终止状态。
         /// </summary>
-        public void RequestDead()
+        public void RequestLinkDown()
         {
             _currentAssistTarget = null;
             ClearCurrentAction();
-            ChangeState(AllyStateId.Dead);
+            ChangeState(AllyStateId.LinkDown);
+        }
+
+        /// <summary>
+        /// 旧死亡入口的兼容包装。队友战斗语义已改为 LinkDown。
+        /// </summary>
+        [System.Obsolete("Use RequestLinkDown.")]
+        public void RequestDead()
+        {
+            RequestLinkDown();
         }
 
         private void RegisterState(IAllyState state)

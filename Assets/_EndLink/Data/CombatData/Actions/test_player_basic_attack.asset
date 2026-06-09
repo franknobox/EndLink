@@ -15,10 +15,13 @@ MonoBehaviour:
   actionId: test.player.basic
   displayName: Player Basic Attack
   actionType: 0
-  damageAmount: 10
-  knockbackForce: 3
+  flatDamage: 10
+  atkPowerMultiplier: 0
+  damageType: 0
+  knockbackForce: 1
   combatTagToApply: {fileID: 0}
   combatTagDuration: 0
+  combatTagStackCount: 1
   cooldown: 0.45
   startupTime: 0.1
   activeTime: 0.2
@@ -26,5 +29,4 @@ MonoBehaviour:
   hitboxPrefab: {fileID: 5103679077457519376, guid: 8caf2470444b6d947a5acc2fd8d74882, type: 3}
   hitboxSpawnDistance: 1
   hitboxSpawnHeight: 1
-  hitboxLifetime: 0.2
   effectiveAttackRange: 1.2

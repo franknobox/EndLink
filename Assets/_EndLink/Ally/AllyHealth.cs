@@ -1,12 +1,13 @@
 using EndLink.Combat;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Serialization;
 
 namespace EndLink.Ally
 {
     /// <summary>
     /// 队友生命桥接组件。
-    /// CharacterHealth 负责真正的血量、受击和死亡；本组件只把结果接到 AllyStateMachine。
+    /// CharacterHealth 负责真正的血量、受击和生命归零；本组件只把结果接到 AllyStateMachine。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(AllyStateMachine))]
@@ -18,9 +19,10 @@ namespace EndLink.Ally
         [SerializeField]
         private bool requestHitStateOnDamage = true;
 
-        [Tooltip("生命值首次降到 0 时，是否请求进入 Dead 状态。")]
+        [Tooltip("生命值首次降到 0 时，是否请求进入 LinkDown 状态。")]
         [SerializeField]
-        private bool requestDeadStateOnDeath = true;
+        [FormerlySerializedAs("requestDeadStateOnDeath")]
+        private bool requestLinkDownOnHealthDepleted = true;
 
         [Header("事件")]
         [Tooltip("生命值变化时触发。参数依次为：当前生命值、最大生命值。")]
@@ -31,9 +33,10 @@ namespace EndLink.Ally
         [SerializeField]
         private AllyHealthDamagedEvent onDamaged = new();
 
-        [Tooltip("生命值首次降到 0 时触发。")]
+        [Tooltip("生命值首次降到 0 并进入链接中断语义时触发。")]
         [SerializeField]
-        private UnityEvent onDead = new();
+        [FormerlySerializedAs("onDead")]
+        private UnityEvent onLinkDown = new();
 
         private CharacterHealth _health;
         private AllyStateMachine _stateMachine;
@@ -47,8 +50,11 @@ namespace EndLink.Ally
         /// <summary>当前生命值。</summary>
         public int CurrentHealth => _health != null ? _health.CurrentHealth : 0;
 
-        /// <summary>是否已经死亡。</summary>
+        /// <summary>生命值是否已经归零。</summary>
         public bool IsDead => _health != null && _health.IsDead;
+
+        /// <summary>队友是否处于链接中断语义。</summary>
+        public bool IsLinkDown => IsDead;
 
         /// <summary>生命值变化事件。</summary>
         public AllyHealthChangedEvent OnHealthChanged => onHealthChanged;
@@ -56,8 +62,11 @@ namespace EndLink.Ally
         /// <summary>受击事件。</summary>
         public AllyHealthDamagedEvent OnDamaged => onDamaged;
 
-        /// <summary>死亡事件。</summary>
-        public UnityEvent OnDead => onDead;
+        /// <summary>链接中断事件。</summary>
+        public UnityEvent OnLinkDown => onLinkDown;
+
+        /// <summary>生命值归零事件的旧命名入口，保留给已有 UI 或调试接线。</summary>
+        public UnityEvent OnDead => onLinkDown;
 
         private void Awake()
         {
@@ -137,11 +146,11 @@ namespace EndLink.Ally
 
         private void HandleDied(CharacterHealthDeathInfo deathInfo)
         {
-            onDead.Invoke();
+            onLinkDown.Invoke();
 
-            if (requestDeadStateOnDeath)
+            if (requestLinkDownOnHealthDepleted)
             {
-                _stateMachine.RequestDead();
+                _stateMachine.RequestLinkDown();
             }
         }
     }

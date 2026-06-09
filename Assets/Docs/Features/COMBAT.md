@@ -24,7 +24,7 @@
 - 不直接切换玩家、队友或敌人的状态机；具体角色通过桥接脚本订阅事件。
 - `PlayerHealth` 是玩家生命桥接层，订阅 `CharacterHealth` 后把受伤和死亡转发给 `PlayerStateMachine.RequestHit()` / `RequestDead()`。
 - `PlayerHealth` 保留玩家侧 `OnHealthChanged`、`OnDamaged`、`OnHealed` 和 `OnDead` 事件，方便玩家 UI 或调试工具监听。
-- `AllyHealth` 是队友生命桥接层，订阅 `CharacterHealth` 后把受伤和死亡转发给 `AllyStateMachine.RequestHit()` / `RequestDead()`。
+- `AllyHealth` 是队友生命桥接层，订阅 `CharacterHealth` 后把受伤和生命归零转发给 `AllyStateMachine.RequestHit()` / `RequestLinkDown()`。
 - 当前不把 Debuff / Buff 逻辑直接放进生命桥接层，后续应由独立状态效果系统处理，再通过事件或接口影响生命值与状态机。
 
 对应脚本：
@@ -57,7 +57,7 @@
 - `PlayerHealth.requestHitStateOnDamage`：玩家受伤时是否请求进入 Hit 状态
 - `PlayerHealth.requestDeadStateOnDeath`：玩家死亡时是否请求进入 Dead 状态
 - `AllyHealth.requestHitStateOnDamage`：队友受伤时是否请求进入 Hit 状态
-- `AllyHealth.requestDeadStateOnDeath`：队友死亡时是否请求进入 Dead 状态
+- `AllyHealth.requestLinkDownOnHealthDepleted`：队友生命归零时是否请求进入 LinkDown 状态
 
 </details>
 

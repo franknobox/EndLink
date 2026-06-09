@@ -277,7 +277,7 @@ namespace EndLink.Ally
 
         /// <summary>
         /// 执行一帧跟随移动。
-        /// 只在 AllyFollowState 中调用，避免 Idle、Assist、Hit、Dead 状态继续抢移动控制权。
+        /// 只在 AllyFollowState 中调用，避免 Idle、Assist、Action、Hit、LinkDown 状态继续抢移动控制权。
         /// </summary>
         public void TickFollow(float deltaTime)
         {
