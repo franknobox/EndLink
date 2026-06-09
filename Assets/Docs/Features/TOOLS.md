@@ -41,6 +41,7 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 
 功能说明：
 - `EndLink Combat Lab` 是浏览器端战斗实验工具，通过打开 `Tools/CombatLab/index.html` 使用。
+- 界面采用固定三栏布局，页面本身不滚动，Tag/规则/时间线等长内容只在各自列表区域内滚动。
 - 工具用于脱离 Unity Play Mode 快速验证标签定义、标签层数、默认持续时间、反应规则、反应效果、基础伤害和连携窗口。
 - 中心区域显示一个可配置血量的目标，目标身上可以手动添加和移除 Tag。
 - 下方固定三名角色，每名角色有攻击力、一个 Skill 和一个 Link，动作伤害按 `Flat + Atk * Multiplier` 计算，并支持 `StructuralDamage` 与 `RuntimeDamage`。

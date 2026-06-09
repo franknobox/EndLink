@@ -442,6 +442,14 @@
   function renderTimeline() {
     elements.timeline.innerHTML = "";
 
+    if (state.timeline.length === 0) {
+      var emptyItem = document.createElement("li");
+      emptyItem.className = "timeline-empty";
+      emptyItem.textContent = "No combat events";
+      elements.timeline.appendChild(emptyItem);
+      return;
+    }
+
     state.timeline.slice().reverse().forEach(function (event) {
       var item = document.createElement("li");
       item.className = "event-" + event.type;

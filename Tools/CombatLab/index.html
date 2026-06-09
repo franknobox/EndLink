@@ -11,68 +11,83 @@
     <main class="app-shell">
       <section class="workbench">
         <aside class="side-panel">
-          <h2>Tag 定义</h2>
-          <form id="tagDefinitionForm" class="compact-form">
-            <div class="definition-grid">
-              <label>
-                ID
-                <input id="tagDefinitionId" type="text" placeholder="ovl">
-              </label>
-              <label>
-                显示名
-                <input id="tagDefinitionName" type="text" placeholder="超频">
-              </label>
-              <label>
-                等级
-                <input id="tagDefinitionLevel" type="number" min="1" value="1">
-              </label>
-              <label>
-                默认时间
-                <input id="tagDefinitionDuration" type="number" min="0" step="0.1" value="6">
-              </label>
-              <label>
-                最大层数
-                <input id="tagDefinitionMaxStack" type="number" min="1" value="3">
-              </label>
-            </div>
-            <button type="submit">保存 Tag</button>
-          </form>
-          <div id="tagDefinitionList" class="definition-list"></div>
+          <header class="panel-header">
+            <span class="panel-kicker">DATA</span>
+            <h2>TAG DEFINITIONS</h2>
+          </header>
+          <div class="panel-section tag-definition-section">
+            <form id="tagDefinitionForm" class="compact-form">
+              <div class="definition-grid">
+                <label>
+                  ID
+                  <input id="tagDefinitionId" type="text" placeholder="ovl">
+                </label>
+                <label>
+                  显示名
+                  <input id="tagDefinitionName" type="text" placeholder="超频">
+                </label>
+                <label>
+                  等级
+                  <input id="tagDefinitionLevel" type="number" min="1" value="1">
+                </label>
+                <label>
+                  默认时间
+                  <input id="tagDefinitionDuration" type="number" min="0" step="0.1" value="6">
+                </label>
+                <label>
+                  最大层数
+                  <input id="tagDefinitionMaxStack" type="number" min="1" value="3">
+                </label>
+              </div>
+              <button type="submit">保存 Tag</button>
+            </form>
+            <div id="tagDefinitionList" class="definition-list"></div>
+          </div>
 
-          <h2 class="panel-section-title">反应规则</h2>
-          <form id="ruleForm" class="compact-form">
-            <div class="rule-grid">
+          <header class="panel-header panel-header-secondary">
+            <span class="panel-kicker">RULE</span>
+            <h2>REACTION RULES</h2>
+          </header>
+          <div class="panel-section rule-section">
+            <form id="ruleForm" class="compact-form">
+              <div class="rule-grid">
+                <label>
+                  Tag A
+                  <input id="ruleFirstTag" type="text" placeholder="ovl">
+                </label>
+                <label>
+                  A 层数
+                  <input id="ruleFirstStack" type="number" min="1" value="1">
+                </label>
+                <label>
+                  Tag B
+                  <input id="ruleSecondTag" type="text" placeholder="ovl">
+                </label>
+                <label>
+                  B 层数
+                  <input id="ruleSecondStack" type="number" min="1" value="1">
+                </label>
+                <label>
+                  优先级
+                  <input id="rulePriority" type="number" value="0">
+                </label>
+              </div>
               <label>
-                Tag A
-                <input id="ruleFirstTag" type="text" placeholder="ovl">
+                Effects
+                <textarea id="ruleEffects" rows="3" placeholder="ApplyTag:meltdown; DealDamage:35:RuntimeDamage; RemoveTag:ovl"></textarea>
               </label>
-              <label>
-                A 层数
-                <input id="ruleFirstStack" type="number" min="1" value="1">
-              </label>
-              <label>
-                Tag B
-                <input id="ruleSecondTag" type="text" placeholder="ovl">
-              </label>
-              <label>
-                B 层数
-                <input id="ruleSecondStack" type="number" min="1" value="1">
-              </label>
-              <label>
-                优先级
-                <input id="rulePriority" type="number" value="0">
-              </label>
-            </div>
-            <label>
-              Effects
-              <textarea id="ruleEffects" rows="3" placeholder="ApplyTag:meltdown; DealDamage:35:RuntimeDamage; RemoveTag:ovl"></textarea>
-            </label>
-            <button type="submit">添加规则</button>
-          </form>
-          <div id="rulesList" class="rules-list"></div>
+              <button type="submit">添加规则</button>
+            </form>
+            <div id="rulesList" class="rules-list"></div>
+          </div>
         </aside>
 
         <section class="center-panel">
+          <header class="lab-title">
+            <span>ENDLINK</span>
+            <h1>COMBAT LAB</h1>
+            <small>Protocol reaction simulator</small>
+          </header>
           <section class="target-zone">
             <div class="target-orb">
               <span id="targetHpText">100 / 100</span>
@@ -97,7 +112,7 @@
                 </label>
               </div>
               <div class="target-tags">
-                <div class="section-title">目标 Tag</div>
+                <div class="section-title">TARGET TAGS</div>
                 <div id="targetTags" class="tag-list"></div>
                 <form id="tagForm" class="inline-form">
                   <input id="tagInput" type="text" placeholder="ovl:3">
@@ -111,9 +126,15 @@
         </section>
 
         <aside class="side-panel">
-          <h2>连携窗口</h2>
+          <header class="panel-header">
+            <span class="panel-kicker">LINK</span>
+            <h2>LINK WINDOW</h2>
+          </header>
           <div id="linkStatus" class="link-status">Closed</div>
-          <h2 class="panel-section-title">时间线</h2>
+          <header class="panel-header panel-header-secondary">
+            <span class="panel-kicker">LOG</span>
+            <h2>TIMELINE</h2>
+          </header>
           <ol id="timeline" class="timeline"></ol>
         </aside>
       </section>
