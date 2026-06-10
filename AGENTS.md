@@ -96,7 +96,7 @@ Assets/Docs/FEATURES.md
 Assets/Docs/Features/*.md
 ```
 
-3. 不要主动更新 `ROADMAP.md`，除非用户明确要求。
+3. 不要主动更新 `ROADMAP.md`以及 Assets\Docs\Design 文件夹中的文档，除非用户明确要求。
 4. 技术债、设计债、反复出现的问题，记录到：
 
 ```text
@@ -108,6 +108,6 @@ Assets/Docs/ISSUE.md
 最终回复要说明：
 
 - 做了哪些关键改动。
-- 改了哪些主要文件。
+- 增/删/改了哪些主要文件。
 - 运行了哪些验证。
 - 如果没有运行测试或验证，需要明确说明原因。

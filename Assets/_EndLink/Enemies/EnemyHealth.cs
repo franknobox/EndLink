@@ -80,6 +80,7 @@ namespace EndLink.Enemies
         private int _currentHealth;
         private int _ownedColliderCount;
         private GameObject _lastDamageSource;
+        private EnemyActor _actor;
         private bool _isDead;
         private bool _componentsCached;
 
@@ -199,6 +200,7 @@ namespace EndLink.Enemies
             _originalName = gameObject.name;
             _ownedColliders = GetComponentsInChildren<Collider>(false);
             _ownedColliderCount = _ownedColliders.Length;
+            _actor = GetComponent<EnemyActor>();
             _componentsCached = true;
         }
 
@@ -212,6 +214,18 @@ namespace EndLink.Enemies
         {
             if (_isDead)
             {
+                return 0;
+            }
+
+            if (!CanReceiveDamageType(damageResult.DamageType))
+            {
+                if (logHits)
+                {
+                    Debug.Log(
+                        $"Enemy ignored {damageResult.DamageType} damage due to enemy form: {_actor.EnemyKind}/{_actor.AberrantProgramForm}",
+                        this);
+                }
+
                 return 0;
             }
 
@@ -281,6 +295,12 @@ namespace EndLink.Enemies
             onDead.Invoke();
             CombatEventsBus.RaiseDead(source, gameObject);
             StartDeathCleanup();
+        }
+
+        private bool CanReceiveDamageType(CombatDamageType damageType)
+        {
+            _actor ??= GetComponent<EnemyActor>();
+            return _actor == null || _actor.CanReceiveDamageType(damageType);
         }
 
         private void StartDeathCleanup()

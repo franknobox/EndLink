@@ -13,6 +13,15 @@ namespace EndLink.Enemies
     [RequireComponent(typeof(CombatTarget))]
     public sealed class EnemyActor : MonoBehaviour, ICharacterStatsTypeProvider
     {
+        [Header("分类")]
+        [Tooltip("敌人的根类别。用于归纳敌人设定来源和后续配置入口，不表示封装、继承、多态等战斗特性。")]
+        [SerializeField]
+        private EnemyKind enemyKind = EnemyKind.AberrantProgram;
+
+        [Tooltip("异常程序的实体形态。只有敌人类别为 Aberrant Program 时生效；游离态不接受结构伤害，显壳态可接受结构伤害与运行伤害。")]
+        [SerializeField]
+        private AberrantProgramForm aberrantProgramForm = AberrantProgramForm.ManifestedShell;
+
         [Header("视觉")]
         [Tooltip("视觉根节点。当前只作为后续动画/表现预留引用。")]
         [SerializeField]
@@ -43,6 +52,22 @@ namespace EndLink.Enemies
 
                 return _health;
             }
+        }
+
+        /// <summary>敌人的根类别。</summary>
+        public EnemyKind EnemyKind => enemyKind;
+
+        /// <summary>异常程序的实体形态。非异常程序敌人会忽略该值。</summary>
+        public AberrantProgramForm AberrantProgramForm => aberrantProgramForm;
+
+        /// <summary>当前敌人是否为游离态异常程序。</summary>
+        public bool IsFreeAberrantProgram => enemyKind == EnemyKind.AberrantProgram
+            && aberrantProgramForm == AberrantProgramForm.FreeState;
+
+        /// <summary>判断当前敌人是否接受指定伤害类型。</summary>
+        public bool CanReceiveDamageType(CombatDamageType damageType)
+        {
+            return !(IsFreeAberrantProgram && damageType == CombatDamageType.StructuralDamage);
         }
 
         /// <summary>敌人的战斗标签容器。</summary>

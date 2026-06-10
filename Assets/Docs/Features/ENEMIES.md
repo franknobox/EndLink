@@ -14,6 +14,9 @@
 
 功能说明：
 - `EnemyActor` 是正式敌人的根入口组件，只暴露敌人身份和能力组件引用，并要求同物体存在 `CombatTarget`。
+- `EnemyActor.enemyKind` 记录敌人的根类别，当前分为 `AberrantProgram`、`DelinkedAgent`、`RogueSystemUnit`，用于后续创建具体敌人时快速归纳设定来源。
+- `EnemyActor.aberrantProgramForm` 记录异常程序内部形态，当前分为游离态和显壳态；游离态不接受结构伤害，显壳态可以接受结构伤害与运行伤害。
+- 敌人类别不表示封装、继承、多态等战斗特性；这些应作为后续独立特性、标签、配置或能力系统处理。
 - `EnemyActor` 要求同物体挂载 `CombatTagContainer`，保证正式敌人天然支持战斗标签、持续标签和协议反应。
 - `EnemyActor` 持有 `EnemyMotorBase` 和 `EnemyCombatDriver` 引用，状态机通过 Actor 读取敌人能力，而不是直接查找具体实现。
 - `EnemyHealth` 负责正式敌人的血量、受击、死亡、死亡事件和白模调试反馈。
@@ -24,6 +27,8 @@
 
 对应脚本：
 - `Assets/_EndLink/Enemies/EnemyActor.cs`
+- `Assets/_EndLink/Enemies/EnemyKind.cs`
+- `Assets/_EndLink/Enemies/AberrantProgramForm.cs`
 - `Assets/_EndLink/Enemies/EnemyHealth.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagContainer.cs`
 - `Assets/_EndLink/Combat/Target/ICombatTarget.cs`
@@ -42,6 +47,8 @@
   - Layer 设置为 `Enemy`
 
 关键配置：
+- `enemyKind`：敌人根类别，当前用于归纳异常程序、受污染智能体和失控系统单元
+- `aberrantProgramForm`：异常程序形态；游离态不接受结构伤害，显壳态接受结构伤害与运行伤害
 - `CombatTarget.lockPoint`：锁定、瞄准和攻击朝向参考点，空则使用敌人根物体
 - `motor`：敌人移动能力引用，普通地面敌人拖 `EnemyMotorBase`
 - `combatDriver`：敌人战斗执行器引用，需要攻击能力的敌人拖 `EnemyCombatDriver`
