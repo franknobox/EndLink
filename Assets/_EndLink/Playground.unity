@@ -399,6 +399,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.CharacterStats
   statsType: 0
   baseAttackPower: 10
+  knockbackTakenMultiplier: 1
 --- !u!1 &71180439
 GameObject:
   m_ObjectHideFlags: 0
@@ -706,6 +707,7 @@ GameObject:
   - component: {fileID: 163565089}
   - component: {fileID: 163565090}
   - component: {fileID: 163565091}
+  - component: {fileID: 163565092}
   m_Layer: 0
   m_Name: PartyManager
   m_TagString: Untagged
@@ -798,6 +800,7 @@ MonoBehaviour:
   inputReader: {fileID: 509600057}
   partyManager: {fileID: 163565087}
   linkContext: {fileID: 0}
+  ultimateContext: {fileID: 0}
   playerSkillKey: 31
   allySlotASkillKey: 19
   allySlotBSkillKey: 20
@@ -834,6 +837,31 @@ MonoBehaviour:
   linkWindowDuration: 4
   partyManager: {fileID: 163565087}
   logWindowChanges: 0
+--- !u!114 &163565092
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 163565086}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65e5054d7cd847708092fdf74349f83e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.Party.PartyUltimateContext
+  maxSynergyRate: 100
+  initialSynergyRate: 0
+  resetOnEnable: 1
+  onSynergyChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  onUltimateReady:
+    m_PersistentCalls:
+      m_Calls: []
+  onUltimateConsumed:
+    m_PersistentCalls:
+      m_Calls: []
+  logChanges: 0
 --- !u!1 &171857034
 GameObject:
   m_ObjectHideFlags: 0
@@ -2172,6 +2200,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.CharacterStats
   statsType: 1
   baseAttackPower: 10
+  knockbackTakenMultiplier: 1
 --- !u!1 &651892029
 GameObject:
   m_ObjectHideFlags: 0
@@ -2426,6 +2455,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.CharacterStats
   statsType: 0
   baseAttackPower: 10
+  knockbackTakenMultiplier: 1
 --- !u!1 &769434831
 GameObject:
   m_ObjectHideFlags: 0
@@ -3525,6 +3555,9 @@ MonoBehaviour:
   detectionRadius: 8
   requiredAlertTime: 3
   hitDuration: 0.25
+  retargetOnDamage: 1
+  heavyHitDamageThreshold: 8
+  hitReactCooldown: 0.12
   combatChaseStopDistance: 0.5
   combatLeashDistance: 18
   logStateChanges: 0
@@ -3542,6 +3575,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f340a751993441b3a1ad3addfc4a2738, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Enemies.EnemyActor
+  enemyKind: 0
+  aberrantProgramForm: 1
   bodyRoot: {fileID: 1284033434}
   motor: {fileID: 1284033437}
   combatDriver: {fileID: 1284033438}
@@ -3590,6 +3625,8 @@ MonoBehaviour:
   maxHealth: 100
   resetHealthOnEnable: 1
   disableCollidersOnDeath: 0
+  deactivateOnDeath: 1
+  deathDeactivateDelay: 0.8
   feedbackRenderer: {fileID: 187405868}
   hitColor: {r: 1, g: 0.55, b: 0.55, a: 1}
   hitFlashDuration: 0.1
@@ -4409,6 +4446,9 @@ MonoBehaviour:
   detectionRadius: 8
   requiredAlertTime: 3
   hitDuration: 0.25
+  retargetOnDamage: 1
+  heavyHitDamageThreshold: 8
+  hitReactCooldown: 0.12
   combatChaseStopDistance: 0.5
   combatLeashDistance: 18
   logStateChanges: 0
@@ -4426,6 +4466,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f340a751993441b3a1ad3addfc4a2738, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Enemies.EnemyActor
+  enemyKind: 0
+  aberrantProgramForm: 1
   bodyRoot: {fileID: 2012491627}
   motor: {fileID: 2012491620}
   combatDriver: {fileID: 2012491621}
@@ -4474,6 +4516,8 @@ MonoBehaviour:
   maxHealth: 100
   resetHealthOnEnable: 1
   disableCollidersOnDeath: 0
+  deactivateOnDeath: 1
+  deathDeactivateDelay: 0.8
   feedbackRenderer: {fileID: 651892030}
   hitColor: {r: 1, g: 0.55, b: 0.55, a: 1}
   hitFlashDuration: 0.1
@@ -4818,7 +4862,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d9ab4cc667a54e60abdd82f60bbf37d9, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.CombatTarget
   lockPoint: {fileID: 0}
   targetable: 1
@@ -4832,7 +4876,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d9ab4cc667a54e60abdd82f60bbf37d9, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.CombatTarget
   lockPoint: {fileID: 0}
   targetable: 1
@@ -4846,7 +4890,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d9ab4cc667a54e60abdd82f60bbf37d9, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.CombatTarget
   lockPoint: {fileID: 0}
   targetable: 1
@@ -4860,7 +4904,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d9ab4cc667a54e60abdd82f60bbf37d9, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.CombatTarget
   lockPoint: {fileID: 0}
   targetable: 1
@@ -4874,7 +4918,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d9ab4cc667a54e60abdd82f60bbf37d9, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.CombatTarget
   lockPoint: {fileID: 0}
   targetable: 1
@@ -4888,7 +4932,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d9ab4cc667a54e60abdd82f60bbf37d9, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.CombatTarget
   lockPoint: {fileID: 0}
   targetable: 1
