@@ -4,7 +4,7 @@ namespace EndLink.Ally
 {
     /// <summary>
     /// 队友通用动作状态。
-    /// 用于承载主动技能、后续连携技或其他指令动作的执行窗口。
+    /// 用于承载主动技能、连携技或其他外部命令动作的执行窗口。
     /// </summary>
     public sealed class AllyActionState : AllyStateBase
     {

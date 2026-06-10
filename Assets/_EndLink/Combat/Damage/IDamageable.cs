@@ -2,7 +2,7 @@ namespace EndLink.Combat
 {
     /// <summary>
     /// 可受伤对象接口。
-    /// 只关心伤害数值和战斗标签，适合给血量系统、木桩、可破坏物使用。
+    /// 只关心伤害数值和战斗标签，适合给血量系统、调试目标和可破坏物使用。
     /// </summary>
     public interface IDamageable
     {

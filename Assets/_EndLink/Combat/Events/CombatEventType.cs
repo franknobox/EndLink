@@ -6,7 +6,7 @@ namespace EndLink.Combat
     /// </summary>
     public enum CombatEventType
     {
-        /// <summary>战斗动作开始，例如普攻、技能、连携攻击或大招开始释放。</summary>
+        /// <summary>战斗动作开始，例如普攻、技能、连携攻击或终链奥义开始释放。</summary>
         ActionStarted = 0,
 
         /// <summary>Hitbox 成功命中目标。</summary>

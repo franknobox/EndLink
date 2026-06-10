@@ -7,14 +7,14 @@ namespace EndLink.Enemies
     /// <summary>
     /// 敌人战斗执行器。
     /// 只负责按 CombatActionDefinition 执行动作表现和 Hitbox 判定，不决定何时出手、不选择目标、不切状态。
-    /// 当前阶段先作为正式近战敌人的攻击能力基底，后续由 Combat 状态内部逻辑或行为树调用。
+    /// 当前阶段作为正式近战敌人的攻击能力基底，由 Combat 状态内部逻辑或行为树调用。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyActor))]
     public sealed class EnemyCombatDriver : MonoBehaviour, ICombatActionExecutor
     {
         [Header("动作配置")]
-        [Tooltip("敌人普通攻击动作。后续近战敌人的 Combat 行为会优先调用它。")]
+        [Tooltip("敌人普通攻击动作。近战敌人的 Combat 行为会优先调用它。")]
         [SerializeField]
         private CombatActionDefinition basicAttackAction;
 

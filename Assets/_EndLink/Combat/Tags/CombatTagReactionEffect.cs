@@ -27,7 +27,7 @@ namespace EndLink.Combat
         /// <summary>打断当前动作。具体打断规则后续接入状态机或韧性系统。</summary>
         InterruptAction = 5,
 
-        /// <summary>修改战斗资源，例如连携能量、极限技能量等。</summary>
+        /// <summary>修改战斗资源，例如终链奥义协同率、连携窗口或其他战斗资源。</summary>
         ModifyResource = 6,
 
         /// <summary>自定义事件入口，用于后续扩展特殊反应。</summary>

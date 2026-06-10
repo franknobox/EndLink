@@ -4,7 +4,7 @@ namespace EndLink.Combat
 {
     /// <summary>
     /// 一次 Hitbox 命中的完整上下文。
-    /// 后续伤害系统、标签系统、击退、受击表现都应优先从这里取数据。
+    /// 伤害系统、标签系统、击退和受击表现都应优先从这里取数据。
     /// </summary>
     public readonly struct HitboxHitInfo
     {

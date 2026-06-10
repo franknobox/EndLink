@@ -7,7 +7,7 @@ namespace EndLink.Enemies
 {
     /// <summary>
     /// 正式敌人的生命与受击组件。
-    /// 复用木桩敌人的血量、受伤、死亡、事件广播和白模调试反馈逻辑。
+    /// 负责敌人血量、受伤、死亡、事件广播、目标失效和白模调试反馈。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class EnemyHealth : MonoBehaviour, IHitReceiver, IDamageable, ICombatTargetLifeState
@@ -145,7 +145,7 @@ namespace EndLink.Enemies
         }
 
         /// <summary>
-        /// 兼容旧调用：接收简单伤害接口，默认按结构伤害处理。
+        /// 接收简单伤害接口，默认按结构伤害处理。
         /// </summary>
         public void TakeDamage(int damage, CombatTagDefinition tag)
         {

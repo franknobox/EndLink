@@ -7,8 +7,8 @@ namespace EndLink.Enemies
 {
     /// <summary>
     /// 敌人有限状态机。
-    /// 当前只管理 Idle、Alert、Combat、Hit、Dead 这些大状态；
-    /// 后续更细的追击、攻击、技能和撤退行为会放进 Combat 内部的行为树。
+    /// 当前管理 Idle、Alert、Combat、Hit、Dead 这些大状态；
+    /// 更细的攻击、技能、撤退和复杂站位行为会放进 Combat 内部的行为树。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyActor))]
@@ -284,7 +284,7 @@ namespace EndLink.Enemies
 
         /// <summary>
         /// 请求进入 Combat 大状态。
-        /// 第一版 Combat 不执行具体行为，后续由行为树接管内部细节。
+        /// Combat 当前负责基础追击和面向目标，复杂攻击决策之后由行为树接管。
         /// </summary>
         public bool RequestCombat(Transform target = null)
         {

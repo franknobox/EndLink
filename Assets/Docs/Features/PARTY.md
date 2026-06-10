@@ -19,10 +19,14 @@
 - 只有一个有效反应目标时默认攻击该目标；记录了多个反应目标时优先攻击主控当前软锁目标。
 - 反应目标死亡或失效不会关闭窗口；没有有效反应目标时会回退到当前软锁目标，没有任何有效目标时保留窗口但拒绝本次释放。
 - 主控连携技通过玩家通用技能状态执行；队友连携技通过 `AllyActionState` 执行，不绕过角色状态机。
+- 成功释放连携技后，`PartyUltimateContext` 会读取本次 `LinkAction` 的 `SynergyGainOnLink`，增加全队协同率。
+- 协同率达到 100% 后，`PartyUltimateContext` 标记终链奥义可释放；当前第一版按 V 键只消耗就绪状态并广播事件，不要求目标，也不执行具体奥义表现。
 - `PartyLinkContext` 暴露窗口是否开启、剩余时间、归一化剩余时间和目标解析接口，供后续连携 UI 使用。
+- `PartyUltimateContext` 暴露当前协同率、协同率上限、归一化进度、奥义就绪事件和奥义消耗事件，供后续 UI、镜头和奥义表现接入。
 
 对应脚本：
 - `Assets/_EndLink/Party/PartyLinkContext.cs`
+- `Assets/_EndLink/Party/PartyUltimateContext.cs`
 - `Assets/_EndLink/Party/PartyCombatRouter.cs`
 - `Assets/_EndLink/Combat/Events/CombatEventType.cs`
 - `Assets/_EndLink/Combat/Events/CombatEventsBus.cs`
@@ -35,12 +39,16 @@
   - `PartyManager`
   - `PartyCombatRouter`
   - `PartyLinkContext`
+  - `PartyUltimateContext`
 
 关键配置：
 - `PartyLinkContext.linkWindowDuration`：协议反应触发后的共享连携窗口，默认 4 秒
+- `PartyUltimateContext.maxSynergyRate`：协同率上限，默认 100
+- `CombatActionDefinition.SynergyGainOnLink`：连携动作成功释放后增加的协同率，只对 `LinkAttack` 类型动作生效
 - `PlayerCombatDriver.LinkAction`：主控连携技动作
 - `AllyCombatDriver.LinkAction`：对应队友连携技动作
 - `PartyCombatRouter` 的 `1` / `2` / `3` 键位：分别选择主控、队友 A、队友 B 的连携技
+- `PartyCombatRouter` 的 V 键：尝试释放全队终链奥义，第一版固定键位
 
 </details>
 
@@ -101,6 +109,7 @@
 - 队友 `Skill` 命令会由 `PartyCombatRouter` 转发给对应 `AllyStateMachine.RequestAction(...)`，进入 `Action` 状态后再由 `AllyCombatDriver` 执行 `SkillAction`。
 - `PartyCombatRouter` Inspector 中可以覆盖 Q/E/F 和 1/2/3 对应的技能与连携请求键位，V 键全队极限技暂时固定。
 - `LinkAttack` 命令只有在 `PartyLinkContext` 窗口开启时才会被接受；请求成功后由对应角色状态机执行 `LinkAction` 并消费共享窗口。
+- `PartyUltimateContext` 维护全队协同率；成功释放连携技会按 `CombatActionDefinition.SynergyGainOnLink` 充能，V 键在满值后消耗奥义就绪状态。
 - 后续队友 AI、连携规则或调试工具需要知道“谁是主控，谁是队友”时，可以从 `PartyManager` 查询。
 
 对应脚本：
@@ -110,6 +119,7 @@
 - `Assets/_EndLink/Party/PartyCombatRouter.cs`
 - `Assets/_EndLink/Party/PartyCombatContext.cs`
 - `Assets/_EndLink/Party/PartyLinkContext.cs`
+- `Assets/_EndLink/Party/PartyUltimateContext.cs`
 - `Assets/_EndLink/Ally/AllyFollowMotor.cs`
 - `Assets/_EndLink/Ally/AllyStateMachine.cs`
 
@@ -118,6 +128,7 @@
   - `PartyManager`
   - `PartyCombatRouter`
   - `PartyLinkContext`
+  - `PartyUltimateContext`
 - 主控角色根物体
   - 拖入 `mainCharacter`
 - 两个队友根物体
@@ -135,6 +146,8 @@
 - `formationSwitchCooldown`：站位交换冷却，避免频繁来回抢位
 - `playerSkillKey` / `allySlotASkillKey` / `allySlotBSkillKey`：主控和两个队友主动技能键位，默认 Q / E / F
 - `playerLinkAttackKey` / `allySlotALinkAttackKey` / `allySlotBLinkAttackKey`：主控和两个队友连携请求键位，默认 1 / 2 / 3
+- `PartyUltimateContext.maxSynergyRate`：终链奥义协同率上限，默认 100
+- `CombatActionDefinition.SynergyGainOnLink`：各连携技自己的协同率收益
 - `logInitialization`：是否打印小队初始化日志
 - `logCommands`：是否打印小队战斗命令路由日志
 

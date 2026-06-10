@@ -5,7 +5,7 @@ namespace EndLink.Enemies
 {
     /// <summary>
     /// 敌人战斗大状态。
-    /// 第一版不执行具体行为；后续行为树会挂在这里，负责追击、站位、攻击和技能等细节。
+    /// 当前负责基础追击、停止距离和面向目标；之后可在这里接入行为树，处理站位、攻击和技能细节。
     /// </summary>
     public sealed class EnemyCombatState : EnemyStateBase
     {

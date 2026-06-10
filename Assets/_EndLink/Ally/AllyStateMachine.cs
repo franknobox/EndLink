@@ -7,7 +7,7 @@ namespace EndLink.Ally
     /// <summary>
     /// 队友有限状态机。
     /// 当前负责 Idle、Follow、Assist、Action、Hit、LinkDown 的大状态切换，不读取玩家输入。
-    /// Assist 内部再处理接近、攻击和后续行为树细节。
+    /// Assist 内部处理接近和攻击，之后可继续承接行为树细节。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(AllyCombatDriver))]
@@ -316,7 +316,7 @@ namespace EndLink.Ally
 
         /// <summary>
         /// 请求进入通用动作状态。
-        /// 用于队友主动技能、后续连携技或其他由外部命令触发的攻击动作。
+        /// 用于队友主动技能、连携技或其他由外部命令触发的攻击动作。
         /// </summary>
         public bool RequestAction(CombatActionDefinition action, Transform target)
         {
@@ -451,7 +451,7 @@ namespace EndLink.Ally
         }
 
         /// <summary>
-        /// 旧死亡入口的兼容包装。队友战斗语义已改为 LinkDown。
+        /// 队友生命归零入口的兼容包装。队友战斗语义已改为 LinkDown。
         /// </summary>
         [System.Obsolete("Use RequestLinkDown.")]
         public void RequestDead()

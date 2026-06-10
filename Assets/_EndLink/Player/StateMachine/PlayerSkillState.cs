@@ -4,8 +4,8 @@ namespace EndLink.Core
 {
     /// <summary>
     /// 玩家通用技能状态。
-    /// 当前只负责表示“角色正在释放某个技能”的状态窗口，具体技能表现、判定和资源消耗
-    /// 后续应交给 SkillDriver 或技能配置系统处理，避免状态类膨胀。
+    /// 负责表示“角色正在释放某个动作”的状态窗口，并在进入状态时调用 PlayerCombatDriver 执行当前动作。
+    /// 具体 Hitbox、伤害、标签和冷却仍由 CombatActionDefinition 与 PlayerCombatDriver 负责。
     /// </summary>
     public sealed class PlayerSkillState : PlayerStateBase
     {

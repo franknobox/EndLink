@@ -5,7 +5,7 @@ namespace EndLink.Combat
 {
     /// <summary>
     /// 战斗事件日志监听器。
-    /// 只用于白模阶段观察事件流，后续可以替换成正式调试面板。
+    /// 用于在 Console 中观察事件流；需要表格化查看时可以配合 Combat Monitor 使用。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class CombatEventLog : MonoBehaviour

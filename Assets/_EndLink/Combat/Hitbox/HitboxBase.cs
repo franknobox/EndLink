@@ -6,8 +6,8 @@ namespace EndLink.Combat
 {
     /// <summary>
     /// 通用 Hitbox 基类。
-    /// 负责 Trigger 检测、Enemy Layer 过滤、重复命中去重、构造命中信息并通知目标。
-    /// 大多数后续 Hitbox 可以直接使用它，特殊形态可以继承并重写虚方法。
+    /// 负责 Trigger 检测、目标 Layer 过滤、重复命中去重、构造命中信息并通知目标。
+    /// 大多数 Hitbox 可以直接使用它，特殊形态可以继承并重写虚方法。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Collider))]
@@ -16,7 +16,7 @@ namespace EndLink.Combat
         private const string EnemyLayerName = "Enemy";
 
         [Header("目标过滤")]
-        [Tooltip("允许命中的目标 Layer。默认使用 Enemy Layer；后续敌人攻击玩家或特殊 Hitbox 可以在预制体或子类中改写。")]
+        [Tooltip("允许命中的目标 Layer。默认使用 Enemy Layer；敌人攻击玩家或特殊 Hitbox 可以在预制体或子类中改写。")]
         [SerializeField]
         private LayerMask targetLayerMask;
 
@@ -52,7 +52,7 @@ namespace EndLink.Combat
         private float lifetime = 0.2f;
 
         [Header("事件")]
-        [Tooltip("成功命中 Enemy Layer 且目标实现 IHitReceiver 后触发。可用于挂音效、特效或调试输出。")]
+        [Tooltip("成功命中允许的目标 Layer 且目标实现 IHitReceiver 后触发。可用于挂音效、特效或调试输出。")]
         [SerializeField]
         private HitboxUnityEvent onHit = new();
 

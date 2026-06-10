@@ -43,13 +43,13 @@ namespace EndLink.Party
 
         /// <summary>
         /// 该槽位的队友当前是否可视为存活。
-        /// 没有挂 AllyHealth 时，先按“未死亡”处理，避免早期白模配置缺组件时被错误排除。
+        /// 没有挂 AllyHealth 时，先按“可参与”处理，避免早期白模配置缺组件时被错误排除。
         /// </summary>
         public bool IsAlive => HasAlly && (!TryGetAllyHealth(out AllyHealth health) || !health.IsDead);
 
         /// <summary>
         /// 尝试获取该队友的生命桥接组件。
-        /// 后续 UI、队伍状态和连携规则需要查血量时，优先走这个入口。
+        /// UI、队伍状态和连携规则需要查血量时，优先走这个入口。
         /// </summary>
         public bool TryGetAllyHealth(out AllyHealth health)
         {

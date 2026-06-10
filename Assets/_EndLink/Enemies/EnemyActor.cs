@@ -14,7 +14,7 @@ namespace EndLink.Enemies
     public sealed class EnemyActor : MonoBehaviour, ICharacterStatsTypeProvider
     {
         [Header("分类")]
-        [Tooltip("敌人的根类别。用于归纳敌人设定来源和后续配置入口，不表示封装、继承、多态等战斗特性。")]
+        [Tooltip("敌人的根类别。用于归纳敌人设定来源和分类配置入口，不表示封装、继承、多态等战斗特性。")]
         [SerializeField]
         private EnemyKind enemyKind = EnemyKind.AberrantProgram;
 
@@ -23,7 +23,7 @@ namespace EndLink.Enemies
         private AberrantProgramForm aberrantProgramForm = AberrantProgramForm.ManifestedShell;
 
         [Header("视觉")]
-        [Tooltip("视觉根节点。当前只作为后续动画/表现预留引用。")]
+        [Tooltip("视觉根节点。用于动画、受击反馈、特效挂点或后续表现系统定位。")]
         [SerializeField]
         private Transform bodyRoot;
 
@@ -32,7 +32,7 @@ namespace EndLink.Enemies
         [SerializeField]
         private EnemyMotorBase motor;
 
-        [Tooltip("敌人战斗执行器。需要攻击能力的敌人拖 EnemyCombatDriver；纯木桩或非攻击单位可以留空。")]
+        [Tooltip("敌人战斗执行器。需要攻击能力的敌人拖 EnemyCombatDriver；非攻击单位可以留空。")]
         [SerializeField]
         private EnemyCombatDriver combatDriver;
 

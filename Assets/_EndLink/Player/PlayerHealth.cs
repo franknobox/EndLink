@@ -95,7 +95,7 @@ namespace EndLink.Combat
             _health.Died -= HandleDied;
         }
 
-        /// <summary>兼容旧调用：直接对玩家施加伤害。</summary>
+        /// <summary>直接对玩家施加默认结构伤害。</summary>
         public void TakeDamage(int damage, CombatTagDefinition tag)
         {
             _health.ApplyDamage(damage, CombatDamageType.StructuralDamage, tag, null);
@@ -107,7 +107,7 @@ namespace EndLink.Combat
             _health.ApplyDamage(damage, damageType, tag, null);
         }
 
-        /// <summary>兼容旧调用：治疗玩家。</summary>
+        /// <summary>治疗玩家。</summary>
         public int Heal(int amount)
         {
             return _health.Heal(amount);

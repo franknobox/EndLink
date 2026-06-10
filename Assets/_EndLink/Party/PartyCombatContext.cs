@@ -8,13 +8,13 @@ namespace EndLink.Party
     /// <summary>
     /// 小队级战斗上下文。
     /// 负责记录小队当前是否处于战斗、当前主目标和已知敌人集合。
-    /// 不读取输入，不执行攻击，不驱动具体角色状态；队友 AI、战斗 UI 和连携系统后续都从这里读取战斗态。
+    /// 不读取输入，不执行攻击，不驱动具体角色状态；队友 AI、战斗 UI 和连携系统优先从这里读取战斗态。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class PartyCombatContext : MonoBehaviour
     {
         [Header("脱战")]
-        [Tooltip("没有有效敌人后，保持战斗态的时间。当前第一版在最后一个敌人死亡时会立即脱战；该值主要预留给后续远离/失联脱战。")]
+        [Tooltip("没有有效敌人后，保持战斗态的时间。当前第一版在最后一个敌人死亡时会立即脱战；该值主要作为远离/失联脱战扩展入口。")]
         [SerializeField, Min(0f)]
         private float combatExitDelay = 3f;
 
@@ -94,7 +94,7 @@ namespace EndLink.Party
 
         /// <summary>
         /// 手动清空战斗上下文。
-        /// 后续切场景、重置战斗或调试按钮可以调用。
+        /// 切场景、重置战斗或调试按钮可以调用。
         /// </summary>
         public void ClearCombatContext()
         {

@@ -16,7 +16,7 @@ namespace EndLink.Combat
         [SerializeField]
         private string tagId = "combat.tag";
 
-        [Tooltip("显示名称。主要用于 Inspector、调试面板或后续 UI。")]
+        [Tooltip("显示名称。主要用于 Inspector、调试面板和战斗 UI。")]
         [SerializeField]
         private string displayName = "Combat Tag";
 

@@ -124,14 +124,14 @@ namespace EndLink.Core
 
         /// <summary>
         /// 当前是否允许开始一次攻击。
-        /// 这里先只检查攻击冷却；后续可以继续加入硬直、受击、禁用输入等条件。
+        /// 这里检查普攻动作自身的基础执行条件；硬直、受击和禁用输入由状态机外层状态约束处理。
         /// </summary>
         public bool CanStartAttack => ActionExecutor != null
             && ActionExecutor.CanExecute(CombatDriver.BasicAttackAction);
 
         /// <summary>
-        /// 当前是否允许开始一次技能。
-        /// 这里先保留为固定允许；后续可以接入技能冷却、资源、禁用输入和受击硬直判断。
+        /// 当前是否允许开始一次技能或连携动作。
+        /// 这里检查当前动作资源与冷却；资源、禁用输入和受击硬直可以继续在状态机或动作系统中扩展。
         /// </summary>
         public bool CanStartSkill => ActionExecutor != null
             && StateMachine.CurrentAction != null
@@ -170,7 +170,7 @@ namespace EndLink.Core
 
         /// <summary>
         /// 消费一次技能请求。
-        /// 现阶段由 PlayerStateMachine.RequestSkill 临时写入，后续可接入新版 Input System 的 Skill action。
+        /// 当前由 PartyCombatRouter 调用 PlayerStateMachine.RequestSkill 写入，状态机在 Tick 中消费。
         /// </summary>
         public bool ConsumeSkillRequested()
         {

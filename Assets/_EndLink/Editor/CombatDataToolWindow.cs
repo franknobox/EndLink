@@ -389,7 +389,10 @@ namespace EndLink.Editor
         {
             if (asset is CombatActionDefinition action)
             {
-                return $"{action.ActionType} / {action.DamageType} / flat {action.FlatDamage:0.#} / x{action.AtkPowerMultiplier:0.##}";
+                string synergySummary = action.ActionType == CombatActionType.LinkAttack
+                    ? $" / synergy {action.SynergyGainOnLink:0.#}"
+                    : string.Empty;
+                return $"{action.ActionType} / {action.DamageType} / flat {action.FlatDamage:0.#} / x{action.AtkPowerMultiplier:0.##}{synergySummary}";
             }
 
             if (asset is CombatTagDefinition tag)

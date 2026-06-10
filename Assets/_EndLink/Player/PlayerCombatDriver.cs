@@ -16,11 +16,11 @@ namespace EndLink.Combat
         [SerializeField]
         private CombatActionDefinition basicAttackAction;
 
-        [Tooltip("玩家主动技能动作。后续由 PartyCombatRouter 的 Q 命令触发。")]
+        [Tooltip("玩家主动技能动作。由 PartyCombatRouter 的主控技能命令触发。")]
         [SerializeField]
         private CombatActionDefinition skillAction;
 
-        [Tooltip("玩家连携技动作配置。不能被普通输入直接释放，必须由后续连携机制确认窗口后调用。")]
+        [Tooltip("玩家连携技动作配置。不能被普通输入直接释放，必须由连携窗口确认后调用。")]
         [SerializeField]
         private CombatActionDefinition linkAction;
 
@@ -35,7 +35,7 @@ namespace EndLink.Combat
         /// <summary>玩家主动技能动作。</summary>
         public CombatActionDefinition SkillAction => skillAction;
 
-        /// <summary>玩家连携技动作配置。实际释放必须由连携机制授权。</summary>
+        /// <summary>玩家连携技动作配置。实际释放必须由连携窗口授权。</summary>
         public CombatActionDefinition LinkAction => linkAction;
 
         /// <summary>当前是否可以释放下一次动作。</summary>

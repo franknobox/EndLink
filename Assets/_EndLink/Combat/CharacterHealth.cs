@@ -161,7 +161,7 @@ namespace EndLink.Combat
         }
 
         /// <summary>
-        /// 兼容旧调用：接收简单伤害接口，默认按结构伤害处理。
+        /// 接收简单伤害接口，默认按结构伤害处理。
         /// </summary>
         public void TakeDamage(int damage, CombatTagDefinition tag)
         {
@@ -178,7 +178,7 @@ namespace EndLink.Combat
 
         /// <summary>
         /// 设置临时免伤窗口。
-        /// 主要供闪避、出生保护或后续特殊状态使用；不会改变目标有效性，也不会阻止治疗。
+        /// 主要供闪避、出生保护或特殊状态扩展使用；不会改变目标有效性，也不会阻止治疗。
         /// </summary>
         public void SetTemporaryInvincible(float duration)
         {

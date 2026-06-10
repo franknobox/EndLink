@@ -16,7 +16,7 @@ namespace EndLink.Combat
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         [Header("血量")]
-        [Tooltip("木桩最大生命值。用于验证伤害、死亡事件和后续连携条件。")]
+        [Tooltip("木桩最大生命值。用于验证伤害、死亡事件和连携窗口等基础链路。")]
         [SerializeField, Min(1)]
         private int maxHealth = 100;
 
@@ -167,7 +167,7 @@ namespace EndLink.Combat
 
         /// <summary>
         /// 重置木桩血量和死亡状态。
-        /// 主要用于调试、反复测试命中链路或后续训练场按钮调用。
+        /// 主要用于调试、反复测试命中链路或训练场按钮调用。
         /// </summary>
         public void ResetHealth()
         {

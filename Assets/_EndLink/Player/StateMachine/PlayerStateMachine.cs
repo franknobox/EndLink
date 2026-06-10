@@ -221,8 +221,7 @@ namespace EndLink.Core
 
         /// <summary>
         /// 请求进入通用技能状态。
-        /// 当前项目的生成输入类里还没有 Skill action，所以先提供一个统一入口，
-        /// 后续可以由输入读取器、UI、调试工具或技能栏系统调用。
+        /// 当前由 PartyCombatRouter 调用，也可以供 UI、调试工具或技能栏系统复用。
         /// </summary>
         public bool RequestSkill()
         {

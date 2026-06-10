@@ -5,7 +5,7 @@ namespace EndLink.UI
 {
     /// <summary>
     /// 小队战斗动作 UI 管理器。
-    /// 负责把 HUD 上的技能槽、连携槽和极限技槽绑定到固定三人小队的战斗命令槽位。
+    /// 负责把 HUD 上的技能槽、连携槽和终链奥义槽绑定到固定三人小队的战斗命令槽位。
     /// 它只刷新 UI，不执行技能、不判断连携是否合法。
     /// </summary>
     [DisallowMultipleComponent]
@@ -46,8 +46,8 @@ namespace EndLink.UI
         [SerializeField]
         private UICombatActionSlot allySlotBLinkAttackSlot;
 
-        [Header("极限技槽")]
-        [Tooltip("全队极限技 UI 槽，默认对应 V。")]
+        [Header("终链奥义槽")]
+        [Tooltip("全队终链奥义 UI 槽，默认对应 V。")]
         [SerializeField]
         private UICombatActionSlot partyUltimateSlot;
 

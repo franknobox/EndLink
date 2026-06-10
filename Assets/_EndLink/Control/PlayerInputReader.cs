@@ -137,7 +137,7 @@ namespace EndLink.Core
 
         /// <summary>
         /// 消费一次主控连携请求输入，默认键位 1。
-        /// 这里只读取玩家意图，是否能释放必须由连携机制判断。
+        /// 这里只读取玩家意图，是否能释放必须由连携窗口判断。
         /// </summary>
         public bool ConsumePlayerLinkAttackPressed()
         {
@@ -146,7 +146,7 @@ namespace EndLink.Core
 
         /// <summary>
         /// 消费一次队友 A 连携请求输入，默认键位 2。
-        /// 这里只读取玩家意图，是否能释放必须由连携机制判断。
+        /// 这里只读取玩家意图，是否能释放必须由连携窗口判断。
         /// </summary>
         public bool ConsumeAllySlotALinkAttackPressed()
         {
@@ -155,7 +155,7 @@ namespace EndLink.Core
 
         /// <summary>
         /// 消费一次队友 B 连携请求输入，默认键位 3。
-        /// 这里只读取玩家意图，是否能释放必须由连携机制判断。
+        /// 这里只读取玩家意图，是否能释放必须由连携窗口判断。
         /// </summary>
         public bool ConsumeAllySlotBLinkAttackPressed()
         {
@@ -163,7 +163,7 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 消费一次全队极限技输入，默认键位 V。
+        /// 消费一次全队终链奥义输入，默认键位 V。
         /// </summary>
         public bool ConsumePartyUltimatePressed()
         {

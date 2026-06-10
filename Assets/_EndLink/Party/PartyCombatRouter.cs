@@ -16,7 +16,7 @@ namespace EndLink.Party
         Skill = 0,
         /// <summary>
         /// 连携技请求。
-        /// 这不是普通快捷键释放，后续必须由连携机制确认当前存在合法连携窗口后才能执行。
+        /// 这不是普通快捷键释放，必须由连携窗口确认当前存在合法窗口后才能执行。
         /// </summary>
         LinkAttack = 1,
         Ultimate = 2
@@ -35,7 +35,8 @@ namespace EndLink.Party
 
     /// <summary>
     /// 一次玩家主动发出的战斗命令。
-    /// 后续 Skill / Link / Ultimate 系统可以订阅 PartyCombatRouter.CommandRequested 来执行具体动作。
+    /// 外部系统可以订阅 PartyCombatRouter.CommandRequested 做 UI、音效、调试或额外表现；
+    /// 当前 Router 自身会处理技能、连携和终链奥义的基础路由。
     /// LinkAttack 类型只表示玩家请求使用连携槽位，不代表动作可以直接释放。
     /// </summary>
     public readonly struct PartyCombatCommand
@@ -63,10 +64,12 @@ namespace EndLink.Party
 
     /// <summary>
     /// 小队战斗命令路由器。
-    /// 负责把 PlayerInputReader 中的战斗输入翻译成“主控/队友/全队”的命令请求，不直接执行 Hitbox、伤害或状态机逻辑。
+    /// 负责把 PlayerInputReader 中的战斗输入翻译成“主控/队友/全队”的命令请求。
+    /// 它不生成 Hitbox、不结算伤害；技能和连携会转发给角色状态机，终链奥义会转发给小队奥义上下文。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PartyLinkContext))]
+    [RequireComponent(typeof(PartyUltimateContext))]
     public sealed class PartyCombatRouter : MonoBehaviour
     {
         [Header("组件引用")]
@@ -82,6 +85,10 @@ namespace EndLink.Party
         [SerializeField]
         private PartyLinkContext linkContext;
 
+        [Tooltip("小队终链奥义上下文。负责协同率、奥义就绪和奥义消耗；不执行具体奥义表现。")]
+        [SerializeField]
+        private PartyUltimateContext ultimateContext;
+
         [Header("主动技能键位")]
         [Tooltip("主控主动技能键位。默认 Q。")]
         [SerializeField]
@@ -96,20 +103,20 @@ namespace EndLink.Party
         private Key allySlotBSkillKey = Key.F;
 
         [Header("连携请求键位")]
-        [Tooltip("主控连携请求键位。默认 1。按下后只发出请求，必须由连携机制确认可释放。")]
+        [Tooltip("主控连携请求键位。默认 1。按下后只发出请求，必须由连携窗口确认可释放。")]
         [SerializeField]
         private Key playerLinkAttackKey = Key.Digit1;
 
-        [Tooltip("队友 A 连携请求键位。默认 2。按下后只发出请求，必须由连携机制确认可释放。")]
+        [Tooltip("队友 A 连携请求键位。默认 2。按下后只发出请求，必须由连携窗口确认可释放。")]
         [SerializeField]
         private Key allySlotALinkAttackKey = Key.Digit2;
 
-        [Tooltip("队友 B 连携请求键位。默认 3。按下后只发出请求，必须由连携机制确认可释放。")]
+        [Tooltip("队友 B 连携请求键位。默认 3。按下后只发出请求，必须由连携窗口确认可释放。")]
         [SerializeField]
         private Key allySlotBLinkAttackKey = Key.Digit3;
 
         [Header("调试")]
-        [Tooltip("是否在收到战斗命令时打印调试日志。第一版还未接具体技能执行，建议开启便于确认输入和路由。")]
+        [Tooltip("是否在收到战斗命令、连携窗口校验、动作请求或终链奥义请求时打印调试日志。")]
         [SerializeField]
         private bool logCommands = true;
 
@@ -118,6 +125,9 @@ namespace EndLink.Party
 
         /// <summary>当前绑定的小队连携窗口上下文。</summary>
         public PartyLinkContext LinkContext => linkContext;
+
+        /// <summary>当前绑定的小队终链奥义上下文。</summary>
+        public PartyUltimateContext UltimateContext => ultimateContext;
 
         private void Awake()
         {
@@ -266,6 +276,16 @@ namespace EndLink.Party
             {
                 linkContext = partyManager.GetComponent<PartyLinkContext>();
             }
+
+            if (ultimateContext == null)
+            {
+                ultimateContext = GetComponent<PartyUltimateContext>();
+            }
+
+            if (ultimateContext == null && partyManager != null)
+            {
+                ultimateContext = partyManager.GetComponent<PartyUltimateContext>();
+            }
         }
 
         private void RouteCommand(PartyCombatCommandType commandType, PartyCombatActorSlot actorSlot)
@@ -295,7 +315,7 @@ namespace EndLink.Party
                     ExecuteLinkAttackCommand(command);
                     break;
                 case PartyCombatCommandType.Ultimate:
-                    LogCommand("ultimate request queued for future limit break system");
+                    ExecuteUltimateCommand(command);
                     break;
             }
         }
@@ -383,6 +403,7 @@ namespace EndLink.Party
                 return;
             }
 
+            CombatActionDefinition linkAction = ResolveLinkAction(command.ActorSlot, command.Actor);
             Transform target = linkContext.ResolveLinkTarget();
             if (target == null)
             {
@@ -392,9 +413,9 @@ namespace EndLink.Party
 
             bool executed = command.ActorSlot switch
             {
-                PartyCombatActorSlot.MainCharacter => RequestPlayerLinkAction(command.Actor, target),
-                PartyCombatActorSlot.AllySlotA => RequestAllyLinkAction(command.Actor, target),
-                PartyCombatActorSlot.AllySlotB => RequestAllyLinkAction(command.Actor, target),
+                PartyCombatActorSlot.MainCharacter => RequestPlayerLinkAction(command.Actor, target, linkAction),
+                PartyCombatActorSlot.AllySlotA => RequestAllyLinkAction(command.Actor, target, linkAction),
+                PartyCombatActorSlot.AllySlotB => RequestAllyLinkAction(command.Actor, target, linkAction),
                 _ => false
             };
 
@@ -406,23 +427,68 @@ namespace EndLink.Party
             }
 
             linkContext.ConsumeWindow();
+            AddSynergyFromLinkAction(linkAction);
             LogCommand(
                 $"LinkAttack accepted and window consumed, slot={command.ActorSlot}, actor={GetObjectName(command.Actor)}, target={GetObjectName(target)}");
         }
 
-        private bool RequestPlayerLinkAction(GameObject actor, Transform target)
+        private void ExecuteUltimateCommand(PartyCombatCommand command)
+        {
+            if (ultimateContext == null)
+            {
+                CacheReferences();
+            }
+
+            if (ultimateContext == null)
+            {
+                LogCommand("ignored Ultimate: PartyUltimateContext not found");
+                return;
+            }
+
+            if (!ultimateContext.CanUseUltimate)
+            {
+                LogCommand(
+                    $"ignored Ultimate: synergy={ultimateContext.CurrentSynergyRate:F1}/{ultimateContext.MaxSynergyRate:F1}");
+                return;
+            }
+
+            if (ultimateContext.ConsumeUltimate())
+            {
+                LogCommand("Ultimate consumed: EndLink Ultimate effect is not implemented yet");
+            }
+        }
+
+        private void AddSynergyFromLinkAction(CombatActionDefinition linkAction)
+        {
+            if (ultimateContext == null)
+            {
+                CacheReferences();
+            }
+
+            if (ultimateContext == null)
+            {
+                LogCommand("LinkAttack succeeded but PartyUltimateContext was not found");
+                return;
+            }
+
+            float gainedSynergy = ultimateContext.AddSynergyFromLinkAction(linkAction);
+            LogCommand(
+                $"LinkAttack synergy gained={gainedSynergy:F1}, current={ultimateContext.CurrentSynergyRate:F1}/{ultimateContext.MaxSynergyRate:F1}");
+        }
+
+        private bool RequestPlayerLinkAction(GameObject actor, Transform target, CombatActionDefinition linkAction)
         {
             if (actor == null
                 || !actor.TryGetComponent(out PlayerStateMachine stateMachine)
-                || !actor.TryGetComponent(out PlayerCombatDriver combatDriver))
+                || linkAction == null)
             {
                 return false;
             }
 
-            return stateMachine.RequestAction(combatDriver.LinkAction, target);
+            return stateMachine.RequestAction(linkAction, target);
         }
 
-        private static bool RequestAllyLinkAction(GameObject actor, Transform target)
+        private static bool RequestAllyLinkAction(GameObject actor, Transform target, CombatActionDefinition linkAction)
         {
             if (actor == null || !actor.TryGetComponent(out AllyStateMachine stateMachine))
             {
@@ -431,12 +497,47 @@ namespace EndLink.Party
 
             AllyCombatDriver combatDriver = stateMachine.CombatDriver;
             ICombatActionExecutor actionExecutor = combatDriver;
-            if (actionExecutor == null || !actionExecutor.CanExecute(combatDriver.LinkAction))
+            if (linkAction == null || actionExecutor == null || !actionExecutor.CanExecute(linkAction))
             {
                 return false;
             }
 
-            return stateMachine.RequestAction(combatDriver.LinkAction, target);
+            return stateMachine.RequestAction(linkAction, target);
+        }
+
+        private static CombatActionDefinition ResolveLinkAction(PartyCombatActorSlot actorSlot, GameObject actor)
+        {
+            if (actor == null)
+            {
+                return null;
+            }
+
+            return actorSlot switch
+            {
+                PartyCombatActorSlot.MainCharacter => actor.TryGetComponent(out PlayerCombatDriver playerDriver)
+                    ? playerDriver.LinkAction
+                    : null,
+                PartyCombatActorSlot.AllySlotA or PartyCombatActorSlot.AllySlotB => ResolveAllyLinkAction(actor),
+                _ => null
+            };
+        }
+
+        private static CombatActionDefinition ResolveAllyLinkAction(GameObject actor)
+        {
+            if (actor == null)
+            {
+                return null;
+            }
+
+            if (actor.TryGetComponent(out AllyStateMachine stateMachine)
+                && stateMachine.CombatDriver != null)
+            {
+                return stateMachine.CombatDriver.LinkAction;
+            }
+
+            return actor.TryGetComponent(out AllyCombatDriver combatDriver)
+                ? combatDriver.LinkAction
+                : null;
         }
 
         private GameObject ResolveActor(PartyCombatActorSlot actorSlot)

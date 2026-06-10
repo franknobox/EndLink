@@ -51,12 +51,12 @@ namespace EndLink.Party
         private PartyFollowSettings followSettings = new();
 
         [Header("战斗路由")]
-        [Tooltip("小队战斗命令路由器。UI 和后续小队战斗系统通过这里读取当前键位路由。为空时会在场景中自动查找。")]
+        [Tooltip("小队战斗命令路由器。UI 和小队战斗系统通过这里读取当前键位路由。为空时会在场景中自动查找。")]
         [SerializeField]
         private PartyCombatRouter combatRouter;
 
         [Header("小队表现调度")]
-        [Tooltip("小队进入战斗时触发。后续 UI、镜头、语音和站位表现可以监听这里。")]
+        [Tooltip("小队进入战斗时触发。UI、镜头、语音和站位表现可以监听这里。")]
         [SerializeField]
         private UnityEvent onCombatStarted = new();
 
@@ -64,7 +64,7 @@ namespace EndLink.Party
         [SerializeField]
         private UnityEvent onCombatEnded = new();
 
-        [Tooltip("主控或队友死亡时触发，参数为死亡成员的根物体。")]
+        [Tooltip("主控死亡或队友链接中断时触发，参数为成员根物体。")]
         [SerializeField]
         private PartyMemberEvent onMemberDead = new();
 
@@ -83,7 +83,7 @@ namespace EndLink.Party
         /// <summary>小队退出战斗的代码事件。</summary>
         public event Action CombatEnded;
 
-        /// <summary>主控或队友死亡的代码事件。</summary>
+        /// <summary>主控死亡或队友链接中断的代码事件。</summary>
         public event Action<GameObject> MemberDead;
 
         /// <summary>固定主控角色。</summary>
@@ -108,10 +108,10 @@ namespace EndLink.Party
         public bool IsMainCharacterAlive =>
             mainCharacter != null && (!TryGetMainCharacterHealth(out CharacterHealth health) || !health.IsDead);
 
-        /// <summary>已经配置到槽位上的队友数量，不判断死亡。</summary>
+        /// <summary>已经配置到槽位上的队友数量，不判断 LinkDown / 死亡。</summary>
         public int ConfiguredAllyCount => CountConfiguredAllies();
 
-        /// <summary>当前有效队友数量。第一版定义为：已配置，并且没有死亡。</summary>
+        /// <summary>当前有效队友数量。定义为：已配置，并且未进入 LinkDown / 死亡状态。</summary>
         public int ActiveAllyCount => CountActiveAllies();
 
         /// <summary>当前存活队友数量，和 ActiveAllyCount 含义一致，方便调用方按语义选择。</summary>
@@ -123,7 +123,7 @@ namespace EndLink.Party
         /// <summary>小队退出战斗的 Inspector 事件。</summary>
         public UnityEvent OnCombatEnded => onCombatEnded;
 
-        /// <summary>主控或队友死亡的 Inspector 事件。</summary>
+        /// <summary>主控死亡或队友链接中断的 Inspector 事件。</summary>
         public PartyMemberEvent OnMemberDead => onMemberDead;
 
         /// <summary>小队战斗命令路由器。</summary>
@@ -211,7 +211,7 @@ namespace EndLink.Party
 
         /// <summary>
         /// 获取当前已配置的队友状态机。
-        /// 后续 Ally AI、连携规则或调试工具需要查询队友列表时，可以先走这里。
+        /// Ally AI、连携规则或调试工具需要查询队友列表时，可以先走这里。
         /// </summary>
         public IReadOnlyList<AllyStateMachine> GetAllies(List<AllyStateMachine> results)
         {
@@ -225,7 +225,7 @@ namespace EndLink.Party
 
         /// <summary>
         /// 获取当前存活的队友状态机。
-        /// 后续队友 AI、战斗 UI 和连携规则需要“可参与战斗的队友”时，优先用这个接口。
+        /// 队友 AI、战斗 UI 和连携规则需要“可参与战斗的队友”时，优先用这个接口。
         /// </summary>
         public IReadOnlyList<AllyStateMachine> GetAliveAllies(List<AllyStateMachine> results)
         {
@@ -237,7 +237,7 @@ namespace EndLink.Party
             return results;
         }
 
-        /// <summary>判断指定队友是否属于当前小队，并且当前没有死亡。</summary>
+        /// <summary>判断指定队友是否属于当前小队，并且当前未进入 LinkDown / 死亡状态。</summary>
         public bool IsAllyAlive(AllyStateMachine ally)
         {
             if (ally == null)
@@ -263,7 +263,7 @@ namespace EndLink.Party
 
         /// <summary>
         /// 通知小队进入战斗表现状态。
-        /// 它只负责广播，不决定战斗规则；后续 UI、镜头、队友语音、站位表现都可以监听这里。
+        /// 它只负责广播，不决定战斗规则；UI、镜头、队友语音、站位表现都可以监听这里。
         /// </summary>
         public void NotifyCombatStarted()
         {
@@ -281,8 +281,8 @@ namespace EndLink.Party
         }
 
         /// <summary>
-        /// 通知主控或队友死亡。
-        /// 参数使用成员根物体，方便 UI、镜头、语音和队伍槽位系统后续各自解析。
+        /// 通知主控死亡或队友链接中断。
+        /// 参数使用成员根物体，方便 UI、镜头、语音和队伍槽位系统各自解析。
         /// </summary>
         public void NotifyMemberDead(GameObject member)
         {

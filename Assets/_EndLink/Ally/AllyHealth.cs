@@ -65,7 +65,7 @@ namespace EndLink.Ally
         /// <summary>链接中断事件。</summary>
         public UnityEvent OnLinkDown => onLinkDown;
 
-        /// <summary>生命值归零事件的旧命名入口，保留给已有 UI 或调试接线。</summary>
+        /// <summary>生命值归零时触发的通用事件入口，当前映射到链接中断事件。</summary>
         public UnityEvent OnDead => onLinkDown;
 
         private void Awake()

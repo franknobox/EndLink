@@ -132,8 +132,9 @@
 - `CombatActionType` 描述动作性质，不描述释放者来源。
 - 当前动作类型包括 `BasicAttack`、`Skill`、`LinkAttack`、`Ultimate`。
 - 主控、队友和敌人后续可以共用同一套动作类型，释放者来源应由后续战斗事件数据携带。
-- 动作配置包含固定伤害 `FlatDamage`、攻击力倍率 `AtkPowerMultiplier`、伤害类型、击退、`CombatTagDefinition` 命中标签、标签持续时间、标签层数、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置和 AI 有效攻击距离。
+- 动作配置包含固定伤害 `FlatDamage`、攻击力倍率 `AtkPowerMultiplier`、伤害类型、击退、`CombatTagDefinition` 命中标签、标签持续时间、标签层数、连携协同率收益、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置和 AI 有效攻击距离。
 - 动作伤害基础公式为 `FlatDamage + AttackPower × AtkPowerMultiplier`，因此可配置纯固定伤害、纯倍率伤害或两者混合。
+- `SynergyGainOnLink` 只在动作类型为 `LinkAttack` 且连携技成功释放时由 `PartyUltimateContext` 读取，用于提升全队终链奥义协同率。
 
 对应脚本：
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`

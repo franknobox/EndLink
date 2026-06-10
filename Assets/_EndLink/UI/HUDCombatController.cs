@@ -5,8 +5,8 @@ namespace EndLink.UI
 {
     /// <summary>
     /// 战斗 HUD 总控制器。
-    /// 第一版只负责绑定小队引用、控制 HUD 显隐，并驱动小队战斗动作 UI 刷新。
-    /// 后续血条、目标信息、连携提示等 HUD 模块都可以从这里接入。
+    /// 第一版负责绑定小队引用、控制 HUD 显隐，并驱动小队战斗动作 UI 刷新。
+    /// 血条、目标信息、连携提示等 HUD 模块可以从这里接入。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class HUDCombatController : MonoBehaviour

@@ -18,13 +18,13 @@ namespace EndLink.Combat
         /// <summary>连携攻击。必须由标签、事件或连携规则打开合法窗口后释放。</summary>
         LinkAttack = 2,
 
-        /// <summary>大招。通常消耗高权重资源或满足特殊条件，后续可接演出和镜头。</summary>
+        /// <summary>终链奥义。通常消耗全队协同率或满足特殊条件，具体表现由奥义系统接入。</summary>
         Ultimate = 3
     }
 
     /// <summary>
     /// 战斗动作配置。
-    /// 用 ScriptableObject 描述一次普通攻击、技能、连携技或大招所需的基础数据。
+    /// 用 ScriptableObject 描述一次普通攻击、技能、连携技或终链奥义所需的基础数据。
     /// Hitbox 的存活时间由 Hitbox prefab 自己配置，不由动作资产统一销毁。
     /// </summary>
     [CreateAssetMenu(
@@ -33,7 +33,7 @@ namespace EndLink.Combat
     public sealed class CombatActionDefinition : ScriptableObject
     {
         /// <summary>
-        /// 旧版动作资产没有写入有效攻击距离时使用的默认值。
+        /// 动作资产没有写入有效攻击距离时使用的默认值。
         /// 当前近战波默认生成在前方 1 米，1.2 米可以让 AI 停在能覆盖到目标表面的距离。
         /// </summary>
         public const float DefaultEffectiveAttackRange = 1.2f;
@@ -43,7 +43,7 @@ namespace EndLink.Combat
         [SerializeField]
         private string actionId = "new_combat_action";
 
-        [Tooltip("显示名称。主要用于 Inspector、调试面板或后续 UI。")]
+        [Tooltip("显示名称。主要用于 Inspector、调试面板和战斗 UI。")]
         [SerializeField]
         private string displayName = "New Combat Action";
 
@@ -80,6 +80,11 @@ namespace EndLink.Combat
         [Tooltip("动作命中时施加的战斗标签层数。最终会被标签定义的最大层数钳制。")]
         [SerializeField, Min(1)]
         private int combatTagStackCount = 1;
+
+        [Header("连携与奥义")]
+        [Tooltip("该动作作为连携技成功释放时，为全队协同率增加的数值。只有 LinkAttack 类型会被小队奥义上下文读取。")]
+        [SerializeField, Min(0f)]
+        private float synergyGainOnLink;
 
         [Header("冷却与时序")]
         [Tooltip("动作冷却时间。冷却未结束时不应再次释放同一个动作。")]
@@ -146,6 +151,9 @@ namespace EndLink.Combat
         /// <summary>动作命中时施加的战斗标签层数。</summary>
         public int CombatTagStackCount => Mathf.Max(1, combatTagStackCount);
 
+        /// <summary>该连携动作成功释放后增加的全队协同率。</summary>
+        public float SynergyGainOnLink => Mathf.Max(0f, synergyGainOnLink);
+
         /// <summary>冷却时间。</summary>
         public float Cooldown => cooldown;
 
@@ -210,6 +218,7 @@ namespace EndLink.Combat
             knockbackForce = Mathf.Max(0f, knockbackForce);
             combatTagDuration = Mathf.Max(0f, combatTagDuration);
             combatTagStackCount = Mathf.Max(1, combatTagStackCount);
+            synergyGainOnLink = Mathf.Max(0f, synergyGainOnLink);
             cooldown = Mathf.Max(0f, cooldown);
             startupTime = Mathf.Max(0f, startupTime);
             activeTime = Mathf.Max(0.01f, activeTime);

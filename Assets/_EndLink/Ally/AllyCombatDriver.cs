@@ -21,7 +21,7 @@ namespace EndLink.Ally
         [SerializeField]
         private CombatActionDefinition skillAction;
 
-        [Tooltip("队友连携技动作配置。实际释放必须由后续连携机制授权。")]
+        [Tooltip("队友连携技动作配置。实际释放必须由连携窗口授权。")]
         [SerializeField]
         private CombatActionDefinition linkAction;
 
@@ -121,7 +121,7 @@ namespace EndLink.Ally
 
         /// <summary>
         /// 执行指定队友动作。
-        /// 调用者负责判断动作来自自动助战、玩家命令技能，还是连携机制授权的连携攻击。
+        /// 调用者负责判断动作来自自动助战、玩家命令技能，还是连携窗口授权的连携攻击。
         /// </summary>
         public bool TryExecute(CombatActionDefinition actionDefinition, Transform target = null)
         {
