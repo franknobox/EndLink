@@ -27,6 +27,7 @@ namespace EndLink.Core
         private InputAction _attackAction;
         private InputAction _sprintAction;
         private InputAction _dodgeAction;
+        private InputAction _jumpAction;
         private InputAction _playerSkillAction;
         private InputAction _allySlotASkillAction;
         private InputAction _allySlotBSkillAction;
@@ -37,6 +38,7 @@ namespace EndLink.Core
         private bool _initialized;
         private bool _attackPressed;
         private bool _dodgePressed;
+        private bool _jumpPressed;
         private bool _playerSkillPressed;
         private bool _allySlotASkillPressed;
         private bool _allySlotBSkillPressed;
@@ -81,6 +83,7 @@ namespace EndLink.Core
             _sprintAction.performed -= OnSprintStartedOrPerformed;
             _sprintAction.canceled -= OnSprintCanceled;
             _dodgeAction.performed -= OnDodgePerformed;
+            _jumpAction.performed -= OnJumpPerformed;
             _playerSkillAction.performed -= OnPlayerSkillPerformed;
             _allySlotASkillAction.performed -= OnAllySlotASkillPerformed;
             _allySlotBSkillAction.performed -= OnAllySlotBSkillPerformed;
@@ -109,6 +112,15 @@ namespace EndLink.Core
         public bool ConsumeDodgePressed()
         {
             return ConsumePressed(ref _dodgePressed);
+        }
+
+        /// <summary>
+        /// 消费一次跳跃输入，第一版默认键位为 Space，手柄为 buttonSouth。
+        /// 返回 true 后会立即清空，避免同一次输入被多个状态重复处理。
+        /// </summary>
+        public bool ConsumeJumpPressed()
+        {
+            return ConsumePressed(ref _jumpPressed);
         }
 
         /// <summary>
@@ -224,6 +236,11 @@ namespace EndLink.Core
             SetPressedIfButton(context, ref _dodgePressed);
         }
 
+        private void OnJumpPerformed(InputAction.CallbackContext context)
+        {
+            SetPressedIfButton(context, ref _jumpPressed);
+        }
+
         private void OnPlayerSkillPerformed(InputAction.CallbackContext context)
         {
             SetPressedIfButton(context, ref _playerSkillPressed);
@@ -283,6 +300,7 @@ namespace EndLink.Core
             SprintHeld = false;
             _attackPressed = false;
             _dodgePressed = false;
+            _jumpPressed = false;
             _playerSkillPressed = false;
             _allySlotASkillPressed = false;
             _allySlotBSkillPressed = false;
@@ -305,6 +323,7 @@ namespace EndLink.Core
             _attackAction = _inputActions.asset.FindAction("Player/Attack", true);
             _sprintAction = _inputActions.asset.FindAction("Player/Sprint", true);
             _dodgeAction = _inputActions.asset.FindAction("Player/Dodge", true);
+            _jumpAction = _inputActions.asset.FindAction("Player/Jump", true);
             _playerSkillAction = _inputActions.asset.FindAction("Player/PlayerSkill", true);
             _allySlotASkillAction = _inputActions.asset.FindAction("Player/AllySlotASkill", true);
             _allySlotBSkillAction = _inputActions.asset.FindAction("Player/AllySlotBSkill", true);
@@ -319,6 +338,7 @@ namespace EndLink.Core
             _sprintAction.performed += OnSprintStartedOrPerformed;
             _sprintAction.canceled += OnSprintCanceled;
             _dodgeAction.performed += OnDodgePerformed;
+            _jumpAction.performed += OnJumpPerformed;
             _playerSkillAction.performed += OnPlayerSkillPerformed;
             _allySlotASkillAction.performed += OnAllySlotASkillPerformed;
             _allySlotBSkillAction.performed += OnAllySlotBSkillPerformed;

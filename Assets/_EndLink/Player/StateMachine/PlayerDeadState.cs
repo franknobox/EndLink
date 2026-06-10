@@ -17,6 +17,7 @@ namespace EndLink.Core
 
         public override void Tick(float deltaTime)
         {
+            Context.ConsumeJumpPressed();
             Context.Controller.TickMovement(Vector2.zero, deltaTime);
         }
     }

@@ -16,6 +16,7 @@
 - 输入动作以 `InputSystem_Actions.inputactions` 为唯一源头；修改动作或绑定后，需要在 Unity 中重新 Generate C# Class 生成 `InputSystem_Actions.cs`。
 - 玩家移动输入和相机输入分开读取，避免输入读取器承担移动或相机逻辑。
 - 移动输入读取 `Player/Move`。
+- 跳跃输入读取 `Player/Jump`，默认键位为键盘 `Space`、手柄 `buttonSouth`。
 - 攻击输入读取 `Player/Attack`，由状态机消费后决定是否进入攻击状态。
 - 闪避输入读取 `Player/Dodge`，默认键位为键盘 `Left Ctrl`、手柄 `buttonEast`。
 - 主控主动技能读取 `Player/PlayerSkill`，默认键位 Q。
@@ -55,6 +56,7 @@
 - 暴露面向指定世界方向的接口，供攻击和自动软锁目标在出手前让角色正面与动作方向一致。
 - 支持移动方向参考，拖入 `Main Camera` 后可实现相机相对移动。
 - 支持按住 `Left Shift` 冲刺；当前冲刺作为移动速度修饰，不单独进入状态机大状态。
+- 支持基础单段跳，跳跃高度和冷却由 `PlayerController` 配置，垂直速度继续走现有手动重力。
 - 支持状态机驱动的闪避位移，闪避期间由 `PlayerDodgeState` 决定方向、速度和持续时间。
 - 支持接收敌人移动碰撞带来的外部位移，玩家可以被敌人正常前进时挤开，但不会通过该通道反向推动敌人。
 - 移动调用由 `PlayerStateMachine` 驱动，`PlayerController` 通过 `TickMovement` 执行实际位移。
@@ -77,6 +79,8 @@
 - `accelerationSmoothTime`：加速阻尼
 - `decelerationSmoothTime`：减速阻尼
 - `rotationSharpness`：转向响应
+- `jumpHeight`：单次跳跃目标高度
+- `jumpCooldown`：两次跳跃之间的最短间隔
 - `movementReference`：移动方向参考，通常拖 `Main Camera`
 
 </details>
@@ -143,6 +147,7 @@
 - 使用代码状态机，不依赖 Animator StateMachine。
 - 当前包含 `Idle`、`Move`、`Attack`、`Skill`、`Dodge`、`Hit`、`Dead` 七个状态。
 - `Idle` 和 `Move` 会优先消费闪避输入，检查闪避冷却后切换到 `Dodge`。
+- `Idle` 和 `Move` 会消费跳跃输入，满足贴地和冷却条件时由 `PlayerController` 写入向上的垂直初速度；第一版不单独进入空中状态。
 - `Idle` 和 `Move` 会消费攻击输入，检查攻击冷却后切换到 `Attack`。
 - `Skill` 是通用技能状态，当前由 `PartyCombatRouter` 发起请求，状态机决定是否进入，进入状态后再调用 `PlayerCombatDriver` 执行技能表现和判定。
 - `Attack` 状态进入时调用 `PlayerCombatDriver.ExecuteAttack()`，攻击持续时间结束后根据移动输入回到 `Move` 或 `Idle`。

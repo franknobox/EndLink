@@ -153,6 +153,11 @@ namespace EndLink.Core
         public bool CanStartDodge => StateMachine.CanStartDodge;
 
         /// <summary>
+        /// 当前是否允许开始基础跳跃。
+        /// </summary>
+        public bool CanStartJump => Controller.CanJump;
+
+        /// <summary>
         /// 消费一次攻击输入。
         /// </summary>
         public bool ConsumeAttackPressed()
@@ -166,6 +171,22 @@ namespace EndLink.Core
         public bool ConsumeDodgePressed()
         {
             return InputReader.ConsumeDodgePressed();
+        }
+
+        /// <summary>
+        /// 消费一次跳跃输入。
+        /// </summary>
+        public bool ConsumeJumpPressed()
+        {
+            return InputReader.ConsumeJumpPressed();
+        }
+
+        /// <summary>
+        /// 请求控制器执行一次基础跳跃。
+        /// </summary>
+        public bool TryJump()
+        {
+            return Controller.TryJump();
         }
 
         /// <summary>

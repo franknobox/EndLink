@@ -23,6 +23,19 @@ namespace EndLink.Core
                 return;
             }
 
+            if (Context.ConsumeJumpPressed() && Context.TryJump())
+            {
+                Vector2 jumpMoveInput = Context.HasMoveInput ? Context.InputReader.MoveInput : Vector2.zero;
+                Context.Controller.TickMovement(jumpMoveInput, Context.InputReader.SprintHeld, deltaTime);
+
+                if (Context.HasMoveInput)
+                {
+                    Context.StateMachine.ChangeState(PlayerStateId.Move);
+                }
+
+                return;
+            }
+
             if (Context.ConsumeSkillRequested() && Context.CanStartSkill)
             {
                 Context.StateMachine.ChangeState(PlayerStateId.Skill);

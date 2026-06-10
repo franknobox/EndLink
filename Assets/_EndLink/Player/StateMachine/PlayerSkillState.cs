@@ -26,6 +26,8 @@ namespace EndLink.Core
 
         public override void Tick(float deltaTime)
         {
+            Context.ConsumeJumpPressed();
+
             if (!_executed)
             {
                 Context.StateMachine.CompleteAction();

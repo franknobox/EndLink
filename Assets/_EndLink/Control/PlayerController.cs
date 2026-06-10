@@ -40,6 +40,15 @@ namespace EndLink.Core
         [SerializeField]
         private float groundedStickForce = -2f;
 
+        [Header("跳跃参数")]
+        [Tooltip("单次跳跃的目标高度，单位米。第一版只做基础单段跳。")]
+        [SerializeField, Min(0f)]
+        private float jumpHeight = 1.6f;
+
+        [Tooltip("两次跳跃之间的最短间隔，防止贴地瞬间重复触发。")]
+        [SerializeField, Min(0f)]
+        private float jumpCooldown = 0.1f;
+
         [Header("方向参考")]
         [Tooltip("移动方向参考。拖 Main Camera 后，WASD/左摇杆会按相机朝向转换为世界移动方向。")]
         [SerializeField]
@@ -57,9 +66,22 @@ namespace EndLink.Core
         // CharacterController 不自带重力，需要手动累计垂直速度。
         private float _verticalVelocity;
         private bool _isSprinting;
+        private float _nextJumpAllowedTime;
 
         /// <summary>当前帧玩家是否正在冲刺移动。</summary>
         public bool IsSprinting => _isSprinting;
+
+        /// <summary>当前 CharacterController 是否认为玩家贴地。</summary>
+        public bool IsGrounded => _characterController != null && _characterController.isGrounded;
+
+        /// <summary>当前是否满足基础跳跃条件。</summary>
+        public bool CanJump => isActiveAndEnabled
+            && _characterController != null
+            && _characterController.enabled
+            && _characterController.isGrounded
+            && jumpHeight > 0f
+            && gravity < 0f
+            && Time.time >= _nextJumpAllowedTime;
 
         /// <summary>玩家是否能被敌人的正常移动挤开。</summary>
         public bool CanReceiveExternalDisplacement => isActiveAndEnabled;
@@ -167,6 +189,22 @@ namespace EndLink.Core
         }
 
         /// <summary>
+        /// 尝试执行一次基础单段跳。
+        /// 状态机负责决定哪些状态能请求跳跃，控制器只负责写入垂直初速度。
+        /// </summary>
+        public bool TryJump()
+        {
+            if (!CanJump)
+            {
+                return false;
+            }
+
+            _verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            _nextJumpAllowedTime = Time.time + jumpCooldown;
+            return true;
+        }
+
+        /// <summary>
         /// 璁╃帺瀹舵湰鍦?Z 杞存鏂瑰悜闈㈠悜鎸囧畾涓栫晫鏂瑰悜銆?
         /// 鏀诲嚮銆佹妧鑳芥垨鍚庣画閿佸畾鍔ㄤ綔鍙互璋冪敤瀹冿紝璁╄鑹叉湞鍚戝拰鏀诲嚮鍔ㄧ敾姝ｉ潰淇濇寔涓€鑷淬€?
         /// </summary>
@@ -232,6 +270,8 @@ namespace EndLink.Core
             // Inspector 中允许直接调参，这里保证重力与贴地力始终向下。
             gravity = -Mathf.Abs(gravity);
             groundedStickForce = -Mathf.Abs(groundedStickForce);
+            jumpHeight = Mathf.Max(0f, jumpHeight);
+            jumpCooldown = Mathf.Max(0f, jumpCooldown);
         }
 
         private void SmoothPlanarVelocity(Vector3 targetPlanarVelocity, float deltaTime)

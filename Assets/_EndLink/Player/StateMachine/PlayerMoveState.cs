@@ -20,6 +20,12 @@ namespace EndLink.Core
                 return;
             }
 
+            if (Context.ConsumeJumpPressed() && Context.TryJump())
+            {
+                Context.Controller.TickMovement(Context.InputReader.MoveInput, Context.InputReader.SprintHeld, deltaTime);
+                return;
+            }
+
             if (Context.ConsumeSkillRequested() && Context.CanStartSkill)
             {
                 Context.StateMachine.ChangeState(PlayerStateId.Skill);

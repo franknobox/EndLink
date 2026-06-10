@@ -34,6 +34,7 @@ namespace EndLink.Core
         public override void Tick(float deltaTime)
         {
             _elapsedTime += deltaTime;
+            Context.ConsumeJumpPressed();
 
             float normalizedTime = Context.DodgeDuration > 0f
                 ? Mathf.Clamp01(_elapsedTime / Context.DodgeDuration)

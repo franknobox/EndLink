@@ -29,10 +29,10 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成第一版 | 负责读取玩家移动、相机旋转和鼠标滚轮缩放输入，并把输入缓存为控制层可使用的数据。 |
-| [玩家 CharacterController 移动](Features/PLAYER.md#feature-player-movement) | 已完成第一版 | 负责玩家在 XZ 平面的平滑移动、加减速、重力贴地和面向移动方向的平滑转向。 |
+| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成第一版 | 负责读取玩家移动、跳跃、相机旋转和鼠标滚轮缩放输入，并把输入缓存为控制层可使用的数据。 |
+| [玩家 CharacterController 移动](Features/PLAYER.md#feature-player-movement) | 已完成基础跳跃版 | 负责玩家在 XZ 平面的平滑移动、加减速、基础跳跃、重力贴地和面向移动方向的平滑转向。 |
 | [第三人称自由相机](Features/PLAYER.md#feature-third-person-camera) | 已完成第一版 | 负责越肩第三人称视角、自由旋转、上下角度限制、滚轮缩放和较开阔的战斗观察距离。 |
-| [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成最小战斗骨架 | 负责 Idle、Move、Attack、Skill、Dodge、Hit、Dead 的状态切换，由状态机决定什么时候允许移动、攻击、释放技能、闪避、受击和死亡。 |
+| [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成最小战斗骨架 | 负责 Idle、Move、Attack、Skill、Dodge、Hit、Dead 的状态切换，由状态机决定什么时候允许移动、跳跃、攻击、释放技能、闪避、受击和死亡。 |
 | [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成第一版 | 负责把玩家状态、移动速度和状态进入触发器同步到 Animator 参数，不参与状态决策。 |
 | [玩家自动软锁定](Features/PLAYER.md#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按固定间隔自动选择当前战斗目标，默认优先最近敌人，并显示轻量目标点。 |
 | [玩家战斗驱动](Features/PLAYER.md#feature-player-combat-driver) | 已完成第一版 | 由状态机调用，负责执行攻击表现和判定，在角色前方生成 Hitbox 并管理攻击冷却。 |

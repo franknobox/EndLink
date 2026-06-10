@@ -24,6 +24,7 @@ namespace EndLink.Core
         public override void Tick(float deltaTime)
         {
             _elapsedTime += deltaTime;
+            Context.ConsumeJumpPressed();
 
             Vector2 hitMoveInput = Context.InputReader.MoveInput * Context.HitMoveInputScale;
             Context.Controller.TickMovement(hitMoveInput, deltaTime);
