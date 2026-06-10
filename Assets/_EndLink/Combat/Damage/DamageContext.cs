@@ -25,6 +25,7 @@ namespace EndLink.Combat
             GameObject source,
             GameObject target,
             CombatActionDefinition actionDefinition,
+            CharacterStats sourceStats,
             HitboxHitInfo hitInfo,
             bool hasHitInfo,
             float baseDamage,
@@ -36,6 +37,7 @@ namespace EndLink.Combat
             Source = source;
             Target = target;
             ActionDefinition = actionDefinition;
+            SourceStats = sourceStats;
             HitInfo = hitInfo;
             HasHitInfo = hasHitInfo;
             BaseDamage = Mathf.Max(0f, baseDamage);
@@ -53,6 +55,9 @@ namespace EndLink.Combat
 
         /// <summary>关联动作配置。标签反应或环境伤害可以为空。</summary>
         public CombatActionDefinition ActionDefinition { get; }
+
+        /// <summary>攻击来源的数值组件。为空时 DamageCalculator 会按兼容路径回退查找。</summary>
+        public CharacterStats SourceStats { get; }
 
         /// <summary>关联 Hitbox 命中信息。</summary>
         public HitboxHitInfo HitInfo { get; }
@@ -85,6 +90,7 @@ namespace EndLink.Combat
                 hitInfo.Owner,
                 target,
                 hitInfo.ActionDefinition,
+                hitInfo.SourceStats,
                 hitInfo,
                 true,
                 hitInfo.DamageAmount,
@@ -113,6 +119,7 @@ namespace EndLink.Combat
             return new DamageContext(
                 source,
                 target,
+                null,
                 null,
                 default,
                 false,

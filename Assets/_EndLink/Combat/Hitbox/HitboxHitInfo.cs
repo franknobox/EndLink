@@ -13,6 +13,7 @@ namespace EndLink.Combat
             GameObject owner,
             Collider hitCollider,
             CombatActionDefinition actionDefinition,
+            CharacterStats sourceStats,
             float damageAmount,
             CombatDamageType damageType,
             float knockbackForce,
@@ -26,6 +27,7 @@ namespace EndLink.Combat
             Owner = owner;
             HitCollider = hitCollider;
             ActionDefinition = actionDefinition;
+            SourceStats = sourceStats;
             DamageAmount = damageAmount;
             DamageType = damageType;
             KnockbackForce = knockbackForce;
@@ -47,6 +49,9 @@ namespace EndLink.Combat
 
         /// <summary>关联动作配置。非动作来源可以为空。</summary>
         public CombatActionDefinition ActionDefinition { get; }
+
+        /// <summary>攻击来源的数值组件。由 Hitbox 初始化时缓存，避免伤害计算阶段重复查找。</summary>
+        public CharacterStats SourceStats { get; }
 
         /// <summary>Hitbox 携带的固定伤害部分，完整动作伤害由 DamageCalculator 计算。</summary>
         public float DamageAmount { get; }

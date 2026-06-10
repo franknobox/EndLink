@@ -96,6 +96,8 @@ namespace EndLink.Enemies
         private bool drawDetectionGizmo = true;
 
         private readonly Dictionary<EnemyStateId, IEnemyState> _states = new();
+        private readonly List<Renderer> _boundsRenderers = new();
+        private readonly List<Collider> _boundsColliders = new();
         private IEnemyState _currentState;
         private EnemyActor _actor;
         private EnemyHealth _health;
@@ -171,6 +173,7 @@ namespace EndLink.Enemies
             RegisterState(new EnemyCombatState(context));
             RegisterState(new EnemyHitState(context));
             RegisterState(new EnemyDeadState(context));
+            CacheEnemyBoundsComponents();
         }
 
         private void OnEnable()
@@ -221,6 +224,7 @@ namespace EndLink.Enemies
             combatChaseStopDistance = Mathf.Max(0f, combatChaseStopDistance);
             combatLeashDistance = Mathf.Max(0f, combatLeashDistance);
             EnsureDetectionDefaults();
+            CacheEnemyBoundsComponents();
         }
 
         private void OnDestroy()
@@ -582,11 +586,9 @@ namespace EndLink.Enemies
 
         private bool TryGetEnemyBounds(out Bounds bounds)
         {
-            Renderer[] renderers = GetComponentsInChildren<Renderer>();
-
-            for (int i = 0; i < renderers.Length; i++)
+            for (int i = 0; i < _boundsRenderers.Count; i++)
             {
-                Renderer currentRenderer = renderers[i];
+                Renderer currentRenderer = _boundsRenderers[i];
                 if (!IsEnemyBoundsRenderer(currentRenderer))
                 {
                     continue;
@@ -594,9 +596,9 @@ namespace EndLink.Enemies
 
                 bounds = currentRenderer.bounds;
 
-                for (int j = i + 1; j < renderers.Length; j++)
+                for (int j = i + 1; j < _boundsRenderers.Count; j++)
                 {
-                    Renderer nextRenderer = renderers[j];
+                    Renderer nextRenderer = _boundsRenderers[j];
                     if (IsEnemyBoundsRenderer(nextRenderer))
                     {
                         bounds.Encapsulate(nextRenderer.bounds);
@@ -606,11 +608,9 @@ namespace EndLink.Enemies
                 return true;
             }
 
-            Collider[] colliders = GetComponentsInChildren<Collider>();
-
-            for (int i = 0; i < colliders.Length; i++)
+            for (int i = 0; i < _boundsColliders.Count; i++)
             {
-                Collider currentCollider = colliders[i];
+                Collider currentCollider = _boundsColliders[i];
                 if (!IsEnemyBoundsCollider(currentCollider))
                 {
                     continue;
@@ -618,9 +618,9 @@ namespace EndLink.Enemies
 
                 bounds = currentCollider.bounds;
 
-                for (int j = i + 1; j < colliders.Length; j++)
+                for (int j = i + 1; j < _boundsColliders.Count; j++)
                 {
-                    Collider nextCollider = colliders[j];
+                    Collider nextCollider = _boundsColliders[j];
                     if (IsEnemyBoundsCollider(nextCollider))
                     {
                         bounds.Encapsulate(nextCollider.bounds);
@@ -632,6 +632,14 @@ namespace EndLink.Enemies
 
             bounds = default;
             return false;
+        }
+
+        private void CacheEnemyBoundsComponents()
+        {
+            _boundsRenderers.Clear();
+            _boundsColliders.Clear();
+            GetComponentsInChildren(false, _boundsRenderers);
+            GetComponentsInChildren(false, _boundsColliders);
         }
 
         private bool IsEnemyBoundsRenderer(Renderer candidate)

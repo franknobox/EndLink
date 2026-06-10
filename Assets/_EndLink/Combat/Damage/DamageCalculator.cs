@@ -20,7 +20,9 @@ namespace EndLink.Combat
                 && actionDefinition.AtkPowerMultiplier > 0f
                 && context.Source != null)
             {
-                CharacterStats sourceStats = context.Source.GetComponentInParent<CharacterStats>();
+                CharacterStats sourceStats = context.SourceStats != null
+                    ? context.SourceStats
+                    : context.Source.GetComponentInParent<CharacterStats>();
                 if (sourceStats != null)
                 {
                     calculatedDamage += sourceStats.AttackPower * actionDefinition.AtkPowerMultiplier;

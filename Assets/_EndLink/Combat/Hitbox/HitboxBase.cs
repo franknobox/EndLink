@@ -60,6 +60,7 @@ namespace EndLink.Combat
         private readonly HashSet<Transform> _hitTargets = new();
         private Collider _triggerCollider;
         private GameObject _owner;
+        private CharacterStats _ownerStats;
         private CombatActionDefinition _actionDefinition;
         private float _enabledTime;
 
@@ -143,6 +144,7 @@ namespace EndLink.Combat
         public virtual void Initialize(GameObject owner)
         {
             _owner = owner;
+            _ownerStats = owner != null ? owner.GetComponentInParent<CharacterStats>() : null;
         }
 
         /// <summary>
@@ -277,6 +279,7 @@ namespace EndLink.Combat
                 _owner,
                 other,
                 _actionDefinition,
+                _ownerStats,
                 damageAmount,
                 damageType,
                 knockbackForce,

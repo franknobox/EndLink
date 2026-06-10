@@ -76,3 +76,12 @@
 - `PartyCombatContext` 当前用 `List<Transform>` 保存已知敌人，并在清理目标时使用 `Contains`。
 - 当前白模阶段敌人数量很少，不是性能瓶颈。
 - 后续如果一场战斗中已知敌人数量变多，再改为 `HashSet<Transform>` 或 `HashSet<ICombatTarget>`，并保留有序主目标列表。
+
+### Camera.main 访问收敛
+- 当前 `PlayerTargeting` 和 `EnemyStateMachine` 的目标/状态标识朝向逻辑仍会在运行时访问 `Camera.main`。
+- Unity 6 会缓存 `MainCamera` 标签对象，但访问 `Camera.main` 仍有小 CPU 开销，且依赖场景中正确配置 `MainCamera` 标签。
+- 白模阶段可以接受；后续镜头系统复杂后，应优先提供显式 `viewReference`，未配置时再 fallback 到缓存的主相机。
+- 建议处理方式：
+  - `PlayerTargeting`、敌人头顶状态点等世界空间标识统一支持 `viewReference`。
+  - `Awake/OnEnable` 缓存一次主相机 Transform，避免每帧直接访问 `Camera.main`。
+  - 切换相机或重建相机时提供刷新入口，而不是依赖每帧全局查询。

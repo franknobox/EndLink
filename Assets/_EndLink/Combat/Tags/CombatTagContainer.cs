@@ -47,6 +47,8 @@ namespace EndLink.Combat
         private CombatTagTransformEvent onReactionTriggered = new();
 
         private readonly List<ActiveCombatTag> _activeTags = new();
+        private CharacterHealth _reactionHealth;
+        private IDamageable _reactionDamageable;
 
         /// <summary>当前激活标签数量。</summary>
         public int ActiveTagCount => _activeTags.Count;
@@ -66,8 +68,18 @@ namespace EndLink.Combat
         /// <summary>协议反应触发事件。</summary>
         public CombatTagTransformEvent OnReactionTriggered => onReactionTriggered;
 
+        private void Awake()
+        {
+            CacheReactionDamageReceivers();
+        }
+
         private void OnEnable()
         {
+            if (_reactionHealth == null && _reactionDamageable == null)
+            {
+                CacheReactionDamageReceivers();
+            }
+
             ClearTags();
 
             foreach (ActiveCombatTag initialTag in initialTags)
@@ -344,15 +356,26 @@ namespace EndLink.Combat
                 return;
             }
 
-            CharacterHealth characterHealth = GetComponentInParent<CharacterHealth>();
-            if (characterHealth != null)
+            if (_reactionHealth == null && _reactionDamageable == null)
             {
-                characterHealth.ApplyDamage(effect.DamageAmount, effect.DamageType, effect.Tag, source);
+                CacheReactionDamageReceivers();
+            }
+
+            if (_reactionHealth != null)
+            {
+                _reactionHealth.ApplyDamage(effect.DamageAmount, effect.DamageType, effect.Tag, source);
                 return;
             }
 
-            IDamageable damageable = GetComponentInParent<IDamageable>();
-            damageable?.TakeDamage(effect.DamageAmount, effect.DamageType, effect.Tag);
+            _reactionDamageable?.TakeDamage(effect.DamageAmount, effect.DamageType, effect.Tag);
+        }
+
+        private void CacheReactionDamageReceivers()
+        {
+            _reactionHealth = GetComponentInParent<CharacterHealth>();
+            _reactionDamageable = _reactionHealth != null
+                ? _reactionHealth
+                : GetComponentInParent<IDamageable>();
         }
 
         private void LogUnsupportedReactionEffect(CombatTagReactionEffect effect)
