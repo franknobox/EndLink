@@ -51,11 +51,11 @@ namespace EndLink.UI
         [SerializeField]
         private Color cooldownTintColor = new(0.45f, 0.45f, 0.45f, 0.65f);
 
-        [Tooltip("是否每帧从对应角色槽位读取当前动作冷却。")]
+        [Tooltip("是否每帧从对应角色槽位读取当前动作冷却。冷却是连续变化的显示，适合逐帧刷新。")]
         [SerializeField]
         private bool autoRefreshCooldown = true;
 
-        [Tooltip("是否自动刷新键位文本。由上层 UIPartyCombatAction 统一驱动时可以关闭。")]
+        [Tooltip("是否每帧刷新键位文本。键位通常只在绑定或配置变化时刷新，由上层 UIPartyCombatAction 统一驱动时可以关闭。")]
         [SerializeField]
         private bool autoRefreshKeyLabel = true;
 
@@ -112,12 +112,12 @@ namespace EndLink.UI
 
             if (autoRefreshCooldown)
             {
-                SetCooldown(ResolveCooldownNormalized());
+                RefreshCooldown();
             }
 
             if (autoRefreshKeyLabel)
             {
-                ApplyKeyLabel();
+                RefreshKeyLabel();
             }
         }
 
@@ -161,7 +161,25 @@ namespace EndLink.UI
         /// </summary>
         public void RefreshNow()
         {
+            RefreshCooldown();
+            RefreshKeyLabel();
+        }
+
+        /// <summary>
+        /// 只刷新冷却显示。
+        /// 上层 HUD 每帧驱动时应优先调用它，避免反复刷新键位文本。
+        /// </summary>
+        public void RefreshCooldown()
+        {
             SetCooldown(ResolveCooldownNormalized());
+        }
+
+        /// <summary>
+        /// 只刷新键位文本。
+        /// 键位绑定变化、槽位重新绑定或 Inspector 配置改变时调用即可。
+        /// </summary>
+        public void RefreshKeyLabel()
+        {
             ApplyKeyLabel();
         }
 

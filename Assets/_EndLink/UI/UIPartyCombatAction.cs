@@ -52,7 +52,7 @@ namespace EndLink.UI
         private UICombatActionSlot partyUltimateSlot;
 
         [Header("刷新")]
-        [Tooltip("是否由本组件在 LateUpdate 统一刷新所有动作槽。")]
+        [Tooltip("是否由本组件在 LateUpdate 统一刷新所有动作槽的连续显示，例如冷却。键位和绑定只在 Bind 或 RefreshNow 时刷新。")]
         [SerializeField]
         private bool autoRefresh = true;
 
@@ -63,10 +63,22 @@ namespace EndLink.UI
         /// <summary>当前绑定的小队管理器。</summary>
         public PartyManager PartyManager => partyManager;
 
+        private PartyCombatRouter _subscribedRouter;
+
         private void Awake()
         {
             CacheReferences();
             BindSlots();
+        }
+
+        private void OnEnable()
+        {
+            SubscribeRouterEvents();
+        }
+
+        private void OnDisable()
+        {
+            UnsubscribeRouterEvents();
         }
 
         private void Reset()
@@ -87,7 +99,7 @@ namespace EndLink.UI
         {
             if (autoRefresh)
             {
-                RefreshNow();
+                RefreshCooldowns();
             }
         }
 
@@ -96,8 +108,10 @@ namespace EndLink.UI
         /// </summary>
         public void BindPartyManager(PartyManager manager)
         {
+            UnsubscribeRouterEvents();
             partyManager = manager;
             BindSlots();
+            SubscribeRouterEvents();
         }
 
         /// <summary>
@@ -113,6 +127,36 @@ namespace EndLink.UI
             RefreshSlot(allySlotBLinkAttackSlot);
             RefreshSlot(partyUltimateSlot);
         }
+
+        /// <summary>
+        /// 只刷新所有动作槽的冷却显示。
+        /// 供 HUD 每帧驱动，避免每帧重复刷新键位文本和静态绑定信息。
+        /// </summary>
+        public void RefreshCooldowns()
+        {
+            RefreshSlotCooldown(playerSkillSlot);
+            RefreshSlotCooldown(allySlotASkillSlot);
+            RefreshSlotCooldown(allySlotBSkillSlot);
+            RefreshSlotCooldown(playerLinkAttackSlot);
+            RefreshSlotCooldown(allySlotALinkAttackSlot);
+            RefreshSlotCooldown(allySlotBLinkAttackSlot);
+            RefreshSlotCooldown(partyUltimateSlot);
+        }
+
+        /// <summary>
+        /// 只刷新键位文本等静态槽位显示。
+        /// </summary>
+        public void RefreshStaticSlots()
+        {
+            RefreshSlotKeyLabel(playerSkillSlot);
+            RefreshSlotKeyLabel(allySlotASkillSlot);
+            RefreshSlotKeyLabel(allySlotBSkillSlot);
+            RefreshSlotKeyLabel(playerLinkAttackSlot);
+            RefreshSlotKeyLabel(allySlotALinkAttackSlot);
+            RefreshSlotKeyLabel(allySlotBLinkAttackSlot);
+            RefreshSlotKeyLabel(partyUltimateSlot);
+        }
+
 
         /// <summary>
         /// 获取指定小队动作 UI 槽。
@@ -218,11 +262,56 @@ namespace EndLink.UI
             actionSlot.RefreshNow();
         }
 
+        private void SubscribeRouterEvents()
+        {
+            PartyCombatRouter router = partyManager != null ? partyManager.CombatRouter : null;
+            if (router == null || _subscribedRouter == router)
+            {
+                return;
+            }
+
+            UnsubscribeRouterEvents();
+            _subscribedRouter = router;
+            _subscribedRouter.KeyBindingsChanged += HandleKeyBindingsChanged;
+        }
+
+        private void UnsubscribeRouterEvents()
+        {
+            if (_subscribedRouter == null)
+            {
+                return;
+            }
+
+            _subscribedRouter.KeyBindingsChanged -= HandleKeyBindingsChanged;
+            _subscribedRouter = null;
+        }
+
+        private void HandleKeyBindingsChanged()
+        {
+            RefreshStaticSlots();
+        }
+
         private static void RefreshSlot(UICombatActionSlot actionSlot)
         {
             if (actionSlot != null)
             {
                 actionSlot.RefreshNow();
+            }
+        }
+
+        private static void RefreshSlotCooldown(UICombatActionSlot actionSlot)
+        {
+            if (actionSlot != null)
+            {
+                actionSlot.RefreshCooldown();
+            }
+        }
+
+        private static void RefreshSlotKeyLabel(UICombatActionSlot actionSlot)
+        {
+            if (actionSlot != null)
+            {
+                actionSlot.RefreshKeyLabel();
             }
         }
     }

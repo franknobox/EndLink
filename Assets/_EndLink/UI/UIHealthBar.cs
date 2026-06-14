@@ -1,4 +1,5 @@
 using EndLink.Combat;
+using EndLink.Enemies;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,22 +8,26 @@ namespace EndLink.UI
 {
     /// <summary>
     /// 通用生命条 UI。
-    /// 只依赖 CharacterHealth，不关心目标是玩家、队友还是敌人。
-    /// 可用于 HUD 状态栏，也可用于后续敌人头顶血条。
+    /// 支持通用 CharacterHealth 和正式敌人 EnemyHealth。
+    /// 可用于 HUD 状态栏，也可用于敌人头顶血条。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class UIHealthBar : MonoBehaviour
     {
         [Header("生命来源")]
-        [Tooltip("要显示的通用生命组件。为空时可从父物体或场景中自动查找。")]
+        [Tooltip("要显示的通用生命组件。玩家和队友通常使用 CharacterHealth。为空时可从父物体或场景中自动查找。")]
         [SerializeField]
         private CharacterHealth health;
 
-        [Tooltip("当 Health 为空时，是否从父物体向上查找 CharacterHealth。适合把血条挂在角色子物体上。")]
+        [Tooltip("要显示的正式敌人生命组件。敌人头顶血条通常使用 EnemyHealth。CharacterHealth 和 EnemyHealth 同时存在时，优先使用 CharacterHealth。")]
+        [SerializeField]
+        private EnemyHealth enemyHealth;
+
+        [Tooltip("当生命来源为空时，是否从父物体向上查找 CharacterHealth 或 EnemyHealth。适合把血条挂在角色子物体上。")]
         [SerializeField]
         private bool autoFindInParent = true;
 
-        [Tooltip("当 Health 为空且父物体没有生命组件时，是否在场景中查找第一个 CharacterHealth。HUD 调试时可用。")]
+        [Tooltip("当生命来源为空且父物体没有生命组件时，是否在场景中查找第一个 CharacterHealth 或 EnemyHealth。HUD 调试时可用。")]
         [SerializeField]
         private bool autoFindInScene;
 
@@ -61,20 +66,29 @@ namespace EndLink.UI
         private bool showMaxHealthInText = true;
 
         [Header("刷新")]
-        [Tooltip("是否在 Update 中自动刷新。常规 HUD 建议开启；如果完全依赖事件刷新也可以关闭。")]
+        [Tooltip("是否在 Update 中自动兜底刷新。血量变化优先通过事件刷新；只有担心外部重置血量但未发事件时才需要开启。")]
         [SerializeField]
-        private bool autoRefresh = true;
+        private bool autoRefresh;
 
         /// <summary>当前绑定的生命组件。</summary>
         public CharacterHealth Health => health;
 
+        /// <summary>当前绑定的正式敌人生命组件。</summary>
+        public EnemyHealth EnemyHealth => enemyHealth;
+
+        /// <summary>当前是否绑定了任何生命来源。</summary>
+        public bool HasHealthSource => health != null || enemyHealth != null;
+
         /// <summary>当前血量比例。</summary>
         public float NormalizedValue { get; private set; }
+
+        private CharacterHealth _subscribedHealth;
+        private EnemyHealth _subscribedEnemyHealth;
 
         private void Awake()
         {
             CacheReferences();
-            BindHealth(health);
+            RefreshNow();
         }
 
         private void OnEnable()
@@ -113,7 +127,7 @@ namespace EndLink.UI
         /// </summary>
         public void BindHealth(CharacterHealth nextHealth)
         {
-            if (health == nextHealth)
+            if (health == nextHealth && enemyHealth == null)
             {
                 RefreshNow();
                 return;
@@ -121,6 +135,34 @@ namespace EndLink.UI
 
             Unsubscribe();
             health = nextHealth;
+            if (nextHealth != null)
+            {
+                enemyHealth = null;
+            }
+
+            Subscribe();
+            RefreshNow();
+        }
+
+        /// <summary>
+        /// 绑定正式敌人生命来源。
+        /// 敌人头顶血条可以通过它直接显示 EnemyHealth。
+        /// </summary>
+        public void BindEnemyHealth(EnemyHealth nextEnemyHealth)
+        {
+            if (enemyHealth == nextEnemyHealth && health == null)
+            {
+                RefreshNow();
+                return;
+            }
+
+            Unsubscribe();
+            enemyHealth = nextEnemyHealth;
+            if (nextEnemyHealth != null)
+            {
+                health = null;
+            }
+
             Subscribe();
             RefreshNow();
         }
@@ -130,7 +172,10 @@ namespace EndLink.UI
         /// </summary>
         public void ClearHealth()
         {
-            BindHealth(null);
+            Unsubscribe();
+            health = null;
+            enemyHealth = null;
+            RefreshNow();
         }
 
         /// <summary>
@@ -140,16 +185,16 @@ namespace EndLink.UI
         {
             CacheVisualReferences();
 
-            if (health == null)
+            if (!HasHealthSource)
             {
                 TryAutoFindHealth();
             }
 
-            int currentHealth = health != null ? health.CurrentHealth : 0;
-            int maxHealth = health != null ? Mathf.Max(1, health.MaxHealth) : 1;
-            bool isDead = health != null && health.IsDead;
+            int currentHealth = ResolveCurrentHealth();
+            int maxHealth = Mathf.Max(1, ResolveMaxHealth());
+            bool isDead = ResolveIsDead();
 
-            NormalizedValue = health != null ? Mathf.Clamp01((float)currentHealth / maxHealth) : 0f;
+            NormalizedValue = HasHealthSource ? Mathf.Clamp01((float)currentHealth / maxHealth) : 0f;
             ApplyFill(NormalizedValue);
             ApplyText(currentHealth, maxHealth);
             ApplyVisibility(ResolveShouldShow(isDead));
@@ -159,7 +204,7 @@ namespace EndLink.UI
         {
             CacheVisualReferences();
 
-            if (health == null)
+            if (!HasHealthSource)
             {
                 TryAutoFindHealth();
             }
@@ -186,43 +231,82 @@ namespace EndLink.UI
         private void TryAutoFindHealth()
         {
             CharacterHealth foundHealth = null;
+            EnemyHealth foundEnemyHealth = null;
 
             if (autoFindInParent)
             {
                 foundHealth = GetComponentInParent<CharacterHealth>();
+                if (foundHealth == null)
+                {
+                    foundEnemyHealth = GetComponentInParent<EnemyHealth>();
+                }
             }
 
             if (foundHealth == null && autoFindInScene)
             {
                 foundHealth = FindFirstObjectByType<CharacterHealth>();
+                if (foundHealth == null && foundEnemyHealth == null)
+                {
+                    foundEnemyHealth = FindFirstObjectByType<EnemyHealth>();
+                }
             }
 
             if (foundHealth != null)
             {
                 BindHealth(foundHealth);
+                return;
+            }
+
+            if (foundEnemyHealth != null)
+            {
+                BindEnemyHealth(foundEnemyHealth);
             }
         }
 
         private void Subscribe()
         {
-            if (health == null)
+            if (health != null && _subscribedHealth != health)
             {
-                return;
+                if (_subscribedHealth != null)
+                {
+                    _subscribedHealth.HealthChanged -= HandleHealthChanged;
+                    _subscribedHealth.Died -= HandleDied;
+                }
+
+                health.HealthChanged += HandleHealthChanged;
+                health.Died += HandleDied;
+                _subscribedHealth = health;
             }
 
-            health.HealthChanged += HandleHealthChanged;
-            health.Died += HandleDied;
+            if (enemyHealth != null && _subscribedEnemyHealth != enemyHealth)
+            {
+                if (_subscribedEnemyHealth != null)
+                {
+                    _subscribedEnemyHealth.OnDamaged.RemoveListener(HandleEnemyDamaged);
+                    _subscribedEnemyHealth.OnDead.RemoveListener(HandleEnemyDead);
+                }
+
+                enemyHealth.OnDamaged.AddListener(HandleEnemyDamaged);
+                enemyHealth.OnDead.AddListener(HandleEnemyDead);
+                _subscribedEnemyHealth = enemyHealth;
+            }
         }
 
         private void Unsubscribe()
         {
-            if (health == null)
+            if (_subscribedHealth != null)
             {
-                return;
+                _subscribedHealth.HealthChanged -= HandleHealthChanged;
+                _subscribedHealth.Died -= HandleDied;
+                _subscribedHealth = null;
             }
 
-            health.HealthChanged -= HandleHealthChanged;
-            health.Died -= HandleDied;
+            if (_subscribedEnemyHealth != null)
+            {
+                _subscribedEnemyHealth.OnDamaged.RemoveListener(HandleEnemyDamaged);
+                _subscribedEnemyHealth.OnDead.RemoveListener(HandleEnemyDead);
+                _subscribedEnemyHealth = null;
+            }
         }
 
         private void HandleHealthChanged(CharacterHealthChangeInfo changeInfo)
@@ -233,6 +317,46 @@ namespace EndLink.UI
         private void HandleDied(CharacterHealthDeathInfo deathInfo)
         {
             RefreshNow();
+        }
+
+        private void HandleEnemyDamaged(int damageAmount, CombatTagDefinition tag)
+        {
+            RefreshNow();
+        }
+
+        private void HandleEnemyDead()
+        {
+            RefreshNow();
+        }
+
+        private int ResolveCurrentHealth()
+        {
+            if (health != null)
+            {
+                return health.CurrentHealth;
+            }
+
+            return enemyHealth != null ? enemyHealth.CurrentHealth : 0;
+        }
+
+        private int ResolveMaxHealth()
+        {
+            if (health != null)
+            {
+                return health.MaxHealth;
+            }
+
+            return enemyHealth != null ? enemyHealth.MaxHealth : 1;
+        }
+
+        private bool ResolveIsDead()
+        {
+            if (health != null)
+            {
+                return health.IsDead;
+            }
+
+            return enemyHealth != null && enemyHealth.IsDead;
         }
 
         private void ApplyFill(float normalizedValue)
@@ -252,7 +376,7 @@ namespace EndLink.UI
                 return;
             }
 
-            if (!showValueText || health == null)
+            if (!showValueText || !HasHealthSource)
             {
                 valueText.text = string.Empty;
                 return;
@@ -265,7 +389,7 @@ namespace EndLink.UI
 
         private bool ResolveShouldShow(bool isDead)
         {
-            if (health == null)
+            if (!HasHealthSource)
             {
                 return !hideWhenNoHealth;
             }
@@ -275,7 +399,7 @@ namespace EndLink.UI
                 return false;
             }
 
-            if (hideWhenFull && health.CurrentHealth >= health.MaxHealth)
+            if (hideWhenFull && ResolveCurrentHealth() >= ResolveMaxHealth())
             {
                 return false;
             }

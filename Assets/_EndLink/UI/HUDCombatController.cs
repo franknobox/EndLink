@@ -29,7 +29,7 @@ namespace EndLink.UI
         [SerializeField]
         private bool visibleOnStart = true;
 
-        [Tooltip("是否在 LateUpdate 自动刷新 HUD 模块。")]
+        [Tooltip("是否在 LateUpdate 自动刷新 HUD 中连续变化的显示，例如动作冷却。静态绑定信息只在 Bind 或 RefreshNow 时刷新。")]
         [SerializeField]
         private bool autoRefresh = true;
 
@@ -60,7 +60,7 @@ namespace EndLink.UI
         {
             if (autoRefresh)
             {
-                RefreshNow();
+                RefreshContinuous();
             }
         }
 
@@ -82,6 +82,17 @@ namespace EndLink.UI
             if (partyCombatAction != null)
             {
                 partyCombatAction.RefreshNow();
+            }
+        }
+
+        /// <summary>
+        /// 刷新 HUD 中需要逐帧更新的连续显示。
+        /// </summary>
+        public void RefreshContinuous()
+        {
+            if (partyCombatAction != null)
+            {
+                partyCombatAction.RefreshCooldowns();
             }
         }
 

@@ -123,6 +123,9 @@ namespace EndLink.Party
         /// <summary>战斗命令请求事件。</summary>
         public static event Action<PartyCombatCommand> CommandRequested;
 
+        /// <summary>技能和连携键位绑定变化事件，供 UI 刷新键位文本。</summary>
+        public event Action KeyBindingsChanged;
+
         /// <summary>当前绑定的小队连携窗口上下文。</summary>
         public PartyLinkContext LinkContext => linkContext;
 
@@ -217,6 +220,8 @@ namespace EndLink.Party
                 playerLinkAttackKey,
                 allySlotALinkAttackKey,
                 allySlotBLinkAttackKey);
+
+            KeyBindingsChanged?.Invoke();
         }
 
         /// <summary>
