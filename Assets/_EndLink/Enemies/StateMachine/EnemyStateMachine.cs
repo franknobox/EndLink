@@ -73,10 +73,18 @@ namespace EndLink.Enemies
         [SerializeField, Min(0f)]
         private float hitReactCooldown = 0.12f;
 
-        [Header("Combat 移动")]
+        [Header("Combat 移动与攻击")]
         [Tooltip("基础敌人追击目标时，和目标表面之间保留的很近间隔。实际中心停止距离会自动加上敌人和目标的碰撞半径。")]
         [SerializeField, Min(0f)]
         private float combatChaseStopDistance = 0.2f;
+
+        [Tooltip("Combat 内部普通攻击的攻击距离容差。实际进入攻击距离 = Basic Attack 的 Effective Attack Range + 该值。")]
+        [SerializeField, Min(0f)]
+        private float combatAttackRangeTolerance = 0.15f;
+
+        [Tooltip("Combat 内部接近攻击目标时的内缩距离。敌人会尝试比动作极限攻击距离更近一点，避免卡在刚好够不到的位置。")]
+        [SerializeField, Min(0f)]
+        private float combatAttackInnerOffset = 0.1f;
 
         [Tooltip("目标离敌人超过该距离时脱战并回到 Idle。小于等于 0 表示不按距离脱战。")]
         [SerializeField, Min(0f)]
@@ -150,6 +158,12 @@ namespace EndLink.Enemies
         /// <summary>Combat 状态追击目标时的停止距离。</summary>
         public float CombatChaseStopDistance => combatChaseStopDistance;
 
+        /// <summary>Combat 状态进入普通攻击距离时额外放宽的容差。</summary>
+        public float CombatAttackRangeTolerance => combatAttackRangeTolerance;
+
+        /// <summary>Combat 状态接近攻击目标时，相对动作极限距离向内靠近的距离。</summary>
+        public float CombatAttackInnerOffset => combatAttackInnerOffset;
+
         /// <summary>Combat 状态目标超过该距离时脱战。小于等于 0 表示不按距离脱战。</summary>
         public float CombatLeashDistance => combatLeashDistance;
 
@@ -222,6 +236,8 @@ namespace EndLink.Enemies
             heavyHitDamageThreshold = Mathf.Max(0f, heavyHitDamageThreshold);
             hitReactCooldown = Mathf.Max(0f, hitReactCooldown);
             combatChaseStopDistance = Mathf.Max(0f, combatChaseStopDistance);
+            combatAttackRangeTolerance = Mathf.Max(0f, combatAttackRangeTolerance);
+            combatAttackInnerOffset = Mathf.Max(0f, combatAttackInnerOffset);
             combatLeashDistance = Mathf.Max(0f, combatLeashDistance);
             EnsureDetectionDefaults();
             CacheEnemyBoundsComponents();

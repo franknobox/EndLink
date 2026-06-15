@@ -33,7 +33,7 @@ namespace EndLink.Enemies
         /// <summary>敌人的移动能力组件。没有移动能力的敌人可以为空。</summary>
         public EnemyMotorBase Motor => Actor != null ? Actor.Motor : null;
 
-        /// <summary>敌人的战斗执行器。当前基础 Combat 状态不会自动调用它。</summary>
+        /// <summary>敌人的战斗执行器。Combat 状态会在攻击距离内调用其普通攻击。</summary>
         public EnemyCombatDriver CombatDriver => Actor != null ? Actor.CombatDriver : null;
 
         /// <summary>敌人的统一战斗动作执行接口。</summary>
@@ -59,6 +59,12 @@ namespace EndLink.Enemies
 
         /// <summary>Combat 状态追击目标时保留的表面间隔。</summary>
         public float CombatChaseStopDistance => StateMachine.CombatChaseStopDistance;
+
+        /// <summary>Combat 状态进入普通攻击距离时额外放宽的容差。</summary>
+        public float CombatAttackRangeTolerance => StateMachine.CombatAttackRangeTolerance;
+
+        /// <summary>Combat 状态接近攻击目标时，相对动作极限距离向内靠近的距离。</summary>
+        public float CombatAttackInnerOffset => StateMachine.CombatAttackInnerOffset;
 
         /// <summary>Combat 状态目标超过该距离时脱战。小于等于 0 表示不按距离脱战。</summary>
         public float CombatLeashDistance => StateMachine.CombatLeashDistance;

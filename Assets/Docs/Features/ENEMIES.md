@@ -75,8 +75,9 @@
 - `EnemyStateMachine` 集中暴露索敌配置，`EnemyTargetSensor` 只作为执行器读取状态机参数，不在自身 Inspector 中重复配置。
 - `EnemyTargetSensor` 负责第一版敌人索敌：玩家进入发现范围后请求进入 `Alert`，持续停留达到警觉时间后请求进入 `Combat`。
 - 自动索敌可以在 `EnemyStateMachine` 中关闭，关闭后不会主动触发 `Alert` / `Combat`。
-- `Combat` 当前只做基础追击和面向目标；追击位置取自目标 Collider 最近表面点，停止距离只保留自身半径和配置间隔，避免持续挤入目标中心。
-- `Combat` 后续作为行为树的外层挂载点，内部再承载站位、攻击、技能等细节行为。
+- `Combat` 当前负责基础追击、攻击距离停位、面向目标和普通攻击循环；追击位置取自目标 Collider 最近表面点，攻击距离来自敌人 Basic Attack 动作的 `EffectiveAttackRange`。
+- 没有配置 `EnemyCombatDriver` 或 Basic Attack 动作的敌人仍保持只追击和面向目标，方便制作不会攻击的测试敌人。
+- `Combat` 后续作为行为树的外层挂载点，内部再承载站位、技能、撤退和复杂攻击选择等细节行为。
 - `Hit` 作为独立大状态处理受击打断，不放进 Combat 行为树，方便后续加入硬直、霸体、击倒等规则。
 - 敌人受到有效伤害时，会优先把当前战斗目标切换为伤害来源；轻击只让敌人接战，重击才进入 `Hit` 状态并短暂停止移动。
 - `Hit` 状态触发带有短冷却，避免多段 Hitbox 在极短时间内反复刷新受击打断。
@@ -115,6 +116,8 @@
 - `heavyHitDamageThreshold`：实际伤害达到多少才触发 `Hit` 状态；小于等于 0 表示所有有效伤害都会触发
 - `hitReactCooldown`：两次 `Hit` 触发之间的最短间隔
 - `combatChaseStopDistance`：Combat 追击时保留的目标表面间隔，实际停止距离会额外加上敌人自身碰撞半径
+- `combatAttackRangeTolerance`：Combat 判断普通攻击可进入攻击距离时的容差
+- `combatAttackInnerOffset`：Combat 接近攻击目标时相对动作极限距离向内靠近的距离
 
 </details>
 
@@ -131,7 +134,7 @@
 - `EnemyMotorBase` 在水平追击移动后会抑制碰撞带来的异常上抬，重力在 `LateUpdate` 中补充处理。
 - `EnemyMotorBase` 在正常移动撞到实现 `IExternalDisplacementReceiver` 的玩家或队友时，会把挡路角色沿敌人移动方向挤开；敌人自身不接收这条外部位移，因此队友和玩家不会反向顶动敌人。
 - `EnemyCombatDriver` 是敌人战斗执行器，按 `CombatActionDefinition` 生成 Hitbox、记录冷却并广播动作开始事件。
-- `EnemyCombatDriver` 当前先作为攻击能力基底，具体何时出手后续交给 Combat 状态内部逻辑或行为树。
+- `EnemyCombatDriver` 当前由 `EnemyCombatState` 在攻击距离内调用 Basic Attack；后续行为树接入后，出手时机和动作选择会转交给行为层。
 
 对应脚本：
 - `Assets/_EndLink/Enemies/Abilities/EnemyMotorBase.cs`
