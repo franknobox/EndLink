@@ -22,6 +22,7 @@
 - 动作栏每帧只刷新冷却这类连续变化显示；键位文本通过 `PartyCombatRouter.KeyBindingsChanged` 事件刷新。
 - `UIPartyMemberPortrait` 是小队成员头像 UI，负责显示主控和两个队友头像、1/2/3 连携键位、连携窗口高亮，以及队友 Link Down / 主控死亡后的灰化。
 - `UIPartyUltimateBar` 是终链奥义条 UI，负责显示协同率进度、V 键位和奥义就绪颜色。
+- `HUDDebugLogPanel` 是运行时 HUD 调试日志面板，监听 `CombatEventsBus`、`AllyDebugLog` 和 `PartyCombatRouter.CommandRequested`，可按 Combat、Ally、Party、Damage、Tag 筛选显示最近日志。
 - `UIHealthBar` 是通用血条组件，支持 `CharacterHealth` 和正式敌人的 `EnemyHealth`，可用于主角、队友和敌人头顶血条。
 - `UIHealthBar` 支持 `Image.fillAmount`、可选血量文本、满血隐藏、死亡隐藏、无生命来源隐藏和运行时绑定生命来源。
 - `UIHealthBar` 优先监听生命事件刷新，`autoRefresh` 只作为兜底刷新开关。
@@ -34,6 +35,7 @@
 - `Assets/_EndLink/UI/UICombatActionSlot.cs`
 - `Assets/_EndLink/UI/UIPartyMemberPortrait.cs`
 - `Assets/_EndLink/UI/UIPartyUltimateBar.cs`
+- `Assets/_EndLink/UI/HUDDebugLogPanel.cs`
 - `Assets/_EndLink/UI/UIHealthBar.cs`
 - `Assets/_EndLink/Editor/CombatHUDPrefabGenerator.cs`
 
@@ -55,6 +57,9 @@
   - `UIPartyUltimateBar`
   - `Image` 协同率填充
   - 可选 `TextMeshProUGUI` 键位和百分比文本
+- 运行时调试日志面板
+  - `HUDDebugLogPanel`
+  - `TextMeshProUGUI` 日志文本
 - 血条物体
   - `UIHealthBar`
   - `Image` 填充图
@@ -81,6 +86,9 @@
 - `UIPartyMemberPortrait.memberSlot`：头像对应 MainCharacter、AllySlotA 或 AllySlotB
 - `UIPartyMemberPortrait.highlightImage`：连携窗口开启时显示的高亮图
 - `UIPartyUltimateBar.fillImage`：协同率填充 Image，建议 Image Type 使用 Filled
+- `HUDDebugLogPanel.logText`：运行时调试日志文本
+- `HUDDebugLogPanel.showCombat / showAlly / showParty / showDamage / showTag`：日志分类筛选
+- `HUDDebugLogPanel.maxLines`：最多保留的 HUD 日志行数
 - `UIHealthBar.health`：要显示的 `CharacterHealth`，主角和队友通常使用它
 - `UIHealthBar.enemyHealth`：要显示的 `EnemyHealth`，正式敌人头顶血条通常使用它
 - `UIHealthBar.fillImage`：血条填充 Image，建议 Image Type 使用 Filled

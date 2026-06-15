@@ -317,21 +317,30 @@ namespace EndLink.Editor
             GameObject panel = CreateUIObject(name, parent);
             SetTopRight(panel.GetComponent<RectTransform>(), new Vector2(-36f, -32f), new Vector2(258f, 312f));
 
+            HUDDebugLogPanel debugLogPanel = panel.AddComponent<HUDDebugLogPanel>();
+
             Image backgroundImage = panel.AddComponent<Image>();
             backgroundImage.sprite = squareSprite;
             backgroundImage.color = new Color(0.83f, 0.83f, 0.83f, 0.9f);
             backgroundImage.raycastTarget = false;
 
-            CreateText(
+            TextMeshProUGUI debugText = CreateText(
                 "DebugText",
                 panel.transform,
                 "Debug\nInfo",
-                Vector2.zero,
-                new Vector2(230f, 110f),
-                32f,
-                TextAlignmentOptions.Center,
+                new Vector2(12f, -12f),
+                new Vector2(234f, 288f),
+                14f,
+                TextAlignmentOptions.TopLeft,
                 Color.black,
-                AnchorPreset.Center);
+                AnchorPreset.TopLeft);
+
+            debugText.textWrappingMode = TextWrappingModes.Normal;
+            debugText.overflowMode = TextOverflowModes.Ellipsis;
+
+            SerializedObject serializedObject = new(debugLogPanel);
+            serializedObject.FindProperty("logText").objectReferenceValue = debugText;
+            serializedObject.ApplyModifiedPropertiesWithoutUndo();
 
             return panel;
         }

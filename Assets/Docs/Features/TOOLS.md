@@ -48,7 +48,7 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 - 成员头像挂载 `UIPartyMemberPortrait`，用于显示 1/2/3 连携键位、连携窗口高亮和 Link Down 灰化。
 - 左下生成 `PF_SkillPanel`，挂载 `UIPartyCombatAction`，并自动绑定 Q/E/F 三个主动技能槽。
 - 右下生成 `PF_UltimatePanel`，挂载 `UIPartyUltimateBar`，显示 V 键位、协同率和终链奥义就绪颜色。
-- 右上生成 `PF_DebugPanel`，作为临时调试信息窗口占位。
+- 右上生成 `PF_DebugPanel`，挂载 `HUDDebugLogPanel`，用于按分类筛选显示运行时战斗、队友和小队命令日志。
 - 工具会在缺失时创建基础圆形和方形 UI Sprite，便于白模阶段直接看到 HUD 结构。
 - 工具只生成 Panel Prefab 资产，不直接修改当前场景。
 
@@ -56,6 +56,7 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 - `Assets/_EndLink/Editor/CombatHUDPrefabGenerator.cs`
 - `Assets/_EndLink/UI/UIPartyMemberPortrait.cs`
 - `Assets/_EndLink/UI/UIPartyUltimateBar.cs`
+- `Assets/_EndLink/UI/HUDDebugLogPanel.cs`
 
 生成路径：
 - `Assets/_EndLink/UI/Prefabs/PF_PartyStatusPanel.prefab`
