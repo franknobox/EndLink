@@ -1,4 +1,5 @@
 using EndLink.Party;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace EndLink.UI
@@ -20,6 +21,14 @@ namespace EndLink.UI
         [SerializeField]
         private UIPartyCombatAction partyCombatAction;
 
+        [Tooltip("小队成员头像 UI。头像用于显示成员状态、Link Down 灰化和连携窗口高亮。")]
+        [SerializeField]
+        private UIPartyMemberPortrait[] partyMemberPortraits;
+
+        [Tooltip("终链奥义条 UI。用于显示协同率和奥义就绪状态。")]
+        [SerializeField]
+        private UIPartyUltimateBar partyUltimateBar;
+
         [Tooltip("HUD 根 CanvasGroup。配置后可以统一控制显示、交互和射线。")]
         [SerializeField]
         private CanvasGroup hudCanvasGroup;
@@ -38,6 +47,12 @@ namespace EndLink.UI
 
         /// <summary>小队战斗动作 UI 管理器。</summary>
         public UIPartyCombatAction PartyCombatAction => partyCombatAction;
+
+        /// <summary>小队成员头像 UI 集合。</summary>
+        public IReadOnlyList<UIPartyMemberPortrait> PartyMemberPortraits => partyMemberPortraits;
+
+        /// <summary>终链奥义条 UI。</summary>
+        public UIPartyUltimateBar PartyUltimateBar => partyUltimateBar;
 
         private void Awake()
         {
@@ -83,6 +98,13 @@ namespace EndLink.UI
             {
                 partyCombatAction.RefreshNow();
             }
+
+            RefreshPortraitsNow();
+
+            if (partyUltimateBar != null)
+            {
+                partyUltimateBar.RefreshNow();
+            }
         }
 
         /// <summary>
@@ -93,6 +115,13 @@ namespace EndLink.UI
             if (partyCombatAction != null)
             {
                 partyCombatAction.RefreshCooldowns();
+            }
+
+            RefreshPortraitStates();
+
+            if (partyUltimateBar != null)
+            {
+                partyUltimateBar.RefreshProgress();
             }
         }
 
@@ -124,6 +153,16 @@ namespace EndLink.UI
                 partyCombatAction = GetComponentInChildren<UIPartyCombatAction>(true);
             }
 
+            if (partyMemberPortraits == null || partyMemberPortraits.Length == 0)
+            {
+                partyMemberPortraits = GetComponentsInChildren<UIPartyMemberPortrait>(true);
+            }
+
+            if (partyUltimateBar == null)
+            {
+                partyUltimateBar = GetComponentInChildren<UIPartyUltimateBar>(true);
+            }
+
             if (hudCanvasGroup == null)
             {
                 hudCanvasGroup = GetComponent<CanvasGroup>();
@@ -135,6 +174,54 @@ namespace EndLink.UI
             if (partyCombatAction != null)
             {
                 partyCombatAction.BindPartyManager(partyManager);
+            }
+
+            if (partyMemberPortraits != null)
+            {
+                for (int i = 0; i < partyMemberPortraits.Length; i++)
+                {
+                    if (partyMemberPortraits[i] != null)
+                    {
+                        partyMemberPortraits[i].BindPartyManager(partyManager);
+                    }
+                }
+            }
+
+            if (partyUltimateBar != null)
+            {
+                partyUltimateBar.BindPartyManager(partyManager);
+            }
+        }
+
+        private void RefreshPortraitsNow()
+        {
+            if (partyMemberPortraits == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < partyMemberPortraits.Length; i++)
+            {
+                if (partyMemberPortraits[i] != null)
+                {
+                    partyMemberPortraits[i].RefreshNow();
+                }
+            }
+        }
+
+        private void RefreshPortraitStates()
+        {
+            if (partyMemberPortraits == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < partyMemberPortraits.Length; i++)
+            {
+                if (partyMemberPortraits[i] != null)
+                {
+                    partyMemberPortraits[i].RefreshState();
+                }
             }
         }
     }

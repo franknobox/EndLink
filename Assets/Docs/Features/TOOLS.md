@@ -32,6 +32,48 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 
 </details>
 
+<a id="feature-combat-hud-generator"></a>
+
+### Feature：战斗 HUD 生成工具
+
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- 通过菜单 `EndLink > UI > Combat HUD` 下的入口执行。
+- 工具使用 Unity Editor API 生成 UGUI Panel Prefab，不手写 `.prefab` 文本。
+- `Create All Panels` 会一次生成全部战斗 HUD 面板；也可以分别生成单个 Panel，方便手动拖到 Canvas 下调整位置。
+- Panel Prefab 本身只保留推荐锚点和尺寸，根 RectTransform 的位置与 Z 会在生成时归零，拖到 Canvas 后再手动调整摆放。
+- 左上生成 `PF_PartyStatusPanel`，包含生命条占位、主控头像和两个队友头像。
+- 成员头像挂载 `UIPartyMemberPortrait`，用于显示 1/2/3 连携键位、连携窗口高亮和 Link Down 灰化。
+- 左下生成 `PF_SkillPanel`，挂载 `UIPartyCombatAction`，并自动绑定 Q/E/F 三个主动技能槽。
+- 右下生成 `PF_UltimatePanel`，挂载 `UIPartyUltimateBar`，显示 V 键位、协同率和终链奥义就绪颜色。
+- 右上生成 `PF_DebugPanel`，作为临时调试信息窗口占位。
+- 工具会在缺失时创建基础圆形和方形 UI Sprite，便于白模阶段直接看到 HUD 结构。
+- 工具只生成 Panel Prefab 资产，不直接修改当前场景。
+
+对应脚本：
+- `Assets/_EndLink/Editor/CombatHUDPrefabGenerator.cs`
+- `Assets/_EndLink/UI/UIPartyMemberPortrait.cs`
+- `Assets/_EndLink/UI/UIPartyUltimateBar.cs`
+
+生成路径：
+- `Assets/_EndLink/UI/Prefabs/PF_PartyStatusPanel.prefab`
+- `Assets/_EndLink/UI/Prefabs/PF_SkillPanel.prefab`
+- `Assets/_EndLink/UI/Prefabs/PF_UltimatePanel.prefab`
+- `Assets/_EndLink/UI/Prefabs/PF_DebugPanel.prefab`
+- `Assets/_EndLink/UI/Generated/UI_Circle64.png`
+- `Assets/_EndLink/UI/Generated/UI_Square64.png`
+
+相关 Editor 工具：
+- `EndLink > UI > Combat HUD > Create All Panels`
+- `EndLink > UI > Combat HUD > Create Party Status Panel`
+- `EndLink > UI > Combat HUD > Create Skill Panel`
+- `EndLink > UI > Combat HUD > Create Ultimate Panel`
+- `EndLink > UI > Combat HUD > Create Debug Panel`
+
+</details>
+
 <a id="feature-combat-lab"></a>
 
 ### Feature：EndLink Combat Lab

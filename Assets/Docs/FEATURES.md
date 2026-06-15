@@ -81,12 +81,13 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [战斗 UI 基础](Features/UI.md#feature-combat-ui-foundation) | 已完成基础版 | 提供 HUD 总入口、小队动作栏、动作槽位冷却显示和通用血条组件。 |
+| [战斗 UI 基础](Features/UI.md#feature-combat-ui-foundation) | 已完成头像连携版 | 提供 HUD 总入口、小队动作栏、成员头像连携高亮、终链奥义条、动作槽位冷却显示、通用血条组件和 UGUI HUD 生成入口。 |
 
 #### TOOLS
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [战斗数据编辑工具](Features/TOOLS.md#feature-combat-data-tool) | 已完成字段同步版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则数据资产，并显示伤害、倍率、类型和连携协同率等关键字段摘要。 |
+| [战斗 HUD 生成工具](Features/TOOLS.md#feature-combat-hud-generator) | 已完成头像连携版 | 提供 Editor 菜单入口生成基础 UGUI 战斗 HUD Prefab，作为后续由 Agent 或人工扩展 HUD 的稳定通道。 |
 | [EndLink Combat Lab](Features/TOOLS.md#feature-combat-lab) | 已完成新模型实验版 | 提供浏览器端战斗实验工具，用于快速验证标签定义、层数、持续时间、反应效果、基础伤害和连携窗口。 |
 | [队友调试监视窗口](Features/TOOLS.md#feature-ally-monitor) | 已完成第一版 | 提供 Editor 窗口集中查看队友状态快照和队友行为日志，辅助排查助战、冷却、距离和目标问题。 |
