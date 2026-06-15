@@ -26,8 +26,9 @@
 - `UIHealthBar` 是通用血条组件，支持 `CharacterHealth` 和正式敌人的 `EnemyHealth`，可用于主角、队友和敌人头顶血条。
 - `UIHealthBar` 支持 `Image.fillAmount`、可选血量文本、满血隐藏、死亡隐藏、无生命来源隐藏和运行时绑定生命来源。
 - `UIHealthBar` 优先监听生命事件刷新，`autoRefresh` 只作为兜底刷新开关。
+- `UIEnemyHealthBar` 是敌人头顶血条控制器，负责 World Space 跟随、面向相机、绑定 `EnemyHealth` 和套用默认半透明暗红色样式。
 - `CombatHUDPrefabGenerator` 提供 `EndLink > UI > Combat HUD` 菜单入口，可以一键生成所有面板，也可以单独生成某个 Panel Prefab。
-- 生成的 HUD 面板当前包含左上小队状态区、头像连携区、左下 Q/E/F 主动技能区、右下终链奥义条和右上临时调试信息区。
+- 生成的 HUD 面板当前包含左上小队状态区、头像连携区、左下 Q/E/F 主动技能区、右下终链奥义条和右上临时调试信息区；生成器也可单独生成敌人头顶血条 World UI 预制体。
 
 对应脚本：
 - `Assets/_EndLink/UI/HUDCombatController.cs`
@@ -37,6 +38,7 @@
 - `Assets/_EndLink/UI/UIPartyUltimateBar.cs`
 - `Assets/_EndLink/UI/HUDDebugLogPanel.cs`
 - `Assets/_EndLink/UI/UIHealthBar.cs`
+- `Assets/_EndLink/UI/UIEnemyHealthBar.cs`
 - `Assets/_EndLink/Editor/CombatHUDPrefabGenerator.cs`
 
 相关物体：
@@ -64,11 +66,18 @@
   - `UIHealthBar`
   - `Image` 填充图
   - 可选 `TextMeshProUGUI` 血量文本
+- 敌人头顶血条物体
+  - `Canvas`，Render Mode 为 World Space
+  - `CanvasGroup`
+  - `UIEnemyHealthBar`
+  - `UIHealthBar`
+  - 半透明暗红色背景与填充 `Image`
 - 生成工具产物
   - `Assets/_EndLink/UI/Prefabs/PF_PartyStatusPanel.prefab`
   - `Assets/_EndLink/UI/Prefabs/PF_SkillPanel.prefab`
   - `Assets/_EndLink/UI/Prefabs/PF_UltimatePanel.prefab`
   - `Assets/_EndLink/UI/Prefabs/PF_DebugPanel.prefab`
+  - `Assets/_EndLink/UI/Prefabs/PF_EnemyHealthBar.prefab`，运行生成菜单后创建
   - `Assets/_EndLink/UI/Generated/UI_Circle64.png`
   - `Assets/_EndLink/UI/Generated/UI_Square64.png`
 
@@ -95,5 +104,9 @@
 - `UIHealthBar.valueText`：可选血量文本
 - `UIHealthBar.hideWhenFull` / `hideWhenDead`：满血和死亡时是否隐藏
 - `UIHealthBar.autoRefresh`：事件刷新之外的兜底刷新开关，默认关闭
+- `UIEnemyHealthBar.enemyHealth`：要显示的正式敌人生命组件；为空时可从父物体查找
+- `UIEnemyHealthBar.worldOffset`：血条相对敌人锁定点或生命组件位置的世界偏移
+- `UIEnemyHealthBar.backgroundColor` / `fillColor`：敌人血条背景和填充颜色，默认半透明暗红色
+- `UIEnemyHealthBar.hideWhenFull` / `hideWhenDead`：满血和死亡时是否隐藏敌人头顶血条
 
 </details>

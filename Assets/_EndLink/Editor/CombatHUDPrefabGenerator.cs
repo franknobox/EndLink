@@ -19,6 +19,7 @@ namespace EndLink.Editor
         private const string SkillPanelPath = PrefabFolder + "/PF_SkillPanel.prefab";
         private const string UltimatePanelPath = PrefabFolder + "/PF_UltimatePanel.prefab";
         private const string DebugPanelPath = PrefabFolder + "/PF_DebugPanel.prefab";
+        private const string EnemyHealthBarPath = PrefabFolder + "/PF_EnemyHealthBar.prefab";
         private const string CircleSpritePath = GeneratedFolder + "/UI_Circle64.png";
         private const string SquareSpritePath = GeneratedFolder + "/UI_Square64.png";
 
@@ -72,6 +73,15 @@ namespace EndLink.Editor
         public static void CreateDebugPanel()
         {
             CreateDebugPanel(true);
+        }
+
+        [MenuItem("EndLink/UI/Combat HUD/Create Enemy Health Bar")]
+        public static void CreateEnemyHealthBar()
+        {
+            EnsureFolder(PrefabFolder);
+            Sprite squareSprite = EnsureSquareSprite();
+            GameObject healthBar = CreateEnemyHealthBarObject("PF_EnemyHealthBar", null, squareSprite);
+            SaveWorldUIPrefab(healthBar, EnemyHealthBarPath, true);
         }
 
         private static void CreatePartyStatusPanel(bool promptOverwrite)
@@ -345,6 +355,76 @@ namespace EndLink.Editor
             return panel;
         }
 
+        private static GameObject CreateEnemyHealthBarObject(string name, Transform parent, Sprite squareSprite)
+        {
+            GameObject root = CreateUIObject(name, parent);
+            RectTransform rootRect = root.GetComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(0.5f, 0.5f);
+            rootRect.anchorMax = new Vector2(0.5f, 0.5f);
+            rootRect.pivot = new Vector2(0.5f, 0.5f);
+            rootRect.sizeDelta = new Vector2(120f, 16f);
+            rootRect.localScale = Vector3.one * 0.01f;
+
+            Canvas canvas = root.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 20;
+
+            CanvasGroup canvasGroup = root.AddComponent<CanvasGroup>();
+            canvasGroup.alpha = 0f;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+
+            UIEnemyHealthBar enemyHealthBar = root.AddComponent<UIEnemyHealthBar>();
+            UIHealthBar healthBar = root.AddComponent<UIHealthBar>();
+
+            GameObject backgroundObject = CreateUIObject("Background", root.transform);
+            RectTransform backgroundRect = backgroundObject.GetComponent<RectTransform>();
+            Stretch(backgroundRect);
+
+            Image backgroundImage = backgroundObject.AddComponent<Image>();
+            backgroundImage.sprite = squareSprite;
+            backgroundImage.color = new Color(0.08f, 0.01f, 0.01f, 0.42f);
+            backgroundImage.raycastTarget = false;
+
+            GameObject fillObject = CreateUIObject("Fill", backgroundObject.transform);
+            RectTransform fillRect = fillObject.GetComponent<RectTransform>();
+            Stretch(fillRect);
+
+            Image fillImage = fillObject.AddComponent<Image>();
+            fillImage.sprite = squareSprite;
+            fillImage.type = Image.Type.Filled;
+            fillImage.fillMethod = Image.FillMethod.Horizontal;
+            fillImage.fillOrigin = 0;
+            fillImage.fillAmount = 1f;
+            fillImage.color = new Color(0.36f, 0.02f, 0.02f, 0.68f);
+            fillImage.raycastTarget = false;
+
+            SerializedObject enemyHealthBarObject = new(enemyHealthBar);
+            enemyHealthBarObject.FindProperty("worldCanvas").objectReferenceValue = canvas;
+            enemyHealthBarObject.FindProperty("canvasGroup").objectReferenceValue = canvasGroup;
+            enemyHealthBarObject.FindProperty("healthBar").objectReferenceValue = healthBar;
+            enemyHealthBarObject.FindProperty("backgroundImage").objectReferenceValue = backgroundImage;
+            enemyHealthBarObject.FindProperty("fillImage").objectReferenceValue = fillImage;
+            enemyHealthBarObject.FindProperty("worldOffset").vector3Value = new Vector3(0f, 2f, 0f);
+            enemyHealthBarObject.FindProperty("backgroundColor").colorValue = new Color(0.08f, 0.01f, 0.01f, 0.42f);
+            enemyHealthBarObject.FindProperty("fillColor").colorValue = new Color(0.36f, 0.02f, 0.02f, 0.68f);
+            enemyHealthBarObject.FindProperty("hideWhenFull").boolValue = true;
+            enemyHealthBarObject.FindProperty("hideWhenDead").boolValue = true;
+            enemyHealthBarObject.ApplyModifiedPropertiesWithoutUndo();
+
+            SerializedObject healthBarObject = new(healthBar);
+            healthBarObject.FindProperty("fillImage").objectReferenceValue = fillImage;
+            healthBarObject.FindProperty("canvasGroup").objectReferenceValue = canvasGroup;
+            healthBarObject.FindProperty("hideWhenFull").boolValue = false;
+            healthBarObject.FindProperty("hideWhenDead").boolValue = true;
+            healthBarObject.FindProperty("showValueText").boolValue = false;
+            healthBarObject.FindProperty("autoRefresh").boolValue = false;
+            healthBarObject.ApplyModifiedPropertiesWithoutUndo();
+
+            return root;
+        }
+
         private static UIPartyMemberPortrait CreatePortrait(
             string name,
             Transform parent,
@@ -615,6 +695,42 @@ namespace EndLink.Editor
             finally
             {
                 UnityEngine.Object.DestroyImmediate(panel);
+            }
+        }
+
+        private static void SaveWorldUIPrefab(GameObject prefabRoot, string prefabPath, bool promptOverwrite)
+        {
+            try
+            {
+                if (promptOverwrite
+                    && AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath) != null
+                    && !EditorUtility.DisplayDialog(
+                        "Create World UI Prefab",
+                        $"Prefab already exists:\n{prefabPath}\n\nOverwrite it?",
+                        "Overwrite",
+                        "Cancel"))
+                {
+                    return;
+                }
+
+                SetLayerRecursively(prefabRoot, LayerMask.NameToLayer("UI"));
+
+                GameObject savedPrefab = PrefabUtility.SaveAsPrefabAsset(prefabRoot, prefabPath, out bool success);
+                if (!success || savedPrefab == null)
+                {
+                    Debug.LogError($"Failed to create World UI prefab at {prefabPath}.");
+                    return;
+                }
+
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                Selection.activeObject = savedPrefab;
+                EditorGUIUtility.PingObject(savedPrefab);
+                Debug.Log($"Created World UI prefab: {prefabPath}", savedPrefab);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(prefabRoot);
             }
         }
 

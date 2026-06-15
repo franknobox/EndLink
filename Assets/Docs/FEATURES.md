@@ -81,7 +81,7 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [战斗 UI 基础](Features/UI.md#feature-combat-ui-foundation) | 已完成 HUD 调试接线版 | 提供 HUD 总入口、小队动作栏、成员头像连携高亮、终链奥义条、运行时调试日志、动作槽位冷却显示、通用血条组件和 UGUI HUD 生成入口。 |
+| [战斗 UI 基础](Features/UI.md#feature-combat-ui-foundation) | 已完成敌人血条版 | 提供 HUD 总入口、小队动作栏、成员头像连携高亮、终链奥义条、运行时调试日志、动作槽位冷却显示、通用血条、敌人头顶血条和 UGUI 生成入口。 |
 
 #### TOOLS
 
