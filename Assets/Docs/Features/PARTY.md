@@ -20,7 +20,7 @@
 - 反应目标死亡或失效不会关闭窗口；没有有效反应目标时会回退到当前软锁目标，没有任何有效目标时保留窗口但拒绝本次释放。
 - 主控连携技通过玩家通用技能状态执行；队友连携技通过 `AllyActionState` 执行，不绕过角色状态机。
 - 成功释放连携技后，`PartyUltimateContext` 会读取本次 `LinkAction` 的 `SynergyGainOnLink`，增加全队协同率。
-- 协同率达到 100% 后，`PartyUltimateContext` 标记终链奥义可释放；当前第一版按 V 键只消耗就绪状态并广播事件，不要求目标，也不执行具体奥义表现。
+- 协同率达到 100% 后，`PartyUltimateContext` 标记终链奥义可释放；当前第一版按 `PartyCombatRouter` 配置的奥义键只消耗就绪状态并广播事件，不要求目标，也不执行具体奥义表现。
 - `PartyLinkContext` 暴露窗口是否开启、剩余时间、归一化剩余时间和目标解析接口，供后续连携 UI 使用。
 - `PartyUltimateContext` 暴露当前协同率、协同率上限、归一化进度、奥义就绪事件和奥义消耗事件，供后续 UI、镜头和奥义表现接入。
 
@@ -48,7 +48,7 @@
 - `PlayerCombatDriver.LinkAction`：主控连携技动作
 - `AllyCombatDriver.LinkAction`：对应队友连携技动作
 - `PartyCombatRouter` 的 `1` / `2` / `3` 键位：分别选择主控、队友 A、队友 B 的连携技
-- `PartyCombatRouter` 的 V 键：尝试释放全队终链奥义，第一版固定键位
+- `PartyCombatRouter.partyUltimateKey`：尝试释放全队终链奥义，默认 V
 
 </details>
 
@@ -107,9 +107,9 @@
 - `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害或标签；它只校验连携窗口并把技能/连携请求转发给对应角色状态机。
 - 当前第一版中，主控 `Skill` 命令会由 `PartyCombatRouter` 转发给 `PlayerStateMachine.RequestSkill()`，由玩家状态机决定能否进入 `Skill` 状态并执行动作。
 - 队友 `Skill` 命令会由 `PartyCombatRouter` 转发给对应 `AllyStateMachine.RequestAction(...)`，进入 `Action` 状态后再由 `AllyCombatDriver` 执行 `SkillAction`。
-- `PartyCombatRouter` Inspector 中可以覆盖 Q/E/F 和 1/2/3 对应的技能与连携请求键位，V 键全队极限技暂时固定。
+- `PartyCombatRouter` Inspector 中可以覆盖 Q/E/F、1/2/3 和全队终链奥义对应的键位。
 - `LinkAttack` 命令只有在 `PartyLinkContext` 窗口开启时才会被接受；请求成功后由对应角色状态机执行 `LinkAction` 并消费共享窗口。
-- `PartyUltimateContext` 维护全队协同率；成功释放连携技会按 `CombatActionDefinition.SynergyGainOnLink` 充能，V 键在满值后消耗奥义就绪状态。
+- `PartyUltimateContext` 维护全队协同率；成功释放连携技会按 `CombatActionDefinition.SynergyGainOnLink` 充能，奥义键在满值后消耗奥义就绪状态。
 - 后续队友 AI、连携规则或调试工具需要知道“谁是主控，谁是队友”时，可以从 `PartyManager` 查询。
 
 对应脚本：
@@ -146,6 +146,7 @@
 - `formationSwitchCooldown`：站位交换冷却，避免频繁来回抢位
 - `playerSkillKey` / `allySlotASkillKey` / `allySlotBSkillKey`：主控和两个队友主动技能键位，默认 Q / E / F
 - `playerLinkAttackKey` / `allySlotALinkAttackKey` / `allySlotBLinkAttackKey`：主控和两个队友连携请求键位，默认 1 / 2 / 3
+- `partyUltimateKey`：全队终链奥义键位，默认 V
 - `PartyUltimateContext.maxSynergyRate`：终链奥义协同率上限，默认 100
 - `CombatActionDefinition.SynergyGainOnLink`：各连携技自己的协同率收益
 - `logInitialization`：是否打印小队初始化日志

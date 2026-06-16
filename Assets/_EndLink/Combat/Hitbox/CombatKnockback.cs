@@ -25,6 +25,8 @@ namespace EndLink.Combat
         /// <summary>
         /// 根据命中方向、动作基础击退距离和受击者倍率，尝试施加瞬时击退。
         /// 未配置 CharacterStats 时按 1 倍处理，确保普通目标仍能使用基础击退。
+        /// 目标会先通过 CombatTarget 归一到 RootTransform，再向父级查找数值和击退接收器，
+        /// 避免 Collider、生命、移动组件拆在不同节点时伤害生效但击退丢失。
         /// </summary>
         public static bool TryApply(
             GameObject target,
@@ -42,7 +44,8 @@ namespace EndLink.Combat
                 return false;
             }
 
-            CharacterStats stats = target.GetComponent<CharacterStats>();
+            Transform targetRoot = ResolveTargetRoot(target);
+            CharacterStats stats = targetRoot.GetComponentInParent<CharacterStats>();
             float multiplier = stats != null ? stats.KnockbackTakenMultiplier : 1f;
             float finalDistance = Mathf.Max(0f, baseKnockbackDistance) * multiplier;
             if (finalDistance <= 0f)
@@ -50,7 +53,7 @@ namespace EndLink.Combat
                 return false;
             }
 
-            ICombatKnockbackReceiver receiver = target.GetComponent<ICombatKnockbackReceiver>();
+            ICombatKnockbackReceiver receiver = targetRoot.GetComponentInParent<ICombatKnockbackReceiver>();
             if (receiver == null)
             {
                 return false;
@@ -58,6 +61,17 @@ namespace EndLink.Combat
 
             receiver.ApplyCombatKnockback(hitDirection.normalized * finalDistance);
             return true;
+        }
+
+        private static Transform ResolveTargetRoot(GameObject target)
+        {
+            if (CombatTargetUtility.TryResolve(target, out ICombatTarget combatTarget)
+                && combatTarget.RootTransform != null)
+            {
+                return combatTarget.RootTransform;
+            }
+
+            return target.transform;
         }
     }
 }

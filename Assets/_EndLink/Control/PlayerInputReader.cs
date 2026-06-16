@@ -183,7 +183,7 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 覆盖主控主动技能、队友主动技能和连携请求的键盘绑定。
+        /// 覆盖主控主动技能、队友主动技能、连携请求和终链奥义的键盘绑定。
         /// 该方法只改运行时 InputAction 实例，不写回 inputactions 资产。
         /// </summary>
         public void ApplyPartyCombatKeyboardBindings(
@@ -192,7 +192,8 @@ namespace EndLink.Core
             Key allySlotBSkillKey,
             Key playerLinkAttackKey,
             Key allySlotALinkAttackKey,
-            Key allySlotBLinkAttackKey)
+            Key allySlotBLinkAttackKey,
+            Key partyUltimateKey)
         {
             EnsureInitialized();
             ApplyKeyboardBindingOverride(_playerSkillAction, playerSkillKey);
@@ -201,6 +202,7 @@ namespace EndLink.Core
             ApplyKeyboardBindingOverride(_playerLinkAttackAction, playerLinkAttackKey);
             ApplyKeyboardBindingOverride(_allySlotALinkAttackAction, allySlotALinkAttackKey);
             ApplyKeyboardBindingOverride(_allySlotBLinkAttackAction, allySlotBLinkAttackKey);
+            ApplyKeyboardBindingOverride(_partyUltimateAction, partyUltimateKey);
         }
 
         private void OnMoveChanged(InputAction.CallbackContext context)

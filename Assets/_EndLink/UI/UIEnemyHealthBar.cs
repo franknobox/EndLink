@@ -94,14 +94,13 @@ namespace EndLink.UI
         private int sortingOrder = 20;
 
         private EnemyHealth _subscribedEnemyHealth;
+        private bool _started;
 
         private void Awake()
         {
             CacheReferences();
             ConfigureCanvas();
             ApplyStyle();
-            BindHealthBar();
-            RefreshNow();
         }
 
         private void OnEnable()
@@ -109,7 +108,10 @@ namespace EndLink.UI
             CacheReferences();
             Subscribe();
             BindHealthBar();
-            RefreshNow();
+            if (_started)
+            {
+                RefreshNow();
+            }
         }
 
         private void OnDisable()
@@ -129,7 +131,6 @@ namespace EndLink.UI
             CacheReferences();
             ConfigureCanvas();
             ApplyStyle();
-            RefreshNow();
         }
 
         private void LateUpdate()
@@ -140,6 +141,12 @@ namespace EndLink.UI
             {
                 ApplyVisibility(ResolveShouldShow());
             }
+        }
+
+        private void Start()
+        {
+            _started = true;
+            RefreshNow();
         }
 
         /// <summary>

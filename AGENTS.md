@@ -75,6 +75,7 @@ Feature 子文档：
 6. 不要执行破坏性 Git 操作，例如 `git reset --hard`、强制 checkout 或删除用户文件，除非用户明确要求。
 7. 代码优先遵循当前目录、命名空间和脚本拆分方式，不要为了“更标准”主动重构。
 8. Unity 生成文件不要手工维护。比如 `InputSystem_Actions.cs` 应由 `.inputactions` 生成。
+9. 如果一个问题可以靠简单的动手配置操作解决（比如某某组件我忘记添加了），就不用另外写代码。
 
 其他工程实践、测试、调试、前端或协作流程，按 Agent 自身预设和可用 Skills 执行。
 
@@ -86,12 +87,10 @@ Feature 子文档：
 ```text
 Assets/Docs/FEATURES.md
 ```
-
 2. 更新对应子文档：
 ```text
 Assets/Docs/Features/*.md
 ```
-
 3. 不要主动更新 `ROADMAP.md`以及 Assets\Docs\Design 文件夹中的文档，除非用户明确要求。
 
 4. 技术债、设计债、反复出现的问题，记录到：

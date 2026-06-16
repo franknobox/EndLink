@@ -36,24 +36,20 @@
 - 做新功能前，先整理一次队友跟随和敌人移动碰撞的职责边界。
 - 后续新增击退、吸聚、霸体等战斗位移时，不复用“敌人挤开挡路角色”的接口，应单独设计角色受力/外部战斗位移入口。
 
-## 2026-06-03：Hitbox 运行时创建与动作时序未完成
+## 2026-06-03：Hitbox 池化与动作时序
 
-### 现象
-- 当前玩家、队友和敌人的动作执行仍然直接 `Instantiate` Hitbox，Hitbox 生命周期结束后直接 `Destroy`。
-- `CombatActionDefinition` 已经预留动作数据，但 `startup`、`active`、`recovery` 等动作时序还没有真正驱动 Hitbox 生成和状态退出。
+### 当前状态
+- 玩家、队友和敌人仍直接 `Instantiate` / `Destroy` Hitbox。
+- `CombatActionDefinition` 已有 `startup`、`active`、`recovery`，但还没有真正驱动判定生成、判定持续和动作结束。
+- 当前白模阶段不阻塞验证，但多敌人压测、动作手感打磨和正式技能时序前应处理。
 
-### 当前判断
-- 白模 Demo 阶段可以接受直接创建/销毁，便于快速验证判定和战斗流程。
-- 进入更高频的动作测试后，频繁创建/销毁 Hitbox 会带来 GC 和 CPU 抖动。
-- 动作时序不接入时，攻击、技能和敌人近战只能用固定状态窗口表达，难以表现前摇、判定帧和后摇。
+### 处理时机
+- 建议在敌人近战循环、主控技能和队友技能的基础动作稳定后做。
+- 不必等 Animator 资源；后续接 Animator 时，再允许动画事件覆盖或校正数据时序。
 
 ### 后续行动
-- 做 Hitbox 池化，优先覆盖近战波和远程飞行 Hitbox。
-- 让 `CombatActionDefinition` 的 `startup`、`active`、`recovery` 真正参与动作执行：
-  - `startup` 后生成或启用 Hitbox。
-  - `active` 控制判定持续时间。
-  - `recovery` 控制动作结束和下一状态切换。
-- 后续接 Animator 后，允许动画事件覆盖或校正数据时序。
+- 建立 Hitbox 池化和统一创建入口，优先覆盖近战波与远程飞行 Hitbox。
+- 让 `startup` / `active` / `recovery` 控制 Hitbox 启停、回收和状态结束。
 
 ## 2026-06-03：代码审查后确认的工程技术债
 
@@ -77,8 +73,14 @@
 - 当前白模阶段敌人数量很少，不是性能瓶颈。
 - 后续如果一场战斗中已知敌人数量变多，再改为 `HashSet<Transform>` 或 `HashSet<ICombatTarget>`，并保留有序主目标列表。
 
+### 自动化验证缺位
+- 项目已保留 `com.unity.test-framework`，但当前还没有稳定的 Runtime/EditMode 测试程序集和基础回归测试。
+- 后续优先补 `DamageCalculator`、`CombatTagContainer`、`PartyLinkContext`、`ActionCooldownTracker` 这类纯逻辑或低场景依赖测试。
+- 正式补测试前，先建立清晰的 `.asmdef` / `.asmref` 边界，避免测试目录继续依赖默认 `Assembly-CSharp`。
+
 ### Camera.main 访问收敛
-- 当前 `PlayerTargeting` 和 `EnemyStateMachine` 的目标/状态标识朝向逻辑仍会在运行时访问 `Camera.main`。
+- 当前 `PlayerTargeting`、`EnemyStateMachine` 和 `UIEnemyHealthBar` 的目标/状态/头顶 UI 朝向逻辑仍会在运行时访问 `Camera.main`。
+- 部分 HUD / UI 脚本仍保留 `FindFirstObjectByType` 兜底查找。白模阶段可接受，正式 Prefab 应尽量由 HUD 或场景管理器集中显式绑定。
 - Unity 6 会缓存 `MainCamera` 标签对象，但访问 `Camera.main` 仍有小 CPU 开销，且依赖场景中正确配置 `MainCamera` 标签。
 - 白模阶段可以接受；后续镜头系统复杂后，应优先提供显式 `viewReference`，未配置时再 fallback 到缓存的主相机。
 - 建议处理方式：

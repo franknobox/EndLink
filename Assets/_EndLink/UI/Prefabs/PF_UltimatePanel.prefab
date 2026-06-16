@@ -194,8 +194,8 @@ MonoBehaviour:
   fillImage: {fileID: 2861437350198145861}
   keyLabelText: {fileID: 8362930363706358725}
   valueText: {fileID: 7446031738308292713}
-  chargingColor: {r: 0.7, g: 0.72, b: 0.76, a: 0.95}
-  readyColor: {r: 1, g: 0.82, b: 0.28, a: 1}
+  chargingColor: {r: 1, g: 0.82, b: 0.28, a: 0.95}
+  readyColor: {r: 1, g: 0.88, b: 0.35, a: 1}
   autoRefresh: 1
 --- !u!1 &991514395432025110
 GameObject:
@@ -468,7 +468,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.7, g: 0.72, b: 0.76, a: 0.95}
+  m_Color: {r: 1, g: 0.82, b: 0.28, a: 0.95}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -550,7 +550,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Ultimate
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

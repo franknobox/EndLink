@@ -22,7 +22,7 @@
 - 主控主动技能读取 `Player/PlayerSkill`，默认键位 Q。
 - 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`，默认键位 E / F。
 - 主控和队友连携请求读取 `Player/PlayerLinkAttack`、`Player/AllySlotALinkAttack`、`Player/AllySlotBLinkAttack`，默认键位 1 / 2 / 3；这些输入不会绕过连携机制直接释放动作。
-- 全队极限技读取 `Player/PartyUltimate`，默认键位 V。
+- 全队终链奥义读取 `Player/PartyUltimate`，默认键位 V，可由 `PartyCombatRouter` 在运行时覆盖。
 - 手柄第一版临时绑定：主控技能 `rightShoulder`，队友 A 技能 `leftShoulder`，队友 B 技能 `rightTrigger`，主控/队友连携为 D-Pad 上/左/右，全队极限技为 D-Pad 下；后续可根据实际手柄手感统一调整。
 - 相机旋转读取 `Player/Look`。
 - 鼠标滚轮缩放通过 `Mouse.current.scroll` 读取。

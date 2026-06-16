@@ -47,8 +47,10 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 - 左上生成 `PF_PartyStatusPanel`，包含生命条占位、主控头像和两个队友头像。
 - 成员头像挂载 `UIPartyMemberPortrait`，用于显示 1/2/3 连携键位、连携窗口高亮和 Link Down 灰化。
 - 左下生成 `PF_SkillPanel`，挂载 `UIPartyCombatAction`，并自动绑定 Q/E/F 三个主动技能槽。
-- 右下生成 `PF_UltimatePanel`，挂载 `UIPartyUltimateBar`，显示 V 键位、协同率和终链奥义就绪颜色。
+- 右下生成 `PF_UltimatePanel`，挂载 `UIPartyUltimateBar`，显示当前奥义键位、协同率和终链奥义就绪颜色。
 - 右上生成 `PF_DebugPanel`，挂载 `HUDDebugLogPanel`，用于按分类筛选显示运行时战斗、队友和小队命令日志。
+- 生成的可见占位文案默认不放英文说明文字，只保留键位和运行时动态内容，避免白模阶段默认 HUD 出现无用英文标签。
+- 生成的主角/队友状态条默认采用 `#659F67` 一档绿色；头像占位保持中性灰，技能槽保留区分配色，奥义条默认使用黄色充能。
 - 工具会在缺失时创建基础圆形和方形 UI Sprite，便于白模阶段直接看到 HUD 结构。
 - 工具只生成 Panel Prefab 资产，不直接修改当前场景。
 

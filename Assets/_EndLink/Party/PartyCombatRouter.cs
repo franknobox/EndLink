@@ -115,6 +115,11 @@ namespace EndLink.Party
         [SerializeField]
         private Key allySlotBLinkAttackKey = Key.Digit3;
 
+        [Header("终链奥义键位")]
+        [Tooltip("全队终链奥义键位。默认 V。")]
+        [SerializeField]
+        private Key partyUltimateKey = Key.V;
+
         [Header("调试")]
         [Tooltip("是否在收到战斗命令、连携窗口校验、动作请求或终链奥义请求时打印调试日志。")]
         [SerializeField]
@@ -199,7 +204,7 @@ namespace EndLink.Party
         }
 
         /// <summary>
-        /// 把 Inspector 中配置的 Q/E/F 和 1/2/3 键位覆盖到运行时 InputAction。
+        /// 把 Inspector 中配置的 Q/E/F、1/2/3 和终链奥义键位覆盖到运行时 InputAction。
         /// </summary>
         public void ApplyInputBindings()
         {
@@ -219,7 +224,8 @@ namespace EndLink.Party
                 allySlotBSkillKey,
                 playerLinkAttackKey,
                 allySlotALinkAttackKey,
-                allySlotBLinkAttackKey);
+                allySlotBLinkAttackKey,
+                partyUltimateKey);
 
             KeyBindingsChanged?.Invoke();
         }
@@ -246,7 +252,7 @@ namespace EndLink.Party
                     PartyCombatActorSlot.AllySlotB => allySlotBLinkAttackKey,
                     _ => Key.None
                 },
-                PartyCombatCommandType.Ultimate => actorSlot == PartyCombatActorSlot.Party ? Key.V : Key.None,
+                PartyCombatCommandType.Ultimate => actorSlot == PartyCombatActorSlot.Party ? partyUltimateKey : Key.None,
                 _ => Key.None
             };
         }

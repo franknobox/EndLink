@@ -213,6 +213,7 @@
 功能说明：
 - Hitbox 实际造成伤害后，通过 `CombatKnockback` 统一计算并分发瞬时击退；免伤、无伤害和击退距离为 `0` 时不会产生位移。
 - 第一版最终击退距离为 `基础击退距离 × CharacterStats.KnockbackTakenMultiplier`，未挂载 `CharacterStats` 的目标默认按 `1` 倍处理。
+- `CombatKnockback` 会先通过 `CombatTarget` 归一到目标 `RootTransform`，再向父级查找 `CharacterStats` 和 `ICombatKnockbackReceiver`，避免命中子 Collider 时击退丢失。
 - `ICombatKnockbackReceiver` 只负责攻击命中的战斗击退，与敌人移动碰撞使用的外部推挤接口保持分离。
 - `PlayerController`、`AllyFollowMotor` 和 `EnemyMotorBase` 已接入统一击退协议，第一版只产生 XZ 平面的瞬时位移，不处理击飞和持续受力。
 - 当前不新增硬直等级、可打断规则或额外受击组件；现有 Hit 状态行为保持不变。

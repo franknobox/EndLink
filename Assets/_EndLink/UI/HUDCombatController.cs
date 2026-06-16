@@ -1,6 +1,9 @@
+using EndLink.Ally;
+using EndLink.Combat;
 using EndLink.Party;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace EndLink.UI
 {
@@ -28,6 +31,18 @@ namespace EndLink.UI
         [Tooltip("终链奥义条 UI。用于显示协同率和奥义就绪状态。")]
         [SerializeField]
         private UIPartyUltimateBar partyUltimateBar;
+
+        [Tooltip("主角血条。为空时会尝试查找名为 Health_Main 的子物体并自动接线。")]
+        [SerializeField]
+        private UIHealthBar mainHealthBar;
+
+        [Tooltip("队友 A 血条。为空时会尝试查找名为 Health_AllyA 的子物体并自动接线。")]
+        [SerializeField]
+        private UIHealthBar allySlotAHealthBar;
+
+        [Tooltip("队友 B 血条。为空时会尝试查找名为 Health_AllyB 的子物体并自动接线。")]
+        [SerializeField]
+        private UIHealthBar allySlotBHealthBar;
 
         [Tooltip("HUD 根 CanvasGroup。配置后可以统一控制显示、交互和射线。")]
         [SerializeField]
@@ -105,6 +120,8 @@ namespace EndLink.UI
             {
                 partyUltimateBar.RefreshNow();
             }
+
+            RefreshHealthBarsNow();
         }
 
         /// <summary>
@@ -163,6 +180,10 @@ namespace EndLink.UI
                 partyUltimateBar = GetComponentInChildren<UIPartyUltimateBar>(true);
             }
 
+            mainHealthBar = ResolveHealthBar(mainHealthBar, "Health_Main");
+            allySlotAHealthBar = ResolveHealthBar(allySlotAHealthBar, "Health_AllyA");
+            allySlotBHealthBar = ResolveHealthBar(allySlotBHealthBar, "Health_AllyB");
+
             if (hudCanvasGroup == null)
             {
                 hudCanvasGroup = GetComponent<CanvasGroup>();
@@ -191,6 +212,8 @@ namespace EndLink.UI
             {
                 partyUltimateBar.BindPartyManager(partyManager);
             }
+
+            BindHealthBars();
         }
 
         private void RefreshPortraitsNow()
@@ -223,6 +246,108 @@ namespace EndLink.UI
                     partyMemberPortraits[i].RefreshState();
                 }
             }
+        }
+
+        private void RefreshHealthBarsNow()
+        {
+            if (mainHealthBar != null)
+            {
+                mainHealthBar.RefreshNow();
+            }
+
+            if (allySlotAHealthBar != null)
+            {
+                allySlotAHealthBar.RefreshNow();
+            }
+
+            if (allySlotBHealthBar != null)
+            {
+                allySlotBHealthBar.RefreshNow();
+            }
+        }
+
+        private void BindHealthBars()
+        {
+            if (mainHealthBar != null)
+            {
+                if (partyManager != null && partyManager.TryGetMainCharacterHealth(out CharacterHealth mainHealth))
+                {
+                    mainHealthBar.BindHealth(mainHealth);
+                }
+                else
+                {
+                    mainHealthBar.ClearHealth();
+                }
+            }
+
+            BindAllyHealthBar(allySlotAHealthBar, partyManager != null ? partyManager.AllySlotA : null);
+            BindAllyHealthBar(allySlotBHealthBar, partyManager != null ? partyManager.AllySlotB : null);
+        }
+
+        private static void BindAllyHealthBar(UIHealthBar healthBar, PartyFormationSlot slot)
+        {
+            if (healthBar == null)
+            {
+                return;
+            }
+
+            if (slot != null
+                && slot.TryGetAllyHealth(out AllyHealth allyHealth)
+                && allyHealth != null
+                && allyHealth.Health != null)
+            {
+                healthBar.BindHealth(allyHealth.Health);
+            }
+            else
+            {
+                healthBar.ClearHealth();
+            }
+        }
+
+        private UIHealthBar ResolveHealthBar(UIHealthBar current, string childName)
+        {
+            if (current == null)
+            {
+                Transform child = FindChildRecursive(transform, childName);
+                if (child == null)
+                {
+                    return null;
+                }
+
+                current = child.GetComponent<UIHealthBar>();
+                if (current == null)
+                {
+                    current = child.gameObject.AddComponent<UIHealthBar>();
+                }
+            }
+
+            Image fillImage = current.GetComponent<Image>();
+            current.ConfigureSimpleBar(fillImage);
+            return current;
+        }
+
+        private static Transform FindChildRecursive(Transform root, string childName)
+        {
+            if (root == null)
+            {
+                return null;
+            }
+
+            if (root.name == childName)
+            {
+                return root;
+            }
+
+            for (int i = 0; i < root.childCount; i++)
+            {
+                Transform child = FindChildRecursive(root.GetChild(i), childName);
+                if (child != null)
+                {
+                    return child;
+                }
+            }
+
+            return null;
         }
     }
 }

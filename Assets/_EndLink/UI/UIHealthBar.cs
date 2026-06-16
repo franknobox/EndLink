@@ -1,6 +1,8 @@
 using EndLink.Combat;
 using EndLink.Enemies;
+using EndLink.Party;
 using TMPro;
+using EndLink.Ally;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -84,17 +86,20 @@ namespace EndLink.UI
 
         private CharacterHealth _subscribedHealth;
         private EnemyHealth _subscribedEnemyHealth;
+        private bool _started;
 
         private void Awake()
         {
             CacheReferences();
-            RefreshNow();
         }
 
         private void OnEnable()
         {
             Subscribe();
-            RefreshNow();
+            if (_started)
+            {
+                RefreshNow();
+            }
         }
 
         private void OnDisable()
@@ -110,7 +115,6 @@ namespace EndLink.UI
         private void OnValidate()
         {
             CacheVisualReferences();
-            RefreshNow();
         }
 
         private void Update()
@@ -119,6 +123,12 @@ namespace EndLink.UI
             {
                 RefreshNow();
             }
+        }
+
+        private void Start()
+        {
+            _started = true;
+            RefreshNow();
         }
 
         /// <summary>
@@ -176,6 +186,33 @@ namespace EndLink.UI
             health = null;
             enemyHealth = null;
             RefreshNow();
+        }
+
+        /// <summary>
+        /// 把当前组件配置为纯进度条模式。
+        /// 适用于主角/队友 HUD 这种只有填充条、不显示数字的轻量血条。
+        /// </summary>
+        public void ConfigureSimpleBar(Image nextFillImage, CanvasGroup nextCanvasGroup = null)
+        {
+            fillImage = nextFillImage;
+            canvasGroup = nextCanvasGroup;
+            valueText = null;
+            showValueText = false;
+            showMaxHealthInText = false;
+            hideWhenFull = false;
+            hideWhenDead = false;
+            hideWhenNoHealth = true;
+            autoFindInParent = false;
+            autoFindInScene = false;
+            autoRefresh = false;
+
+            if (fillImage != null)
+            {
+                fillImage.type = Image.Type.Filled;
+                fillImage.fillMethod = Image.FillMethod.Horizontal;
+                fillImage.fillOrigin = 0;
+                fillImage.raycastTarget = false;
+            }
         }
 
         /// <summary>
@@ -260,7 +297,57 @@ namespace EndLink.UI
             if (foundEnemyHealth != null)
             {
                 BindEnemyHealth(foundEnemyHealth);
+                return;
             }
+
+            TryBindPartyHealth();
+        }
+
+        private bool TryBindPartyHealth()
+        {
+            PartyManager partyManager = FindFirstObjectByType<PartyManager>();
+            if (partyManager == null)
+            {
+                return false;
+            }
+
+            string objectName = gameObject.name;
+            if (string.Equals(objectName, "Health_Main", System.StringComparison.Ordinal))
+            {
+                if (partyManager.TryGetMainCharacterHealth(out CharacterHealth mainHealth) && mainHealth != null)
+                {
+                    BindHealth(mainHealth);
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (string.Equals(objectName, "Health_AllyA", System.StringComparison.Ordinal))
+            {
+                return TryBindAllyHealth(partyManager.AllySlotA);
+            }
+
+            if (string.Equals(objectName, "Health_AllyB", System.StringComparison.Ordinal))
+            {
+                return TryBindAllyHealth(partyManager.AllySlotB);
+            }
+
+            return false;
+        }
+
+        private bool TryBindAllyHealth(PartyFormationSlot slot)
+        {
+            if (slot == null
+                || !slot.TryGetAllyHealth(out AllyHealth allyHealth)
+                || allyHealth == null
+                || allyHealth.Health == null)
+            {
+                return false;
+            }
+
+            BindHealth(allyHealth.Health);
+            return true;
         }
 
         private void Subscribe()

@@ -48,7 +48,7 @@
 | [战斗动作配置](Features/COMBAT.md#feature-combat-action) | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和终链奥义的伤害、冷却、时序、Hitbox、命中标签和连携协同率收益。 |
 | [统一 Action 执行接口](Features/COMBAT.md#feature-combat-action-executor) | 已完成第一版 | 统一玩家、队友和敌人的动作可执行检查、执行请求、目标传入和冷却查询，保留各 Driver 的具体表现实现。 |
 | [伤害结算管线基础](Features/COMBAT.md#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
-| [受击规则基础](Features/COMBAT.md#feature-hit-response) | 已完成瞬时击退第一版 | Hitbox 实际造成伤害后，按动作基础击退距离与受击者倍率对玩家、队友和敌人施加水平瞬时击退。 |
+| [受击规则基础](Features/COMBAT.md#feature-hit-response) | 已完成瞬时击退第一版 | Hitbox 实际造成伤害后，按统一目标根身份、动作基础击退距离与受击者倍率对玩家、队友和敌人施加水平瞬时击退。 |
 | [战斗标签系统](Features/COMBAT.md#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和协议反应规则。 |
 | [战斗事件总栈](Features/COMBAT.md#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
 | [基础 Hitbox 配置](Features/COMBAT.md#feature-hitbox) | 已完成第一版 | 提供通用 Hitbox 基类和远程直线 Hitbox，用于配置近战判定、远程飞行判定、目标过滤、生命周期、伤害、击退和标签。 |
@@ -81,13 +81,13 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [战斗 UI 基础](Features/UI.md#feature-combat-ui-foundation) | 已完成敌人血条版 | 提供 HUD 总入口、小队动作栏、成员头像连携高亮、终链奥义条、运行时调试日志、动作槽位冷却显示、通用血条、敌人头顶血条和 UGUI 生成入口。 |
+| [战斗 UI 基础](Features/UI.md#feature-combat-ui-foundation) | 已完成队伍血条接线版 | 提供 HUD 总入口、小队动作栏、成员头像连携高亮、终链奥义条、运行时调试日志、动作槽位冷却显示、主角/队友状态血条自绑定、通用血条、敌人头顶血条和 UGUI 生成入口。 |
 
 #### TOOLS
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [战斗数据编辑工具](Features/TOOLS.md#feature-combat-data-tool) | 已完成字段同步版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则数据资产，并显示伤害、倍率、类型和连携协同率等关键字段摘要。 |
-| [战斗 HUD 生成工具](Features/TOOLS.md#feature-combat-hud-generator) | 已完成 Panel 生成版 | 提供 Editor 菜单入口生成基础 UGUI 战斗 HUD Panel Prefab，作为后续由 Agent 或人工扩展 HUD 的稳定通道。 |
+| [战斗 HUD 生成工具](Features/TOOLS.md#feature-combat-hud-generator) | 已完成 Panel 生成版 | 提供 Editor 菜单入口生成基础 UGUI 战斗 HUD Panel Prefab，默认去掉可见英文占位文案，主角/队友状态条使用绿色、奥义条使用黄色，作为后续由 Agent 或人工扩展 HUD 的稳定通道。 |
 | [EndLink Combat Lab](Features/TOOLS.md#feature-combat-lab) | 已完成新模型实验版 | 提供浏览器端战斗实验工具，用于快速验证标签定义、层数、持续时间、反应效果、基础伤害和连携窗口。 |
 | [队友调试监视窗口](Features/TOOLS.md#feature-ally-monitor) | 已完成第一版 | 提供 Editor 窗口集中查看队友状态快照和队友行为日志，辅助排查助战、冷却、距离和目标问题。 |

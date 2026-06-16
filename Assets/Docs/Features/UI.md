@@ -21,14 +21,18 @@
 - 冷却中直接把图标染成配置颜色，冷却结束后恢复图标原色。
 - 动作栏每帧只刷新冷却这类连续变化显示；键位文本通过 `PartyCombatRouter.KeyBindingsChanged` 事件刷新。
 - `UIPartyMemberPortrait` 是小队成员头像 UI，负责显示主控和两个队友头像、1/2/3 连携键位、连携窗口高亮，以及队友 Link Down / 主控死亡后的灰化。
-- `UIPartyUltimateBar` 是终链奥义条 UI，负责显示协同率进度、V 键位和奥义就绪颜色。
+- `UIPartyUltimateBar` 是终链奥义条 UI，负责显示协同率进度、`PartyCombatRouter` 当前奥义键位和奥义就绪颜色。
 - `HUDDebugLogPanel` 是运行时 HUD 调试日志面板，监听 `CombatEventsBus`、`AllyDebugLog` 和 `PartyCombatRouter.CommandRequested`，可按 Combat、Ally、Party、Damage、Tag 筛选显示最近日志。
 - `UIHealthBar` 是通用血条组件，支持 `CharacterHealth` 和正式敌人的 `EnemyHealth`，可用于主角、队友和敌人头顶血条。
+- 左上主角/队友状态区里的 `Health_Main`、`Health_AllyA`、`Health_AllyB` 会按默认命名自动绑定到 `PartyManager` 当前的小队生命组件；如果场景里有 `HUDCombatController`，也可以由它统一重绑。
 - `UIHealthBar` 支持 `Image.fillAmount`、可选血量文本、满血隐藏、死亡隐藏、无生命来源隐藏和运行时绑定生命来源。
 - `UIHealthBar` 优先监听生命事件刷新，`autoRefresh` 只作为兜底刷新开关。
+- `UIHealthBar` 和 `UIEnemyHealthBar` 不会在 `Awake` / `OnValidate` 里修改 `CanvasGroup` 显隐，首次显示刷新延后到 `Start`，避免编辑器生命周期 warning。
 - `UIEnemyHealthBar` 是敌人头顶血条控制器，负责 World Space 跟随、面向相机、绑定 `EnemyHealth` 和套用默认半透明暗红色样式。
+- 敌人头顶血条预制体使用小尺寸世界单位 RectTransform，避免拖入场景时因为缩放重置变成巨大半透明面片；显隐刷新只在运行期改 `CanvasGroup`。
 - `CombatHUDPrefabGenerator` 提供 `EndLink > UI > Combat HUD` 菜单入口，可以一键生成所有面板，也可以单独生成某个 Panel Prefab。
 - 生成的 HUD 面板当前包含左上小队状态区、头像连携区、左下 Q/E/F 主动技能区、右下终链奥义条和右上临时调试信息区；生成器也可单独生成敌人头顶血条 World UI 预制体。
+- 生成器默认不再写入可见英文说明文字；主角/队友状态条使用 `#659F67` 一档绿色，头像占位保持中性灰，技能槽保留区分配色，奥义条默认使用黄色充能；键位与运行时动态文本仍正常保留。
 
 对应脚本：
 - `Assets/_EndLink/UI/HUDCombatController.cs`
@@ -86,6 +90,7 @@
 - `HUDCombatController.partyCombatAction`：小队动作栏 UI 管理器
 - `HUDCombatController.partyMemberPortraits`：小队成员头像 UI 集合
 - `HUDCombatController.partyUltimateBar`：终链奥义条 UI
+- `HUDCombatController.mainHealthBar / allySlotAHealthBar / allySlotBHealthBar`：主角与两个队友的状态血条；为空时按默认子物体名自动查找并接线
 - `UIPartyCombatAction.autoCollectChildSlots`：是否自动从子物体收集动作槽
 - `UIPartyCombatAction.driveChildSlotsManually`：是否由动作栏统一驱动子槽刷新
 - `UICombatActionSlot.slot`：该 UI 对应的键位槽，例如 PlayerSkill、AllySlotASkill、AllySlotBSkill

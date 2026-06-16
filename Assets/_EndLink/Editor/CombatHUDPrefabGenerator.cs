@@ -13,6 +13,10 @@ namespace EndLink.Editor
     /// </summary>
     public static class CombatHUDPrefabGenerator
     {
+        private static readonly Color ThemeGreen = new Color32(0x65, 0x9F, 0x67, 0xFF);
+        private static readonly Color ThemeYellowCharge = new Color(1f, 0.82f, 0.28f, 0.95f);
+        private static readonly Color ThemeYellowReady = new Color(1f, 0.88f, 0.35f, 1f);
+
         private const string PrefabFolder = "Assets/_EndLink/UI/Prefabs";
         private const string GeneratedFolder = "Assets/_EndLink/UI/Generated";
         private const string PartyStatusPanelPath = PrefabFolder + "/PF_PartyStatusPanel.prefab";
@@ -130,7 +134,7 @@ namespace EndLink.Editor
             CreateText(
                 "HealthLabel",
                 panel.transform,
-                "HP",
+                string.Empty,
                 new Vector2(74f, -26f),
                 new Vector2(160f, 42f),
                 34f,
@@ -174,7 +178,7 @@ namespace EndLink.Editor
             CreateText(
                 "PortraitNote",
                 panel.transform,
-                "Portraits\nGlow = Link",
+                string.Empty,
                 new Vector2(270f, -118f),
                 new Vector2(260f, 92f),
                 30f,
@@ -225,7 +229,7 @@ namespace EndLink.Editor
             CreateText(
                 "SkillLabel",
                 panel.transform,
-                "Skills",
+                string.Empty,
                 new Vector2(118f, 164f),
                 new Vector2(180f, 44f),
                 30f,
@@ -276,13 +280,13 @@ namespace EndLink.Editor
             fillImage.fillMethod = Image.FillMethod.Horizontal;
             fillImage.fillOrigin = 0;
             fillImage.fillAmount = 0f;
-            fillImage.color = new Color(0.7f, 0.72f, 0.76f, 0.95f);
+            fillImage.color = ThemeYellowCharge;
             fillImage.raycastTarget = false;
 
             CreateText(
                 "UltimateLabel",
                 panel.transform,
-                "Ultimate",
+                string.Empty,
                 new Vector2(-244f, 112f),
                 new Vector2(180f, 42f),
                 30f,
@@ -316,6 +320,8 @@ namespace EndLink.Editor
             serializedObject.FindProperty("fillImage").objectReferenceValue = fillImage;
             serializedObject.FindProperty("keyLabelText").objectReferenceValue = keyText;
             serializedObject.FindProperty("valueText").objectReferenceValue = valueText;
+            serializedObject.FindProperty("chargingColor").colorValue = ThemeYellowCharge;
+            serializedObject.FindProperty("readyColor").colorValue = ThemeYellowReady;
             serializedObject.FindProperty("autoRefresh").boolValue = autoRefresh;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
 
@@ -337,7 +343,7 @@ namespace EndLink.Editor
             TextMeshProUGUI debugText = CreateText(
                 "DebugText",
                 panel.transform,
-                "Debug\nInfo",
+                string.Empty,
                 new Vector2(12f, -12f),
                 new Vector2(234f, 288f),
                 14f,
@@ -362,8 +368,8 @@ namespace EndLink.Editor
             rootRect.anchorMin = new Vector2(0.5f, 0.5f);
             rootRect.anchorMax = new Vector2(0.5f, 0.5f);
             rootRect.pivot = new Vector2(0.5f, 0.5f);
-            rootRect.sizeDelta = new Vector2(120f, 16f);
-            rootRect.localScale = Vector3.one * 0.01f;
+            rootRect.sizeDelta = new Vector2(1.2f, 0.16f);
+            rootRect.localScale = Vector3.one;
 
             Canvas canvas = root.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
@@ -478,6 +484,7 @@ namespace EndLink.Editor
             serializedObject.FindProperty("portraitImage").objectReferenceValue = portraitImage;
             serializedObject.FindProperty("highlightImage").objectReferenceValue = highlightImage;
             serializedObject.FindProperty("keyLabelText").objectReferenceValue = keyText;
+            serializedObject.FindProperty("normalColor").colorValue = new Color(0.82f, 0.82f, 0.82f, 1f);
             serializedObject.FindProperty("autoRefresh").boolValue = autoRefresh;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
 
@@ -496,8 +503,11 @@ namespace EndLink.Editor
 
             Image image = barObject.AddComponent<Image>();
             image.sprite = squareSprite;
-            image.color = new Color(0.2f, 0.75f, 0.22f, 1f);
+            image.color = ThemeGreen;
             image.raycastTarget = false;
+
+            UIHealthBar healthBar = barObject.AddComponent<UIHealthBar>();
+            healthBar.ConfigureSimpleBar(image);
         }
 
         private static UICombatActionSlot CreateActionSlot(
