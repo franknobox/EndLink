@@ -67,7 +67,7 @@
 | --- | --- | --- |
 | [队友助战基础组件](Features/ALLY.md#feature-ally-assist) | 已完成持续助战第一版 | 提供队友事件响应大脑和队友战斗执行器，用于主控命中敌人后让队友自动接近目标并持续攻击。 |
 | [队友有限状态机](Features/ALLY.md#feature-ally-state-machine) | 已完成 Hit 恢复版 | 提供 Idle、Follow、Assist、Action、Hit、LinkDown 外层状态，Assist 处理自动助战，Action 承载主动技能等指令动作，Hit 结束后按上下文恢复行为。 |
-| [队友跟随移动](Features/ALLY.md#feature-ally-follow-motor) | 已完成动态站位配套版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持死区、平滑减速、追赶、远距离归位和简易避让。 |
+| [队友跟随移动](Features/ALLY.md#feature-ally-follow-motor) | 已完成 NavMesh 接线版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持 NavMesh 寻路、按路径高度移动、高低差脱离死区、坡道贴地、平滑减速、追赶、远距离归位和简易避让。 |
 
 #### ENEMIES
 

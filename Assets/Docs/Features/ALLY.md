@@ -117,12 +117,14 @@
 <summary>展开详情</summary>
 
 功能说明：
-- `AllyFollowMotor` 是队友跟随移动执行组件，不依赖 NavMesh。
+- `AllyFollowMotor` 是队友跟随移动执行组件，当前优先使用 `NavMeshAgent` 做地形寻路，同时保留原有直线移动回退。
 - 支持使用 `CharacterController.Move` 移动；如果队友没有 `CharacterController`，则直接修改 `Transform.position`。
+- 跟随移动已补上最小贴地重力和向下附着力，队友在坡道、平台边缘和高低差过渡处会稳定贴地，不再长时间悬空滑行。
+- NavMesh 分支现在实际使用导航结果的 3D 位移与高度，不再只把 NavMesh 当作平面朝向参考，因此坡道和平台跟随会按路径高度移动。
 - `AllyStateMachine` 负责保存跟随目标并同步给 `AllyFollowMotor`。
 - `PartyManager` 通过 `PartyFollowSettings` 统一配置两个队友的跟随参数，并在初始化时写入各自的 `AllyFollowMotor`。
 - `AllyFollowState` 每帧调用 `TickFollow(deltaTime)`，因此 Assist、Action、Hit、LinkDown 状态不会继续抢跟随移动。
-- 助战接近状态会调用 `TickMoveToPosition(position, arriveDistance, deltaTime)`，让队友临时移动到敌人附近而不修改主控跟随目标。
+- 助战接近状态会调用 `TickMoveToPosition(position, arriveDistance, deltaTime)`，让队友临时移动到敌人附近而不修改主控跟随目标；在有 NavMesh 时会按目标所在高度采样，减少坡面和高台接近失真。
 - 队友会移动到主控的本地队形偏移范围，移动时面向移动方向，停下后的朝向由 `idleFacingMode` 决定。
 - 支持 `arrivalSmoothTime` 平滑加减速，降低接近队形点时的机械感。
 - 支持主控冲刺同步：主控在 Move 状态按住冲刺时，队友 Follow 状态下的跟随速度会乘以 `sprintSyncSpeedMultiplier`。
@@ -130,13 +132,14 @@
 - 支持 `teleportDistance`，队友极端远离队形点时会直接归位，避免长距离丢失。
 - 支持 `followSlotSoftness`，队友进入队形点周围软半径后就算到位，不强制踩死精确坐标。
 - 支持 `followDeadZoneRadius`，每个队友站定后会以自己的站位作为死区中心；主控仍在该半径内移动时不会触发该队友重新跟随，也不会跟随主控转向；走出半径后才更新队形点和朝向。
+- 当前死区对明显高低差做了额外处理：主控已稳定落地到另一层高度时，会提前打破死区，让队友开始上坡或上平台跟随。
 - 归位过程中会同步更新死区圆心，避免动态槽位或重新归位后残留旧死区中心。
 - `AllyFollowMotor` 会常驻绘制跟随死区 Gizmo，运行时以该队友当前死区中心为圆心，非运行时以队友自身为圆心；当前使用深蓝色常态显示，不再依赖选中状态。
 - 支持第一版简易避让：离主控太近时会被推开，配置 `avoidanceLayerMask` 后也能对其他队友做局部排斥。
 - 支持接收敌人移动碰撞带来的外部位移：队友可以被敌人正常前进时挤开，但不会反向顶动敌人。
 - `formationOffset` 由 `PartyManager` 的队友槽位统一配置，并写入 `AllyFollowMotor`。
 - `SetFormationOffset` 在偏移未变化时不会重复触发重新归位，降低动态槽位评估带来的抖动。
-- 当前只处理平面 XZ 跟随和局部避让，后续如果需要复杂地形、障碍绕路，再接 NavMesh 或更完整的队伍槽位调度。
+- 当前的跟随规则层仍然由 `AllyFollowMotor` 自己负责死区、追赶、瞬移归位、局部避让和动态站位；`NavMeshAgent` 只负责把这些目标点转成可走路径，避免队友直穿坡体、跑进空中或贴着障碍走直线。
 
 对应脚本：
 - `Assets/_EndLink/Ally/AllyFollowMotor.cs`

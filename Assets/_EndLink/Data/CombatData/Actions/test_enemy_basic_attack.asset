@@ -18,7 +18,7 @@ MonoBehaviour:
   flatDamage: 8
   atkPowerMultiplier: 0
   damageType: 0
-  knockbackForce: 0.8
+  knockbackForce: 0.1
   combatTagToApply: {fileID: 0}
   combatTagDuration: 0
   combatTagStackCount: 1

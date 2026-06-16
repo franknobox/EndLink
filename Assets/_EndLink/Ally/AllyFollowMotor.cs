@@ -2,6 +2,7 @@ using EndLink.Party;
 using EndLink.Core;
 using EndLink.Combat;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace EndLink.Ally
 {
@@ -28,6 +29,12 @@ namespace EndLink.Ally
     [DisallowMultipleComponent]
     public sealed class AllyFollowMotor : MonoBehaviour, IExternalDisplacementReceiver, ICombatKnockbackReceiver
     {
+        private const float FollowGravity = -20f;
+        private const float FollowGroundedStickForce = 2f;
+        private const float DeadZoneGroundedHeightTolerance = 0.5f;
+        private const float NavMeshDestinationThreshold = 0.2f;
+        private const float NavMeshBaseSampleDistance = 1.5f;
+
         [SerializeField, HideInInspector]
         private Transform followTarget;
 
@@ -85,12 +92,16 @@ namespace EndLink.Ally
         private const int AvoidanceOverlapCapacity = 8;
         private const int DeadZoneGizmoSegments = 64;
         private CharacterController _characterController;
+        private NavMeshAgent _navMeshAgent;
         private PlayerController _followTargetPlayerController;
         private readonly Collider[] _avoidanceOverlaps = new Collider[AvoidanceOverlapCapacity];
         private Vector3 _desiredWorldPosition;
         private Vector3 _followDeadZoneAnchorPosition;
+        private Vector3 _lastNavDestination;
         private float _currentSpeed;
         private float _speedVelocity;
+        private float _verticalVelocity;
+        private bool _hasLastNavDestination;
         private bool _isRepositioning;
 
         /// <summary>当前跟随目标。</summary>
@@ -171,6 +182,8 @@ namespace EndLink.Ally
         private void Awake()
         {
             _characterController = GetComponent<CharacterController>();
+            _navMeshAgent = GetComponent<NavMeshAgent>();
+            EnsureNavMeshAgent();
             _desiredWorldPosition = transform.position;
             _followDeadZoneAnchorPosition = transform.position;
         }
@@ -178,7 +191,9 @@ namespace EndLink.Ally
         private void Reset()
         {
             _characterController = GetComponent<CharacterController>();
+            _navMeshAgent = GetComponent<NavMeshAgent>();
             formationOffset = new Vector3(2f, 0f, -2.5f);
+            ConfigureNavMeshAgent();
         }
 
         private void OnValidate()
@@ -196,6 +211,7 @@ namespace EndLink.Ally
             followTargetAvoidRadius = Mathf.Max(0f, followTargetAvoidRadius);
             allyAvoidRadius = Mathf.Max(0f, allyAvoidRadius);
             avoidanceStrength = Mathf.Max(0f, avoidanceStrength);
+            ConfigureNavMeshAgent();
         }
 
         private void OnDrawGizmos()
@@ -215,6 +231,7 @@ namespace EndLink.Ally
         {
             followTarget = target;
             _followTargetPlayerController = target != null ? target.GetComponent<PlayerController>() : null;
+            CancelNavMeshPath();
             ResetFollowDeadZoneAnchor();
             RequestReposition();
             ResetSpeed();
@@ -241,6 +258,7 @@ namespace EndLink.Ally
         /// </summary>
         public void ResumeFollowFromCurrentPosition()
         {
+            CancelNavMeshPath();
             ResetFollowDeadZoneAnchor();
             RequestReposition();
             ResetSpeed();
@@ -273,6 +291,52 @@ namespace EndLink.Ally
             allyAvoidRadius = Mathf.Max(0f, settings.AllyAvoidRadius);
             avoidanceStrength = Mathf.Max(0f, settings.AvoidanceStrength);
             avoidanceLayerMask = settings.AvoidanceLayerMask;
+            ConfigureNavMeshAgent();
+        }
+
+        private void EnsureNavMeshAgent()
+        {
+            if (_navMeshAgent == null)
+            {
+                _navMeshAgent = GetComponent<NavMeshAgent>();
+            }
+
+            if (_navMeshAgent == null && Application.isPlaying)
+            {
+                _navMeshAgent = gameObject.AddComponent<NavMeshAgent>();
+            }
+
+            ConfigureNavMeshAgent();
+        }
+
+        private void ConfigureNavMeshAgent()
+        {
+            if (_navMeshAgent == null)
+            {
+                return;
+            }
+
+            _navMeshAgent.updatePosition = false;
+            _navMeshAgent.updateRotation = false;
+            _navMeshAgent.autoBraking = false;
+            _navMeshAgent.speed = Mathf.Max(0.01f, moveSpeed * catchUpSpeedMultiplier * sprintSyncSpeedMultiplier);
+            _navMeshAgent.acceleration = Mathf.Max(8f, _navMeshAgent.speed * 4f);
+            _navMeshAgent.angularSpeed = Mathf.Max(0f, rotationSpeed);
+            _navMeshAgent.stoppingDistance = Mathf.Max(stopDistance, 0.05f);
+
+            if (_characterController == null)
+            {
+                _characterController = GetComponent<CharacterController>();
+            }
+
+            if (_characterController == null)
+            {
+                return;
+            }
+
+            _navMeshAgent.radius = Mathf.Max(0.05f, _characterController.radius * 0.95f);
+            _navMeshAgent.height = Mathf.Max(_characterController.height, _navMeshAgent.radius * 2f);
+            _navMeshAgent.baseOffset = 0f;
         }
 
         /// <summary>
@@ -291,6 +355,7 @@ namespace EndLink.Ally
             {
                 _desiredWorldPosition = _followDeadZoneAnchorPosition;
                 SmoothSpeedTo(0f, deltaTime);
+                CancelNavMeshPath();
                 ApplyAvoidanceOnly(CalculateAvoidanceVector(), deltaTime, false);
                 _followDeadZoneAnchorPosition = transform.position;
                 return;
@@ -299,6 +364,23 @@ namespace EndLink.Ally
             _isRepositioning = true;
             SyncFollowDeadZoneAnchorToCurrentPosition();
             _desiredWorldPosition = CalculateDesiredWorldPosition();
+
+            float arriveRadius = Mathf.Max(stopDistance, 0.05f);
+            if (TryTickNavMeshMove(_desiredWorldPosition, followTarget, arriveRadius, deltaTime, true, out bool reachedByNavMesh, out Vector3 navMoveDirection))
+            {
+                if (reachedByNavMesh)
+                {
+                    ResetFollowDeadZoneAnchor();
+                    RotateAfterArrive(deltaTime);
+                }
+                else if (navMoveDirection.sqrMagnitude > 0.0001f)
+                {
+                    SyncFollowDeadZoneAnchorToCurrentPosition();
+                    RotateTowards(navMoveDirection, deltaTime);
+                }
+
+                return;
+            }
 
             Vector3 toDesired = _desiredWorldPosition - transform.position;
             toDesired.y = 0f;
@@ -309,17 +391,18 @@ namespace EndLink.Ally
             {
                 TeleportToDesiredPosition();
                 ResetFollowDeadZoneAnchor();
+                CancelNavMeshPath();
                 RotateAfterArrive(deltaTime);
                 return;
             }
 
             Vector3 avoidanceVector = CalculateAvoidanceVector();
-            float arriveRadius = Mathf.Max(stopDistance, 0.05f);
             if (distance <= arriveRadius || moveSpeed <= 0f)
             {
                 SmoothSpeedTo(0f, deltaTime);
                 ApplyAvoidanceOnly(avoidanceVector, deltaTime);
                 ResetFollowDeadZoneAnchor();
+                CancelNavMeshPath();
                 RotateAfterArrive(deltaTime);
                 return;
             }
@@ -332,10 +415,13 @@ namespace EndLink.Ally
 
             if (step > 0f)
             {
-                Move(finalMoveDirection * step);
+                Move(finalMoveDirection * step, deltaTime);
                 SyncFollowDeadZoneAnchorToCurrentPosition();
                 RotateTowards(finalMoveDirection, deltaTime);
+                return;
             }
+
+            ApplyGrounding(deltaTime);
         }
 
         /// <summary>
@@ -351,19 +437,33 @@ namespace EndLink.Ally
             }
 
             _desiredWorldPosition = worldPosition;
-            _desiredWorldPosition.y = transform.position.y;
+
+            float arriveRadius = Mathf.Max(0f, arriveDistance);
+            if (TryTickNavMeshMove(_desiredWorldPosition, null, arriveRadius, deltaTime, false, out bool reachedByNavMesh, out Vector3 navMoveDirection))
+            {
+                if (reachedByNavMesh)
+                {
+                    RotateTowardsPosition(worldPosition, deltaTime);
+                }
+                else if (navMoveDirection.sqrMagnitude > 0.0001f)
+                {
+                    RotateTowards(navMoveDirection, deltaTime);
+                }
+
+                return;
+            }
 
             Vector3 toDesired = _desiredWorldPosition - transform.position;
             toDesired.y = 0f;
 
             float distance = toDesired.magnitude;
             Vector3 avoidanceVector = CalculateAvoidanceVector();
-            float arriveRadius = Mathf.Max(0f, arriveDistance);
 
             if (distance <= arriveRadius || moveSpeed <= 0f)
             {
                 SmoothSpeedTo(0f, deltaTime);
                 ApplyAvoidanceOnly(avoidanceVector, deltaTime);
+                CancelNavMeshPath();
                 RotateTowardsPosition(worldPosition, deltaTime);
                 return;
             }
@@ -376,9 +476,273 @@ namespace EndLink.Ally
 
             if (step > 0f)
             {
-                Move(finalMoveDirection * step);
+                Move(finalMoveDirection * step, deltaTime);
                 RotateTowards(finalMoveDirection, deltaTime);
+                return;
             }
+
+            ApplyGrounding(deltaTime);
+        }
+
+        private bool TryTickNavMeshMove(
+            Vector3 desiredPosition,
+            Transform fallbackSampleTarget,
+            float arriveDistance,
+            float deltaTime,
+            bool allowSprintSync,
+            out bool reachedDestination,
+            out Vector3 moveDirection)
+        {
+            reachedDestination = false;
+            moveDirection = Vector3.zero;
+
+            if (!CanUseNavMesh())
+            {
+                return false;
+            }
+
+            if (!TryResolveNavMeshDestination(desiredPosition, fallbackSampleTarget, out Vector3 navDestination))
+            {
+                CancelNavMeshPath();
+                ApplyGrounding(deltaTime);
+                return true;
+            }
+
+            float planarDistanceToDestination = GetPlanarDistance(transform.position, navDestination);
+            if (ShouldTeleport(planarDistanceToDestination))
+            {
+                TeleportToNavMeshPosition(navDestination);
+                reachedDestination = true;
+                return true;
+            }
+
+            UpdateNavMeshDestination(navDestination);
+
+            float remainingDistance = GetNavMeshRemainingDistance(navDestination);
+            Vector3 navMoveVector = GetNavMeshMoveVector(navDestination);
+            Vector3 pathDirection = GetPlanarDirection(navMoveVector);
+
+            Vector3 avoidanceVector = CalculateAvoidanceVector();
+            float safeArriveDistance = Mathf.Max(0f, arriveDistance);
+            if (remainingDistance <= safeArriveDistance || moveSpeed <= 0f)
+            {
+                SmoothSpeedTo(0f, deltaTime);
+                ApplyAvoidanceOnly(avoidanceVector, deltaTime);
+                CancelNavMeshPath();
+                reachedDestination = true;
+                return true;
+            }
+
+            if (navMoveVector.sqrMagnitude <= 0.0001f)
+            {
+                ApplyGrounding(deltaTime);
+                return true;
+            }
+
+            float targetSpeed = CalculateTargetSpeed(remainingDistance, safeArriveDistance, allowSprintSync);
+            float currentSpeed = SmoothSpeedTo(targetSpeed, deltaTime);
+            float step = Mathf.Min(currentSpeed * deltaTime, Mathf.Max(0f, remainingDistance - safeArriveDistance));
+
+            if (step <= 0f)
+            {
+                ApplyGrounding(deltaTime);
+                return true;
+            }
+
+            Vector3 moveDelta = BuildNavMeshMoveDelta(navMoveVector, avoidanceVector, step);
+            MoveAlongNavMesh(moveDelta);
+            SyncNavMeshAgentToTransform();
+            moveDirection = GetPlanarDirection(moveDelta);
+            return true;
+        }
+
+        private bool CanUseNavMesh()
+        {
+            EnsureNavMeshAgent();
+            if (_navMeshAgent == null || !_navMeshAgent.enabled)
+            {
+                return false;
+            }
+
+            if (_navMeshAgent.isOnNavMesh)
+            {
+                return true;
+            }
+
+            return TrySnapAgentToNavMesh();
+        }
+
+        private bool TryResolveNavMeshDestination(Vector3 desiredPosition, Transform fallbackSampleTarget, out Vector3 navDestination)
+        {
+            float sampleDistance = Mathf.Max(NavMeshBaseSampleDistance, followSlotSoftness + stopDistance);
+            Vector3 sampleOrigin = desiredPosition;
+            if (fallbackSampleTarget != null)
+            {
+                sampleOrigin.y = fallbackSampleTarget.position.y;
+            }
+
+            if (NavMesh.SamplePosition(sampleOrigin, out NavMeshHit hit, sampleDistance, NavMesh.AllAreas))
+            {
+                navDestination = hit.position;
+                return true;
+            }
+
+            if (fallbackSampleTarget != null
+                && NavMesh.SamplePosition(fallbackSampleTarget.position, out hit, sampleDistance * 2f, NavMesh.AllAreas))
+            {
+                navDestination = hit.position;
+                return true;
+            }
+
+            navDestination = transform.position;
+            return false;
+        }
+
+        private bool TrySnapAgentToNavMesh()
+        {
+            if (_navMeshAgent == null || !_navMeshAgent.enabled)
+            {
+                return false;
+            }
+
+            float sampleDistance = Mathf.Max(NavMeshBaseSampleDistance, followSlotSoftness + stopDistance);
+            if (!NavMesh.SamplePosition(transform.position, out NavMeshHit hit, sampleDistance, NavMesh.AllAreas))
+            {
+                return false;
+            }
+
+            if ((hit.position - transform.position).sqrMagnitude > sampleDistance * sampleDistance)
+            {
+                return false;
+            }
+
+            transform.position = hit.position;
+            bool warped = _navMeshAgent.Warp(hit.position);
+            if (warped)
+            {
+                _hasLastNavDestination = false;
+            }
+
+            return warped;
+        }
+
+        private void UpdateNavMeshDestination(Vector3 navDestination)
+        {
+            if (_navMeshAgent == null || !_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh)
+            {
+                return;
+            }
+
+            if (_hasLastNavDestination
+                && (navDestination - _lastNavDestination).sqrMagnitude <= NavMeshDestinationThreshold * NavMeshDestinationThreshold)
+            {
+                return;
+            }
+
+            _navMeshAgent.SetDestination(navDestination);
+            _lastNavDestination = navDestination;
+            _hasLastNavDestination = true;
+        }
+
+        private void CancelNavMeshPath()
+        {
+            _hasLastNavDestination = false;
+
+            if (_navMeshAgent == null || !_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh)
+            {
+                return;
+            }
+
+            _navMeshAgent.ResetPath();
+            _navMeshAgent.nextPosition = transform.position;
+        }
+
+        private void SyncNavMeshAgentToTransform()
+        {
+            if (_navMeshAgent == null || !_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh)
+            {
+                return;
+            }
+
+            _navMeshAgent.nextPosition = transform.position;
+        }
+
+        private float GetNavMeshRemainingDistance(Vector3 navDestination)
+        {
+            if (_navMeshAgent == null || !_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh)
+            {
+                return GetPlanarDistance(transform.position, navDestination);
+            }
+
+            if (_navMeshAgent.pathPending)
+            {
+                return GetPlanarDistance(transform.position, navDestination);
+            }
+
+            if (_navMeshAgent.hasPath && !float.IsInfinity(_navMeshAgent.remainingDistance))
+            {
+                return _navMeshAgent.remainingDistance;
+            }
+
+            return GetPlanarDistance(transform.position, navDestination);
+        }
+
+        private Vector3 GetNavMeshMoveVector(Vector3 navDestination)
+        {
+            if (_navMeshAgent == null || !_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh)
+            {
+                return Vector3.zero;
+            }
+
+            Vector3 delta = _navMeshAgent.nextPosition - transform.position;
+            if (delta.sqrMagnitude > 0.0001f)
+            {
+                return delta;
+            }
+
+            Vector3 direction = _navMeshAgent.steeringTarget - transform.position;
+            if (direction.sqrMagnitude > 0.0001f)
+            {
+                return direction;
+            }
+
+            direction = navDestination - transform.position;
+            return direction.sqrMagnitude > 0.0001f ? direction : Vector3.zero;
+        }
+
+        private static Vector3 GetPlanarDirection(Vector3 vector)
+        {
+            vector.y = 0f;
+            return vector.sqrMagnitude > 0.0001f ? vector.normalized : Vector3.zero;
+        }
+
+        private Vector3 BuildNavMeshMoveDelta(Vector3 navMoveVector, Vector3 avoidanceVector, float step)
+        {
+            if (navMoveVector.sqrMagnitude <= 0.0001f || step <= 0f)
+            {
+                return Vector3.zero;
+            }
+
+            Vector3 normalizedNav = navMoveVector.normalized;
+            Vector3 planarDirection = GetPlanarDirection(navMoveVector);
+            if (planarDirection.sqrMagnitude <= 0.0001f)
+            {
+                return normalizedNav * step;
+            }
+
+            Vector3 blendedPlanar = BlendAvoidance(planarDirection, avoidanceVector);
+            float planarMagnitude = new Vector2(normalizedNav.x, normalizedNav.z).magnitude;
+            return new Vector3(
+                blendedPlanar.x * planarMagnitude,
+                normalizedNav.y,
+                blendedPlanar.z * planarMagnitude) * step;
+        }
+
+        private static float GetPlanarDistance(Vector3 from, Vector3 to)
+        {
+            Vector3 planar = to - from;
+            planar.y = 0f;
+            return planar.magnitude;
         }
 
         private Vector3 CalculateDesiredWorldPosition()
@@ -407,6 +771,13 @@ namespace EndLink.Ally
         private bool ShouldHoldFollowDeadZone()
         {
             if (_isRepositioning || followDeadZoneRadius <= 0f || followTarget == null)
+            {
+                return false;
+            }
+
+            if (_followTargetPlayerController != null
+                && _followTargetPlayerController.IsGrounded
+                && Mathf.Abs(followTarget.position.y - _followDeadZoneAnchorPosition.y) > DeadZoneGroundedHeightTolerance)
             {
                 return false;
             }
@@ -447,6 +818,27 @@ namespace EndLink.Ally
         private void TeleportToDesiredPosition()
         {
             transform.position = _desiredWorldPosition;
+            SyncNavMeshAgentToTransform();
+            ResetSpeed();
+        }
+
+        private void TeleportToNavMeshPosition(Vector3 navPosition)
+        {
+            transform.position = navPosition;
+
+            if (_navMeshAgent != null && _navMeshAgent.enabled)
+            {
+                if (_navMeshAgent.isOnNavMesh)
+                {
+                    _navMeshAgent.Warp(navPosition);
+                }
+                else
+                {
+                    TrySnapAgentToNavMesh();
+                }
+            }
+
+            _hasLastNavDestination = false;
             ResetSpeed();
         }
 
@@ -590,12 +982,13 @@ namespace EndLink.Ally
         {
             if (avoidanceVector.sqrMagnitude <= 0.0001f || moveSpeed <= 0f)
             {
+                ApplyGrounding(deltaTime);
                 return;
             }
 
             Vector3 direction = avoidanceVector.normalized;
             float step = moveSpeed * avoidanceStrength * deltaTime;
-            Move(direction * step);
+            Move(direction * step, deltaTime);
 
             if (rotateTowardsAvoidance)
             {
@@ -616,8 +1009,9 @@ namespace EndLink.Ally
                 return;
             }
 
-            Move(displacement);
+            MoveImmediate(displacement);
             SyncFollowDeadZoneAnchorToCurrentPosition();
+            SyncNavMeshAgentToTransform();
         }
 
         /// <summary>
@@ -629,15 +1023,67 @@ namespace EndLink.Ally
             AddExternalDisplacement(displacement);
         }
 
-        private void Move(Vector3 displacement)
+        private void Move(Vector3 planarDisplacement, float deltaTime)
         {
             if (_characterController != null && _characterController.enabled)
             {
+                UpdateVerticalVelocity(deltaTime);
+                Vector3 displacement = planarDisplacement;
+                displacement.y = _verticalVelocity * deltaTime;
                 _characterController.Move(displacement);
                 return;
             }
 
-            transform.position += displacement;
+            transform.position += planarDisplacement;
+        }
+
+        private void MoveAlongNavMesh(Vector3 worldDisplacement)
+        {
+            if (_characterController != null && _characterController.enabled)
+            {
+                _characterController.Move(worldDisplacement);
+                return;
+            }
+
+            transform.position += worldDisplacement;
+        }
+
+        private void MoveImmediate(Vector3 planarDisplacement)
+        {
+            if (_characterController != null && _characterController.enabled)
+            {
+                _characterController.Move(planarDisplacement);
+                return;
+            }
+
+            transform.position += planarDisplacement;
+        }
+
+        private void ApplyGrounding(float deltaTime)
+        {
+            if (_characterController == null || !_characterController.enabled || deltaTime <= 0f)
+            {
+                return;
+            }
+
+            UpdateVerticalVelocity(deltaTime);
+            _characterController.Move(Vector3.up * (_verticalVelocity * deltaTime));
+        }
+
+        private void UpdateVerticalVelocity(float deltaTime)
+        {
+            if (_characterController == null || !_characterController.enabled || deltaTime <= 0f)
+            {
+                return;
+            }
+
+            if (_characterController.isGrounded && _verticalVelocity < 0f)
+            {
+                _verticalVelocity = -FollowGroundedStickForce;
+                return;
+            }
+
+            _verticalVelocity += FollowGravity * deltaTime;
         }
 
         private void RotateAfterArrive(float deltaTime)
