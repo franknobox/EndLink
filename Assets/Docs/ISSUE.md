@@ -39,17 +39,13 @@
 ## 2026-06-03：Hitbox 池化与动作时序
 
 ### 当前状态
-- 玩家、队友和敌人仍直接 `Instantiate` / `Destroy` Hitbox。
-- `CombatActionDefinition` 已有 `startup`、`active`、`recovery`，但还没有真正驱动判定生成、判定持续和动作结束。
-- 当前白模阶段不阻塞验证，但多敌人压测、动作手感打磨和正式技能时序前应处理。
-
-### 处理时机
-- 建议在敌人近战循环、主控技能和队友技能的基础动作稳定后做。
-- 不必等 Animator 资源；后续接 Animator 时，再允许动画事件覆盖或校正数据时序。
+- `startup / active / recovery` 的第一版动作时序已经接入玩家、队友和敌人的 CombatDriver。
+- 动作开始后会先进入 `startup`，在前摇结束时再真正生成 Hitbox；`active` 会覆盖本次 Hitbox 的运行时生命周期。
+- 当前仍直接 `Instantiate` / `Destroy` Hitbox，尚未做池化。
 
 ### 后续行动
 - 建立 Hitbox 池化和统一创建入口，优先覆盖近战波与远程飞行 Hitbox。
-- 让 `startup` / `active` / `recovery` 控制 Hitbox 启停、回收和状态结束。
+- 后续接 Animator 后，允许动画事件覆盖或校正动作时序。
 
 ## 2026-06-03：代码审查后确认的工程技术债
 

@@ -5,8 +5,8 @@ namespace EndLink.Core
 {
     /// <summary>
     /// 玩家攻击状态。
-    /// 胶囊白模阶段用固定时间表示一次攻击过程，并在 Enter 中通过 PlayerCombatDriver 执行普攻动作。
-    /// 之后可改为动画事件或 Hitbox 事件驱动攻击生效与状态退出。
+    /// 进入时通过 PlayerCombatDriver 提交普攻动作，请求成立后由 CombatActionDefinition 的 startup / active / recovery 推进实际判定。
+    /// 状态持续时间当前仍保留一个最小兜底时长，并与普攻动作总时长取较大值。
     /// </summary>
     public sealed class PlayerAttackState : PlayerStateBase
     {

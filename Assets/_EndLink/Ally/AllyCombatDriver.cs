@@ -41,6 +41,10 @@ namespace EndLink.Ally
 
         private readonly ActionCooldownTracker<CombatActionDefinition> _cooldowns = new();
         private CombatActionDefinition _lastExecutedAction;
+        private CombatActionDefinition _currentActionDefinition;
+        private Transform _currentActionTarget;
+        private Vector3 _currentActionForward = Vector3.forward;
+        private CombatActionTimeline _currentActionTimeline;
 
         /// <summary>队友自动助战动作配置。</summary>
         public CombatActionDefinition AssistAction => assistAction;
@@ -95,11 +99,17 @@ namespace EndLink.Ally
         /// <summary>当前是否已经过了助战动作自己的冷却，可以执行一次助战攻击。</summary>
         public bool CanAssist => CanExecute(assistAction);
 
+        private void Update()
+        {
+            TickCurrentAction(Time.deltaTime);
+        }
+
         /// <summary>判断指定动作当前是否具备基础执行条件。</summary>
         public bool CanExecute(CombatActionDefinition actionDefinition)
         {
             return actionDefinition != null
                 && actionDefinition.HitboxPrefab != null
+                && _currentActionTimeline == null
                 && _cooldowns.IsReady(actionDefinition, Time.time);
         }
 
@@ -160,40 +170,14 @@ namespace EndLink.Ally
                 transform.rotation = Quaternion.LookRotation(forward, Vector3.up);
             }
 
-            Vector3 spawnPosition = transform.position
-                + forward * actionDefinition.HitboxSpawnDistance
-                + Vector3.up * actionDefinition.HitboxSpawnHeight;
-            Quaternion spawnRotation = Quaternion.LookRotation(forward, Vector3.up);
-
-            GameObject hitboxInstance = Instantiate(hitboxPrefab, spawnPosition, spawnRotation);
-
-            if (hitboxInstance.TryGetComponent(out HitboxBase hitbox))
-            {
-                hitbox.Initialize(gameObject);
-                hitbox.Configure(
-                    actionDefinition.FlatDamage,
-                    actionDefinition.DamageType,
-                    actionDefinition.KnockbackForce,
-                    actionDefinition.CombatTagToApply,
-                    actionDefinition.CombatTagDuration,
-                    actionDefinition.CombatTagStackCount,
-                    actionDefinition);
-            }
-            else
-            {
-                AllyDebugLog.Raise(
-                    gameObject,
-                    AllyDebugCategory.Combat,
-                    $"spawned hitbox has no HitboxBase, prefab={hitboxPrefab.name}");
-            }
-
             _lastExecutedAction = actionDefinition;
             _cooldowns.StartCooldown(actionDefinition, Time.time, actionDefinition.Cooldown);
+            StartActionExecution(actionDefinition, target, forward);
 
             AllyDebugLog.Raise(
                 gameObject,
                 AllyDebugCategory.Combat,
-                $"execute action={actionDefinition.ActionId}, target={GetTransformName(target)}, spawn={spawnPosition}, nextCd={actionDefinition.Cooldown:F2}");
+                $"execute action={actionDefinition.ActionId}, target={GetTransformName(target)}, nextCd={actionDefinition.Cooldown:F2}");
 
             CombatEventsBus.RaiseActionStarted(
                 gameObject,
@@ -235,6 +219,87 @@ namespace EndLink.Ally
 
             Vector3 normalizedFallback = Vector3.ProjectOnPlane(fallbackForward, Vector3.up);
             return normalizedFallback.sqrMagnitude > 0.0001f ? normalizedFallback.normalized : Vector3.forward;
+        }
+
+        private void StartActionExecution(CombatActionDefinition actionDefinition, Transform target, Vector3 forward)
+        {
+            _currentActionDefinition = actionDefinition;
+            _currentActionTarget = target;
+            _currentActionForward = forward.sqrMagnitude > 0.0001f
+                ? forward.normalized
+                : Vector3.forward;
+            _currentActionTimeline = new CombatActionTimeline(
+                actionDefinition.StartupTime,
+                actionDefinition.ActiveTime,
+                actionDefinition.RecoveryTime);
+            _currentActionTimeline.Begin(out bool triggerEffect);
+
+            if (triggerEffect)
+            {
+                TriggerCurrentActionEffect();
+            }
+        }
+
+        private void TickCurrentAction(float deltaTime)
+        {
+            if (_currentActionTimeline == null || _currentActionDefinition == null)
+            {
+                return;
+            }
+
+            _currentActionTimeline.Tick(deltaTime, out bool triggerEffect, out bool completed);
+
+            if (triggerEffect)
+            {
+                TriggerCurrentActionEffect();
+            }
+
+            if (completed)
+            {
+                ClearCurrentActionExecution();
+            }
+        }
+
+        private void TriggerCurrentActionEffect()
+        {
+            if (_currentActionDefinition == null)
+            {
+                return;
+            }
+
+            Vector3 spawnPosition = transform.position
+                + _currentActionForward * _currentActionDefinition.HitboxSpawnDistance
+                + Vector3.up * _currentActionDefinition.HitboxSpawnHeight;
+            Quaternion spawnRotation = Quaternion.LookRotation(_currentActionForward, Vector3.up);
+            GameObject hitboxInstance = Instantiate(_currentActionDefinition.HitboxPrefab, spawnPosition, spawnRotation);
+
+            if (hitboxInstance.TryGetComponent(out HitboxBase hitbox))
+            {
+                hitbox.Initialize(gameObject);
+                hitbox.Configure(
+                    _currentActionDefinition.FlatDamage,
+                    _currentActionDefinition.DamageType,
+                    _currentActionDefinition.KnockbackForce,
+                    _currentActionDefinition.CombatTagToApply,
+                    _currentActionDefinition.CombatTagDuration,
+                    _currentActionDefinition.CombatTagStackCount,
+                    _currentActionDefinition);
+                return;
+            }
+
+            AllyDebugLog.Raise(
+                gameObject,
+                AllyDebugCategory.Combat,
+                $"spawned hitbox missing HitboxBase: prefab={hitboxInstance.name}, action={_currentActionDefinition.ActionId}");
+            LogFailure($"AllyCombatDriver 生成的 Hitbox 预制体 {hitboxInstance.name} 缺少 HitboxBase。");
+        }
+
+        private void ClearCurrentActionExecution()
+        {
+            _currentActionTimeline = null;
+            _currentActionDefinition = null;
+            _currentActionTarget = null;
+            _currentActionForward = Vector3.forward;
         }
 
         private void LogFailure(string message)

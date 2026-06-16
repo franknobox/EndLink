@@ -25,7 +25,9 @@ namespace EndLink.Combat
     /// <summary>
     /// 战斗动作配置。
     /// 用 ScriptableObject 描述一次普通攻击、技能、连携技或终链奥义所需的基础数据。
-    /// Hitbox 的存活时间由 Hitbox prefab 自己配置，不由动作资产统一销毁。
+    /// 当前第一版已接入 startup / active / recovery：
+    /// startup 控制动作效果何时真正生效，active 会作为标准近战/驻留 Hitbox 的运行时有效段生命周期，
+    /// projectile 等特殊类型仍可保留自己的寿命规则；recovery 控制动作结束前的剩余锁定时间。
     /// </summary>
     [CreateAssetMenu(
         fileName = "CombatAction_",
@@ -95,7 +97,7 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float startupTime = 0.1f;
 
-        [Tooltip("有效时间。表示 Hitbox 或判定窗口理论上持续多久。具体生成物生命周期由 Hitbox prefab 自己配置。")]
+        [Tooltip("有效时间。第一版会在运行时覆盖标准近战/驻留 Hitbox 的本次生命周期，用来表达判定持续段；Projectile 等特殊类型可保留自身寿命规则。")]
         [SerializeField, Min(0.01f)]
         private float activeTime = 0.2f;
 

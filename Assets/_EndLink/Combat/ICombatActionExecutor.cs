@@ -30,4 +30,106 @@ namespace EndLink.Combat
         /// </summary>
         float GetCooldownNormalized(CombatActionDefinition actionDefinition);
     }
+
+    /// <summary>
+    /// 纯动作时序推进器。
+    /// 只负责按 startup / active / recovery 推进相位，并在跨过 startup 边界时触发一次动作生效。
+    /// </summary>
+    public enum CombatActionPhase
+    {
+        Startup = 0,
+        Active = 1,
+        Recovery = 2,
+        Completed = 3
+    }
+
+    /// <summary>
+    /// 轻量动作时序运行时。
+    /// Driver 持有它来判断何时真正提交动作效果，以及何时结束本次动作锁定。
+    /// </summary>
+    public sealed class CombatActionTimeline
+    {
+        public CombatActionTimeline(float startupDuration, float activeDuration, float recoveryDuration)
+        {
+            StartupDuration = Mathf.Max(0f, startupDuration);
+            ActiveDuration = Mathf.Max(0f, activeDuration);
+            RecoveryDuration = Mathf.Max(0f, recoveryDuration);
+            Phase = CombatActionPhase.Startup;
+        }
+
+        public float StartupDuration { get; }
+
+        public float ActiveDuration { get; }
+
+        public float RecoveryDuration { get; }
+
+        public float TotalDuration => StartupDuration + ActiveDuration + RecoveryDuration;
+
+        public float ElapsedTime { get; private set; }
+
+        public CombatActionPhase Phase { get; private set; }
+
+        public bool HasTriggeredEffect { get; private set; }
+
+        public bool IsCompleted => Phase == CombatActionPhase.Completed;
+
+        public void Begin(out bool triggerEffect)
+        {
+            triggerEffect = false;
+
+            if (IsCompleted)
+            {
+                return;
+            }
+
+            if (StartupDuration > 0f)
+            {
+                Phase = CombatActionPhase.Startup;
+                return;
+            }
+
+            triggerEffect = true;
+            HasTriggeredEffect = true;
+            Phase = ActiveDuration > 0f ? CombatActionPhase.Active : CombatActionPhase.Recovery;
+
+            if (TotalDuration <= 0f)
+            {
+                Phase = CombatActionPhase.Completed;
+            }
+        }
+
+        public void Tick(float deltaTime, out bool triggerEffect, out bool completed)
+        {
+            triggerEffect = false;
+            completed = false;
+
+            if (IsCompleted)
+            {
+                completed = true;
+                return;
+            }
+
+            float previousElapsed = ElapsedTime;
+            ElapsedTime += Mathf.Max(0f, deltaTime);
+
+            if (!HasTriggeredEffect && previousElapsed < StartupDuration && ElapsedTime >= StartupDuration)
+            {
+                HasTriggeredEffect = true;
+                triggerEffect = true;
+                Phase = ActiveDuration > 0f ? CombatActionPhase.Active : CombatActionPhase.Recovery;
+            }
+
+            float activeEndTime = StartupDuration + ActiveDuration;
+            if (HasTriggeredEffect && ElapsedTime >= activeEndTime && !IsCompleted)
+            {
+                Phase = CombatActionPhase.Recovery;
+            }
+
+            if (ElapsedTime >= TotalDuration)
+            {
+                Phase = CombatActionPhase.Completed;
+                completed = true;
+            }
+        }
+    }
 }

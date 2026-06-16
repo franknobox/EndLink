@@ -46,7 +46,7 @@ namespace EndLink.Combat
         private int combatTagStackCount = 1;
 
         [Header("生命周期")]
-        [Tooltip("Hitbox 自动销毁时间。小于等于 0 表示不由 HitboxBase 按时间销毁。")]
+        [Tooltip("Hitbox 默认自动销毁时间。标准近战/驻留判定若通过 CombatActionDefinition 生成，运行时会优先使用该动作的 ActiveTime 覆盖本次生命周期。")]
         [InspectorName("Lifetime")]
         [SerializeField, Min(0f)]
         private float lifetime = 0.2f;
@@ -63,6 +63,7 @@ namespace EndLink.Combat
         private CharacterStats _ownerStats;
         private CombatActionDefinition _actionDefinition;
         private float _enabledTime;
+        private float _runtimeLifetime = -1f;
 
         /// <summary>本 Hitbox 的伤害值。</summary>
         public float DamageAmount => damageAmount;
@@ -82,7 +83,7 @@ namespace EndLink.Combat
         /// <summary>本 Hitbox 命中时附加的战斗标签层数。</summary>
         public int CombatTagStackCount => Mathf.Max(1, combatTagStackCount);
 
-        /// <summary>Hitbox 自动销毁时间。小于等于 0 表示关闭基类时间销毁。</summary>
+        /// <summary>Hitbox 默认自动销毁时间。若该类型允许读取动作 active 时长，则会优先使用动作时长。</summary>
         public float Lifetime => lifetime;
 
         /// <summary>允许命中的目标 Layer。</summary>
@@ -106,7 +107,7 @@ namespace EndLink.Combat
 
         protected virtual void Update()
         {
-            if (ShouldExpireByLifetime(_enabledTime, Time.time, lifetime))
+            if (ShouldExpireByLifetime(_enabledTime, Time.time, GetEffectiveLifetime()))
             {
                 Destroy(gameObject);
             }
@@ -145,10 +146,12 @@ namespace EndLink.Combat
         {
             _owner = owner;
             _ownerStats = owner != null ? owner.GetComponentInParent<CharacterStats>() : null;
+            _runtimeLifetime = -1f;
         }
 
         /// <summary>
         /// 运行时配置 Hitbox 参数，使用新的 CombatTagDefinition 标签通道。
+        /// 若携带 CombatActionDefinition，会同步记录该动作；标准近战/驻留判定会把 ActiveTime 作为本次运行时生命周期。
         /// </summary>
         public void Configure(
             float damage,
@@ -166,6 +169,7 @@ namespace EndLink.Combat
             combatTagDuration = Mathf.Max(0f, tagDuration);
             combatTagStackCount = Mathf.Max(1, tagStackCount);
             _actionDefinition = actionDefinition;
+            _runtimeLifetime = ResolveRuntimeLifetimeOverride(actionDefinition);
         }
 
         /// <summary>
@@ -185,6 +189,22 @@ namespace EndLink.Combat
         public static bool ShouldExpireByLifetime(float startTime, float currentTime, float lifetime)
         {
             return lifetime > 0f && currentTime - startTime >= lifetime;
+        }
+
+        protected virtual float GetEffectiveLifetime()
+        {
+            return _runtimeLifetime > 0f ? _runtimeLifetime : lifetime;
+        }
+
+        /// <summary>
+        /// 决定该类型的 Hitbox 是否接受动作 ActiveTime 作为运行时生命周期覆盖。
+        /// 标准近战/驻留判定默认接受，特殊类型可覆盖后回退到 prefab 自身寿命规则。
+        /// </summary>
+        protected virtual float ResolveRuntimeLifetimeOverride(CombatActionDefinition actionDefinition)
+        {
+            return actionDefinition != null
+                ? Mathf.Max(0f, actionDefinition.ActiveTime)
+                : -1f;
         }
 
         protected virtual void OnTriggerEnter(Collider other)

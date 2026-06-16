@@ -45,13 +45,13 @@
 | [通用生命值与角色受击接线](Features/COMBAT.md#feature-character-health) | 已完成桥接版 | 提供可复用的血量、受击、治疗和死亡；玩家、队友通过薄桥接层接入各自状态机。 |
 | [统一 Combat Target](Features/COMBAT.md#feature-combat-target) | 已完成第一版 | 为玩家、队友和敌人统一提供唯一根身份、存活/可选状态、锁定点、Collider 表面点和水平表面距离。 |
 | [角色战斗数值基础](Features/COMBAT.md#feature-character-stats) | 已完成第一版 | 提供玩家、队友和敌人共用的攻击力与承受击退倍率，并支持动作按固定伤害与攻击力倍率组合计算伤害。 |
-| [战斗动作配置](Features/COMBAT.md#feature-combat-action) | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和终链奥义的伤害、冷却、时序、Hitbox、命中标签和连携协同率收益。 |
-| [统一 Action 执行接口](Features/COMBAT.md#feature-combat-action-executor) | 已完成第一版 | 统一玩家、队友和敌人的动作可执行检查、执行请求、目标传入和冷却查询，保留各 Driver 的具体表现实现。 |
+| [战斗动作配置](Features/COMBAT.md#feature-combat-action) | 已完成第一版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和终链奥义的伤害、冷却、时序、Hitbox、命中标签和连携协同率收益，并已接入第一版 startup / active / recovery 执行时序。 |
+| [统一 Action 执行接口](Features/COMBAT.md#feature-combat-action-executor) | 已完成时序接线第一版 | 统一玩家、队友和敌人的动作可执行检查、执行请求、目标传入和冷却查询，并让 Driver 按动作前摇后再真正生成 Hitbox。 |
 | [伤害结算管线基础](Features/COMBAT.md#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
 | [受击规则基础](Features/COMBAT.md#feature-hit-response) | 已完成瞬时击退第一版 | Hitbox 实际造成伤害后，按统一目标根身份、动作基础击退距离与受击者倍率对玩家、队友和敌人施加水平瞬时击退。 |
 | [战斗标签系统](Features/COMBAT.md#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和协议反应规则。 |
 | [战斗事件总栈](Features/COMBAT.md#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
-| [基础 Hitbox 配置](Features/COMBAT.md#feature-hitbox) | 已完成第一版 | 提供通用 Hitbox 基类和远程直线 Hitbox，用于配置近战判定、远程飞行判定、目标过滤、生命周期、伤害、击退和标签。 |
+| [基础 Hitbox 配置](Features/COMBAT.md#feature-hitbox) | 已完成时序接线第一版 | 提供通用 Hitbox 基类和远程直线 Hitbox，用于配置近战判定、远程飞行判定、目标过滤、生命周期、伤害、击退和标签；标准判定支持动作 `active` 覆盖寿命，弹体仍使用自身寿命规则。 |
 
 #### PARTY
 

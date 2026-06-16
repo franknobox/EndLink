@@ -38,6 +38,10 @@ namespace EndLink.Enemies
 
         private readonly Dictionary<CombatActionDefinition, float> _nextReadyTimes = new();
         private CombatActionDefinition _lastExecutedAction;
+        private CombatActionDefinition _currentActionDefinition;
+        private Transform _currentActionTarget;
+        private Vector3 _currentActionForward = Vector3.forward;
+        private CombatActionTimeline _currentActionTimeline;
 
         /// <summary>敌人普通攻击动作。</summary>
         public CombatActionDefinition BasicAttackAction => basicAttackAction;
@@ -70,6 +74,11 @@ namespace EndLink.Enemies
 
         /// <summary>最近一次成功执行的动作是否仍在冷却。</summary>
         public bool IsActionCoolingDown => ActionCooldownRemaining > 0f;
+
+        private void Update()
+        {
+            TickCurrentAction(Time.deltaTime);
+        }
 
         /// <summary>
         /// 查询指定动作当前的冷却剩余时间。
@@ -107,6 +116,7 @@ namespace EndLink.Enemies
         {
             return actionDefinition != null
                 && actionDefinition.HitboxPrefab != null
+                && _currentActionTimeline == null
                 && GetCooldownRemaining(actionDefinition) <= 0f;
         }
 
@@ -149,16 +159,9 @@ namespace EndLink.Enemies
                 transform.rotation = Quaternion.LookRotation(attackForward, Vector3.up);
             }
 
-            Vector3 spawnPosition = transform.position
-                + attackForward * actionDefinition.HitboxSpawnDistance
-                + Vector3.up * actionDefinition.HitboxSpawnHeight;
-            Quaternion spawnRotation = Quaternion.LookRotation(attackForward, Vector3.up);
-
-            GameObject hitboxInstance = Instantiate(actionDefinition.HitboxPrefab, spawnPosition, spawnRotation);
-            ConfigureHitbox(hitboxInstance, actionDefinition);
-
             _lastExecutedAction = actionDefinition;
             _nextReadyTimes[actionDefinition] = Time.time + Mathf.Max(0f, actionDefinition.Cooldown);
+            StartActionExecution(actionDefinition, target, attackForward);
 
             CombatEventsBus.RaiseActionStarted(
                 gameObject,
@@ -185,6 +188,68 @@ namespace EndLink.Enemies
             }
 
             LogFailure($"EnemyCombatDriver 生成的 Hitbox 预制体 {hitboxInstance.name} 缺少 HitboxBase。");
+        }
+
+        private void StartActionExecution(CombatActionDefinition actionDefinition, Transform target, Vector3 forward)
+        {
+            _currentActionDefinition = actionDefinition;
+            _currentActionTarget = target;
+            _currentActionForward = forward.sqrMagnitude > 0.0001f
+                ? forward.normalized
+                : Vector3.forward;
+            _currentActionTimeline = new CombatActionTimeline(
+                actionDefinition.StartupTime,
+                actionDefinition.ActiveTime,
+                actionDefinition.RecoveryTime);
+            _currentActionTimeline.Begin(out bool triggerEffect);
+
+            if (triggerEffect)
+            {
+                TriggerCurrentActionEffect();
+            }
+        }
+
+        private void TickCurrentAction(float deltaTime)
+        {
+            if (_currentActionTimeline == null || _currentActionDefinition == null)
+            {
+                return;
+            }
+
+            _currentActionTimeline.Tick(deltaTime, out bool triggerEffect, out bool completed);
+
+            if (triggerEffect)
+            {
+                TriggerCurrentActionEffect();
+            }
+
+            if (completed)
+            {
+                ClearCurrentActionExecution();
+            }
+        }
+
+        private void TriggerCurrentActionEffect()
+        {
+            if (_currentActionDefinition == null)
+            {
+                return;
+            }
+
+            Vector3 spawnPosition = transform.position
+                + _currentActionForward * _currentActionDefinition.HitboxSpawnDistance
+                + Vector3.up * _currentActionDefinition.HitboxSpawnHeight;
+            Quaternion spawnRotation = Quaternion.LookRotation(_currentActionForward, Vector3.up);
+            GameObject hitboxInstance = Instantiate(_currentActionDefinition.HitboxPrefab, spawnPosition, spawnRotation);
+            ConfigureHitbox(hitboxInstance, _currentActionDefinition);
+        }
+
+        private void ClearCurrentActionExecution()
+        {
+            _currentActionTimeline = null;
+            _currentActionDefinition = null;
+            _currentActionTarget = null;
+            _currentActionForward = Vector3.forward;
         }
 
         private Vector3 ResolveAttackForward(Transform target)

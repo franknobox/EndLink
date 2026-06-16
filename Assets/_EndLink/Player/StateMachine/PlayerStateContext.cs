@@ -73,7 +73,16 @@ namespace EndLink.Core
         /// 攻击状态的基础持续时间。
         /// 胶囊白模阶段先用时间驱动，后续可改为动画事件驱动。
         /// </summary>
-        public float AttackDuration => StateMachine.AttackDuration;
+        public float AttackDuration
+        {
+            get
+            {
+                CombatActionDefinition basicAttack = CombatDriver != null ? CombatDriver.BasicAttackAction : null;
+                return basicAttack != null
+                    ? Mathf.Max(StateMachine.AttackDuration, basicAttack.TotalDuration)
+                    : StateMachine.AttackDuration;
+            }
+        }
 
         /// <summary>
         /// 攻击期间移动输入倍率。0 表示站桩攻击，1 表示完全保留移动。

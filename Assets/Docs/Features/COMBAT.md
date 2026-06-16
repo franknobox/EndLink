@@ -157,6 +157,12 @@
 
 <details>
 <summary>展开详情</summary>
+
+补充更新：
+- `PlayerCombatDriver`、`AllyCombatDriver`、`EnemyCombatDriver` 已接入第一版 `startup / active / recovery` 时序推进。
+- 动作请求成立后不会立刻生成 Hitbox，而是先进入 `startup`，跨过前摇边界时再真正提交一次动作效果。
+- 当前仍由各 Driver 自己持有时序、生成 Hitbox 和记录冷却；后续如果再做池化和动画事件，再考虑继续抽公共层。
+
 功能说明：
 - `ICombatActionExecutor` 统一提供 `CanExecute`、`TryExecute`、`GetCooldownRemaining` 和 `GetCooldownNormalized`。
 - `PlayerCombatDriver`、`AllyCombatDriver`、`EnemyCombatDriver` 均实现该接口，具体 Hitbox 生成、朝向、日志和事件播报仍由各自 Driver 负责。
@@ -329,6 +335,11 @@
 
 <details>
 <summary>展开详情</summary>
+
+补充更新：
+- 标准近战/驻留 Hitbox 通过 `CombatActionDefinition` 生成时，会优先读取该动作的 `ActiveTime` 作为本次运行时生命周期。
+- `HitboxProjectile` 不读取动作 `ActiveTime`，仍使用 prefab 自身的 `lifetime` 与 `maxDistance` 控制飞行寿命。
+- 没有动作上下文时，Hitbox 仍回退使用 prefab 自身的 `lifetime`，方便独立测试和特殊用法。
 
 功能说明：
 - `HitboxBase` 是大多数攻击判定的基础组件。

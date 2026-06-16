@@ -15,7 +15,7 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float speed = 12f;
 
-        [Tooltip("最大飞行距离。小于等于 0 表示不按距离销毁，只依赖 HitboxBase 的 Lifetime 或命中后销毁。")]
+        [Tooltip("最大飞行距离。小于等于 0 表示不按距离销毁，时间生命周期仅由 Projectile 自身的 Lifetime 控制。")]
         [SerializeField, Min(0f)]
         private float maxDistance = 12f;
 
@@ -45,6 +45,15 @@ namespace EndLink.Combat
             base.OnValidate();
             speed = Mathf.Max(0f, speed);
             maxDistance = Mathf.Max(0f, maxDistance);
+        }
+
+        /// <summary>
+        /// 远程弹体的寿命由 prefab 自身配置决定，不使用动作 ActiveTime 覆盖。
+        /// startup 只负责控制“何时发射”，发射后的飞行寿命与距离规则独立处理。
+        /// </summary>
+        protected override float ResolveRuntimeLifetimeOverride(CombatActionDefinition actionDefinition)
+        {
+            return -1f;
         }
 
         protected override void Update()
