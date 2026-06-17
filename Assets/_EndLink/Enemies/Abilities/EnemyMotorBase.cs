@@ -1,6 +1,7 @@
 using EndLink.Core;
 using EndLink.Combat;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace EndLink.Enemies
 {
@@ -45,6 +46,15 @@ namespace EndLink.Enemies
         [SerializeField]
         private bool autoAlignControllerToFeet = true;
 
+        [Header("NavMesh")]
+        [Tooltip("存在并启用 NavMeshAgent 时优先使用 NavMesh 路径移动；没有有效 NavMeshAgent 时自动回退为直线 CharacterController 移动。")]
+        [SerializeField]
+        private bool useNavMeshWhenAvailable = true;
+
+        [Tooltip("把敌人当前位置或目标点吸附到最近 NavMesh 的最大搜索距离。距离过小会导致找不到路径，过大会产生明显瞬移。")]
+        [SerializeField, Min(0.1f)]
+        private float navMeshSampleDistance = 1.5f;
+
         [Header("碰撞推挤")]
         [Tooltip("敌人正常移动撞到可接收外部位移的角色时，是否把挡路角色沿敌人移动方向挤开。")]
         [SerializeField]
@@ -67,6 +77,9 @@ namespace EndLink.Enemies
         private bool _isApplyingPlanarMove;
         private Vector3 _currentPlanarMoveDirection;
         private float _currentPlanarMoveDistance;
+        private NavMeshAgent _navMeshAgent;
+        private Vector3 _lastNavDestination;
+        private bool _hasLastNavDestination;
 
         /// <summary>当前是否正在执行水平移动。</summary>
         public virtual bool IsMoving => _isMoving;
@@ -80,7 +93,9 @@ namespace EndLink.Enemies
         protected virtual void Awake()
         {
             _characterController = GetComponent<CharacterController>();
+            _navMeshAgent = GetComponent<NavMeshAgent>();
             AlignControllerToFeetIfNeeded();
+            ConfigureNavMeshAgent();
         }
 
         protected virtual void LateUpdate()
@@ -94,9 +109,11 @@ namespace EndLink.Enemies
             accelerationSmoothTime = Mathf.Max(0.01f, accelerationSmoothTime);
             rotationSpeed = Mathf.Max(0f, rotationSpeed);
             groundedStickForce = Mathf.Max(0f, groundedStickForce);
+            navMeshSampleDistance = Mathf.Max(0.1f, navMeshSampleDistance);
             collisionPushMultiplier = Mathf.Max(0f, collisionPushMultiplier);
             maxCollisionPushDistance = Mathf.Max(0f, maxCollisionPushDistance);
             AlignControllerToFeetIfNeeded();
+            ConfigureNavMeshAgent();
         }
 
         /// <summary>
@@ -108,6 +125,11 @@ namespace EndLink.Enemies
             EnsureCharacterController();
 
             if (_characterController == null || !_characterController.enabled)
+            {
+                return;
+            }
+
+            if (TryMoveToWithNavMesh(destination, stopDistance, deltaTime))
             {
                 return;
             }
@@ -165,6 +187,7 @@ namespace EndLink.Enemies
             _horizontalVelocity = Vector3.zero;
             _horizontalVelocitySmoothRef = Vector3.zero;
             _isMoving = false;
+            ClearNavMeshPath();
         }
 
         /// <summary>
@@ -174,6 +197,7 @@ namespace EndLink.Enemies
         public virtual void SetMoveSpeedMultiplier(float multiplier)
         {
             _moveSpeedMultiplier = Mathf.Max(0f, multiplier);
+            ConfigureNavMeshAgent();
         }
 
         /// <summary>
@@ -245,6 +269,295 @@ namespace EndLink.Enemies
             Vector3 position = transform.position;
             position.y = previousY;
             transform.position = position;
+        }
+
+        private bool TryMoveToWithNavMesh(Vector3 destination, float stopDistance, float deltaTime)
+        {
+            if (!CanUseNavMesh())
+            {
+                return false;
+            }
+
+            if (!TryResolveNavMeshDestination(destination, out Vector3 navDestination))
+            {
+                Stop();
+                return true;
+            }
+
+            float stopDistanceSafe = Mathf.Max(0f, stopDistance);
+            _navMeshAgent.stoppingDistance = Mathf.Max(0.05f, stopDistanceSafe);
+            if (!UpdateNavMeshDestination(navDestination))
+            {
+                Stop();
+                return true;
+            }
+
+            if (_navMeshAgent.pathPending)
+            {
+                _isMoving = false;
+                SyncNavMeshAgentToTransform();
+                return true;
+            }
+
+            if (!_navMeshAgent.hasPath || _navMeshAgent.pathStatus == NavMeshPathStatus.PathInvalid)
+            {
+                Stop();
+                return true;
+            }
+
+            float remainingDistance = GetNavMeshRemainingDistance(navDestination);
+            if (remainingDistance <= stopDistanceSafe || moveSpeed <= 0f)
+            {
+                Stop();
+                return true;
+            }
+
+            Vector3 navMoveVector = GetNavMeshMoveVector(navDestination);
+            if (navMoveVector.sqrMagnitude <= 0.0001f)
+            {
+                _isMoving = false;
+                SyncNavMeshAgentToTransform();
+                return true;
+            }
+
+            Vector3 planarDirection = GetPlanarDirection(Vector3.zero, navMoveVector);
+            if (planarDirection.sqrMagnitude <= 0.0001f)
+            {
+                planarDirection = GetPlanarDirection(transform.position, navDestination);
+            }
+
+            if (planarDirection.sqrMagnitude <= 0.0001f)
+            {
+                _isMoving = false;
+                SyncNavMeshAgentToTransform();
+                return true;
+            }
+
+            Vector3 targetVelocity = planarDirection.normalized * moveSpeed * MoveSpeedMultiplier;
+            _horizontalVelocity = Vector3.SmoothDamp(
+                _horizontalVelocity,
+                targetVelocity,
+                ref _horizontalVelocitySmoothRef,
+                accelerationSmoothTime,
+                Mathf.Infinity,
+                deltaTime);
+
+            float stepDistance = _horizontalVelocity.magnitude * Mathf.Max(0f, deltaTime);
+            if (stepDistance <= 0.0001f)
+            {
+                _isMoving = false;
+                SyncNavMeshAgentToTransform();
+                return true;
+            }
+
+            float maxStepDistance = Mathf.Max(0f, remainingDistance - stopDistanceSafe);
+            if (maxStepDistance > 0f)
+            {
+                stepDistance = Mathf.Min(stepDistance, maxStepDistance);
+            }
+
+            Vector3 moveDelta = navMoveVector.normalized * stepDistance;
+            _isMoving = moveDelta.sqrMagnitude > 0.0001f;
+            MoveNavigation(moveDelta);
+            SyncNavMeshAgentToTransform();
+            FaceDirection(planarDirection, deltaTime);
+            return true;
+        }
+
+        private bool CanUseNavMesh()
+        {
+            if (!useNavMeshWhenAvailable)
+            {
+                return false;
+            }
+
+            if (_navMeshAgent == null)
+            {
+                _navMeshAgent = GetComponent<NavMeshAgent>();
+            }
+
+            if (_navMeshAgent == null || !_navMeshAgent.enabled)
+            {
+                return false;
+            }
+
+            ConfigureNavMeshAgent();
+
+            if (_navMeshAgent.isOnNavMesh)
+            {
+                return true;
+            }
+
+            return TrySnapNavMeshAgentToSurface();
+        }
+
+        private bool TrySnapNavMeshAgentToSurface()
+        {
+            if (_navMeshAgent == null)
+            {
+                return false;
+            }
+
+            if (!NavMesh.SamplePosition(transform.position, out NavMeshHit hit, navMeshSampleDistance, _navMeshAgent.areaMask))
+            {
+                return false;
+            }
+
+            if (!_navMeshAgent.Warp(hit.position))
+            {
+                return false;
+            }
+
+            transform.position = hit.position;
+            _hasLastNavDestination = false;
+            return true;
+        }
+
+        private bool TryResolveNavMeshDestination(Vector3 destination, out Vector3 navDestination)
+        {
+            navDestination = destination;
+
+            if (_navMeshAgent == null)
+            {
+                return false;
+            }
+
+            if (!NavMesh.SamplePosition(destination, out NavMeshHit hit, navMeshSampleDistance, _navMeshAgent.areaMask))
+            {
+                return false;
+            }
+
+            navDestination = hit.position;
+            return true;
+        }
+
+        private bool UpdateNavMeshDestination(Vector3 navDestination)
+        {
+            if (_navMeshAgent == null || !_navMeshAgent.isOnNavMesh)
+            {
+                return false;
+            }
+
+            if (_hasLastNavDestination && (navDestination - _lastNavDestination).sqrMagnitude <= 0.04f)
+            {
+                return true;
+            }
+
+            if (_navMeshAgent.SetDestination(navDestination))
+            {
+                _lastNavDestination = navDestination;
+                _hasLastNavDestination = true;
+                return true;
+            }
+
+            return false;
+        }
+
+        private float GetNavMeshRemainingDistance(Vector3 fallbackDestination)
+        {
+            if (_navMeshAgent == null || !_navMeshAgent.isOnNavMesh)
+            {
+                return Vector3.Distance(transform.position, fallbackDestination);
+            }
+
+            if (!_navMeshAgent.pathPending && _navMeshAgent.hasPath && !float.IsInfinity(_navMeshAgent.remainingDistance))
+            {
+                return _navMeshAgent.remainingDistance;
+            }
+
+            return Vector3.Distance(transform.position, fallbackDestination);
+        }
+
+        private Vector3 GetNavMeshMoveVector(Vector3 fallbackDestination)
+        {
+            if (_navMeshAgent == null || !_navMeshAgent.isOnNavMesh)
+            {
+                return fallbackDestination - transform.position;
+            }
+
+            Vector3 moveVector = _navMeshAgent.nextPosition - transform.position;
+            if (moveVector.sqrMagnitude > 0.0001f)
+            {
+                return moveVector;
+            }
+
+            moveVector = _navMeshAgent.steeringTarget - transform.position;
+            if (moveVector.sqrMagnitude > 0.0001f)
+            {
+                return moveVector;
+            }
+
+            return fallbackDestination - transform.position;
+        }
+
+        private void MoveNavigation(Vector3 displacement)
+        {
+            BeginPlanarMove(displacement);
+            try
+            {
+                _characterController.Move(displacement);
+            }
+            finally
+            {
+                EndPlanarMove();
+            }
+        }
+
+        private void SyncNavMeshAgentToTransform()
+        {
+            if (_navMeshAgent != null && _navMeshAgent.enabled && _navMeshAgent.isOnNavMesh)
+            {
+                _navMeshAgent.nextPosition = transform.position;
+            }
+        }
+
+        private void ClearNavMeshPath()
+        {
+            _hasLastNavDestination = false;
+
+            if (_navMeshAgent == null || !_navMeshAgent.enabled || !_navMeshAgent.isOnNavMesh)
+            {
+                return;
+            }
+
+            _navMeshAgent.ResetPath();
+            _navMeshAgent.nextPosition = transform.position;
+        }
+
+        private void ConfigureNavMeshAgent()
+        {
+            if (_navMeshAgent == null)
+            {
+                _navMeshAgent = GetComponent<NavMeshAgent>();
+            }
+
+            if (_navMeshAgent == null)
+            {
+                return;
+            }
+
+            if (_characterController == null)
+            {
+                _characterController = GetComponent<CharacterController>();
+            }
+
+            _navMeshAgent.updatePosition = false;
+            _navMeshAgent.updateRotation = false;
+            _navMeshAgent.autoBraking = false;
+            _navMeshAgent.speed = moveSpeed * MoveSpeedMultiplier;
+            _navMeshAgent.acceleration = accelerationSmoothTime > 0f
+                ? Mathf.Max(moveSpeed / accelerationSmoothTime, moveSpeed)
+                : moveSpeed;
+            _navMeshAgent.angularSpeed = rotationSpeed;
+
+            if (_characterController == null)
+            {
+                return;
+            }
+
+            _navMeshAgent.radius = _characterController.radius;
+            _navMeshAgent.height = _characterController.height;
+            _navMeshAgent.baseOffset = 0f;
         }
 
         private void OnControllerColliderHit(ControllerColliderHit hit)

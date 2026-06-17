@@ -14,7 +14,8 @@ E:\Unity_repo\Engine\6000.3.15f1\Editor\Data\Documentation
 
 ## 工程结构
 
-主要游戏代码集中在：
+工程内容主要分为运行时代码、项目数据、美术资源和工程文档几块。
+主要游戏代码和项目数据集中在：
 
 ```text
 Assets/_EndLink/
@@ -28,7 +29,8 @@ Assets/_EndLink/
 │  └─ Target/            Combat Target 标准化
 ├─ Control/              输入读取、玩家移动、相机输入和外部位移接口
 ├─ Data/                 游戏数据资产目录
-│  └─ CombatData/        战斗动作、标签定义和标签反应规则数据
+│  ├─ CombatData/        战斗动作、标签定义和标签反应规则数据
+│  └─ ScenesData/        场景关联数据，例如 NavMesh 烘焙资产
 ├─ Editor/               Unity Editor 工具窗口和自定义 Inspector
 ├─ Enemies/              正式敌人基底、感知、状态机和能力组件
 │  ├─ Abilities/         敌人移动和战斗执行能力
@@ -38,6 +40,19 @@ Assets/_EndLink/
 │  └─ StateMachine/      玩家状态机
 ├─ Tests/                临时或必要测试脚本
 └─ UI/                   运行时 HUD、动作槽位和血条组件
+```
+
+美术资源集中在：
+
+```text
+Assets/Art/
+├─ Characters/           角色相关视觉资源
+├─ Enemies/              敌人相关视觉资源
+├─ Environments/         场景、地形、关卡视觉资源
+├─ VFX/                  特效资源
+├─ UI/                   UI 视觉资源
+├─ Shared/               多模块复用资源
+└─ _Incoming/            新接入或待整理资源
 ```
 
 ## 工程文档
@@ -77,7 +92,7 @@ Feature 子文档：
 8. Unity 生成文件不要手工维护。比如 `InputSystem_Actions.cs` 应由 `.inputactions` 生成。
 9. 如果一个问题可以靠简单的动手配置操作解决（比如某某组件我忘记添加了），就不用另外写代码。
 
-其他工程实践、测试、调试、前端或协作流程，按 Agent 自身预设和可用 Skills 执行。
+其他工程实践、测试、调试、前端或协作流程，按 Agent 自身预设和所用 Skills 执行。
 
 ## 文档更新规则
 

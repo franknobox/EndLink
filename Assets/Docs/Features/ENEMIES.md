@@ -130,6 +130,7 @@
 
 功能说明：
 - `EnemyMotorBase` 是第一版地面敌人移动能力组件，基于 `CharacterController` 提供移动、转向、重力和停止能力。
+- `EnemyMotorBase` 已预留可选 NavMesh 后端：同物体存在并启用 `NavMeshAgent`、且场景有有效 NavMesh 时，`MoveTo` 会按路径移动；否则保持原有直线 CharacterController 移动。
 - `EnemyMotorBase` 支持按“根物体在脚底”的白模约定自动校正 `CharacterController.center.y`，避免第一次移动时因胶囊底部埋入地面而被弹起。
 - `EnemyMotorBase` 在水平追击移动后会抑制碰撞带来的异常上抬，重力在 `LateUpdate` 中补充处理。
 - `EnemyMotorBase` 在正常移动撞到实现 `IExternalDisplacementReceiver` 的玩家或队友时，会把挡路角色沿敌人移动方向挤开；敌人自身不接收这条外部位移，因此队友和玩家不会反向顶动敌人。
@@ -146,10 +147,13 @@
   - `EnemyMotorBase`
   - 可选 `EnemyCombatDriver`
   - `CharacterController`
+  - 可选 `NavMeshAgent`
 
 关键配置：
 - `EnemyMotorBase.autoAlignControllerToFeet`：是否自动按脚底根物体约定校正 `CharacterController`
 - `EnemyMotorBase.preventPlanarCollisionLift`：是否抑制水平移动碰撞导致的异常上抬
+- `EnemyMotorBase.useNavMeshWhenAvailable`：存在有效 `NavMeshAgent` 时是否优先使用 NavMesh 路径移动
+- `EnemyMotorBase.navMeshSampleDistance`：敌人当前位置或目标点吸附到最近 NavMesh 的最大搜索距离
 - `EnemyMotorBase.pushExternalDisplacementReceivers`：敌人正常移动撞到玩家或队友时，是否把挡路角色挤开
 - `EnemyMotorBase.collisionPushMultiplier`：敌人本帧移动量转换为推挤位移的倍率
 - `EnemyMotorBase.maxCollisionPushDistance`：单次碰撞最多传递给玩家或队友的位移
