@@ -1,85 +1,107 @@
 # EndLink 问题记录
 
-本文档用于记录开发中出现过的系统性/功能性等各类问题、排查结论和后续处理，也是一个技术债文档。
+本文档用于记录开发中出现过的系统性问题、技术债、设计债和长期工程注意事项。
 
 遇到“越改越乱”“多个系统互相牵连”“问题反复修补”的情况时，优先在这里补一条记录，避免同类问题反复消耗时间。
 
-## 2026-06-01：队友跟随、敌人移动碰撞与索敌配置边界混乱
+## 已收束问题
 
-### 现象
-- 队友跟随死区、动态站位、避让和敌人碰撞推挤连续互相影响。
-- 为了解决一个表现问题，牵动了 `AllyFollowMotor`、`PartyManager`、`EnemyMotorBase`、`EnemyTargetSensor`、`EnemyStateMachine` 等多个系统。
-- 主要依赖 Play Mode 手感测试反馈，缺少明确的单点验证步骤，导致改动范围不断扩大。
+### 队友跟随、敌人移动碰撞与索敌配置边界
 
-### 当前判断
-- 问题不只是某一个参数，而是系统职责边界需要更清晰。
-- 队友跟随、动态槽位、避让和敌人移动碰撞都属于“角色位移控制”，第一版同时叠加太多规则时容易互相干扰。
-- 索敌配置放在 `EnemyTargetSensor` 上会让敌人配置入口分散，已调整为由 `EnemyStateMachine` 集中暴露，`EnemyTargetSensor` 只执行检测。
-
-### 处理原则
-- 暂停继续堆叠新功能时，先做收束验证。
-- 优先确认每个组件只负责自己的边界：
-  - `PartyManager`：小队关系、槽位、统一跟随参数。
-  - `AllyFollowMotor`：队友跟随移动、死区、局部避让。
-  - `EnemyMotorBase`：敌人自身移动，以及敌人移动时挤开挡路角色。
-  - `EnemyStateMachine`：敌人大状态和敌人集中配置。
-  - `EnemyTargetSensor`：执行索敌检测，不持有 Inspector 配置。
-- 如果跟随手感继续不稳定，优先关闭或简化动态槽位，先保证固定站位 + 死区 + 基础避让稳定。
-- 每次修改移动/碰撞相关逻辑后，至少验证：
+- 早期队友跟随死区、动态站位、避让、敌人碰撞推挤和敌人索敌配置曾连续互相影响。
+- 当前边界已基本收束：
+  - `PartyManager` 负责小队关系、槽位和统一跟随参数。
+  - `AllyFollowMotor` 负责队友跟随移动、死区、局部避让和队友 NavMesh 接线。
+  - `EnemyMotorBase` 负责敌人自身移动，以及敌人移动时挤开挡路角色。
+  - `EnemyStateMachine` 负责敌人大状态和敌人集中配置。
+  - `EnemyTargetSensor` 只执行索敌检测，不再持有主要 Inspector 配置。
+- 后续修改移动/碰撞相关逻辑时，仍需要回归验证：
   - 队友死区是否稳定。
-  - 队友是否还会轻微移动就大幅调整站位。
-  - 队友是否不能顶动敌人。
-  - 敌人正常移动是否能挤开挡路队友。
-  - 敌人是否还会异常浮空。
+  - 队友是否会因主角轻微移动而大幅调整站位。
+  - 队友和玩家是否仍不能反向顶动敌人。
+  - 敌人正常移动是否能挤开挡路玩家或队友。
+  - 敌人和队友是否还会异常浮空、穿坡或停在空中。
 
-### 后续行动
-- 做新功能前，先整理一次队友跟随和敌人移动碰撞的职责边界。
-- 后续新增击退、吸聚、霸体等战斗位移时，不复用“敌人挤开挡路角色”的接口，应单独设计角色受力/外部战斗位移入口。
+### 动作时序第一版接入
 
-## 2026-06-03：Hitbox 池化与动作时序
-
-### 当前状态
 - `startup / active / recovery` 的第一版动作时序已经接入玩家、队友和敌人的 CombatDriver。
-- 动作开始后会先进入 `startup`，在前摇结束时再真正生成 Hitbox；`active` 会覆盖本次 Hitbox 的运行时生命周期。
-- 当前仍直接 `Instantiate` / `Destroy` Hitbox，尚未做池化。
+- 动作开始后会先进入 `startup`，前摇结束时再生成 Hitbox；`active` 可以覆盖本次非弹体 Hitbox 的运行时生命周期。
+- 这部分不再作为“未完成动作时序”问题记录；剩余问题转入 Hitbox 池化、动画事件校正和动作执行入口统一。
 
-### 后续行动
-- 建立 Hitbox 池化和统一创建入口，优先覆盖近战波与远程飞行 Hitbox。
-- 后续接 Animator 后，允许动画事件覆盖或校正动作时序。
+## 冻结债务
 
-## 2026-06-03：代码审查后确认的工程技术债
+### 队友系统方向冻结
 
-### 静态事件订阅规范
-- `CombatEventsBus`、`PartyCombatRouter.CommandRequested` 等静态事件存在长期订阅风险。
-- 当前主要订阅者基本已在 `OnDisable` 或窗口关闭时退订，暂未发现明确泄漏，但后续新增订阅者必须保持“订阅和退订成对出现”。
-- 后续如果事件总线订阅者明显增多，再考虑统一订阅封装或弱引用方案。
+- 当前战斗方向更偏单人动作，优先做好主角战斗、敌人战斗和核心 3C。
+- 队友短期保持白模和功能实验单位定位，用于验证连携、标签反应、AI 助战和小队 UI，不追求完整表现。
+- 队友系统短期只修阻断问题，不主动做大规模表现完善或结构重构。
 
 ### AllyFollowMotor 过大
-- `AllyFollowMotor` 当前同时承担跟随、死区、动态归位、冲刺同步、追赶、传送、避让、战斗位置移动和 Gizmo 绘制。
-- 现在不立即拆分，避免刚稳定的跟随表现重新引入问题。
-- 后续开始正式做队伍表现、NavMesh 或更复杂队友 AI 前，再拆为跟随行为、避让行为、队形槽位解析等更小模块。
 
-### CombatDriver 重复
-- `PlayerCombatDriver`、`AllyCombatDriver`、`EnemyCombatDriver` 都包含动作冷却、Hitbox 生成、事件上报等相似逻辑。
-- 当前动作执行规则、技能时序和 Hitbox 池化都还没稳定，暂不抽基类。
-- 后续统一动作时序和 Hitbox 池化时，再抽 `CombatExecutionUtility` 或 `CombatDriverBase`。
+- `AllyFollowMotor` 当前同时承担跟随、死区、动态归位、冲刺同步、追赶、传送、避让、NavMesh、战斗位置移动、击退接收、重力、朝向和 Gizmo 绘制。
+- 该问题仍然存在，并且已经接入 NavMesh，属于明确技术债。
+- 当前不立即拆分，避免重新引入已经稳定过的跟随问题。
+- 后续重新推进队友表现、复杂队友 AI 或特色 AI 实验时，再拆为更小模块：
+  - 跟随目标与死区。
+  - 队形槽位解析。
+  - NavMesh / 地形移动。
+  - 局部避让。
+  - 战斗位置移动。
+  - Gizmo 与调试显示。
 
 ### PartyCombatContext 集合优化
-- `PartyCombatContext` 当前用 `List<Transform>` 保存已知敌人，并在清理目标时使用 `Contains`。
-- 当前白模阶段敌人数量很少，不是性能瓶颈。
-- 后续如果一场战斗中已知敌人数量变多，再改为 `HashSet<Transform>` 或 `HashSet<ICombatTarget>`，并保留有序主目标列表。
+
+- `PartyCombatContext` 当前用 `List<Transform>` 保存已知敌人，并在清理目标时使用线性查找。
+- 当前白模阶段敌人数量少，不是性能瓶颈。
+- 后续如果一场战斗中已知敌人数量明显增加，再改为 `HashSet<Transform>` 或 `HashSet<ICombatTarget>`，并保留必要的有序主目标列表。
+
+## 仍有效技术债
+
+### Hitbox 池化与统一创建入口
+
+- 玩家、队友和敌人的动作执行仍会直接 `Instantiate` Hitbox。
+- Hitbox 生命周期结束后仍直接 `Destroy`，高频动作或多敌人压测时可能带来 GC 和 CPU 抖动。
+- 后续需要建立 Hitbox 池化和统一创建入口，优先覆盖近战波与远程飞行 Hitbox。
+- 接入 Animator 后，允许动画事件覆盖或校正 `CombatActionDefinition` 的数据时序。
+
+### CombatDriver 重复
+
+- `PlayerCombatDriver`、`AllyCombatDriver`、`EnemyCombatDriver` 都包含动作冷却、Hitbox 生成、事件上报和动作时序推进等相似逻辑。
+- 当前玩家、队友、敌人的动作表现和后续动画事件接线仍未完全稳定，暂不抽基类。
+- 后续做 Hitbox 池化、动画事件和敌人攻击表现统一时，再抽 `CombatExecutionUtility` 或 `CombatDriverBase`。
 
 ### 自动化验证缺位
+
 - 项目已保留 `com.unity.test-framework`，但当前还没有稳定的 Runtime/EditMode 测试程序集和基础回归测试。
-- 后续优先补 `DamageCalculator`、`CombatTagContainer`、`PartyLinkContext`、`ActionCooldownTracker` 这类纯逻辑或低场景依赖测试。
+- 后续优先补 `DamageCalculator`、`CombatTagContainer`、`PartyLinkContext`、`ActionCooldownTracker` 等纯逻辑或低场景依赖测试。
 - 正式补测试前，先建立清晰的 `.asmdef` / `.asmref` 边界，避免测试目录继续依赖默认 `Assembly-CSharp`。
 
-### Camera.main 访问收敛
+### Camera.main 与全局查找收敛
+
 - 当前 `PlayerTargeting`、`EnemyStateMachine` 和 `UIEnemyHealthBar` 的目标/状态/头顶 UI 朝向逻辑仍会在运行时访问 `Camera.main`。
-- 部分 HUD / UI 脚本仍保留 `FindFirstObjectByType` 兜底查找。白模阶段可接受，正式 Prefab 应尽量由 HUD 或场景管理器集中显式绑定。
-- Unity 6 会缓存 `MainCamera` 标签对象，但访问 `Camera.main` 仍有小 CPU 开销，且依赖场景中正确配置 `MainCamera` 标签。
-- 白模阶段可以接受；后续镜头系统复杂后，应优先提供显式 `viewReference`，未配置时再 fallback 到缓存的主相机。
-- 建议处理方式：
-  - `PlayerTargeting`、敌人头顶状态点等世界空间标识统一支持 `viewReference`。
-  - `Awake/OnEnable` 缓存一次主相机 Transform，避免每帧直接访问 `Camera.main`。
-  - 切换相机或重建相机时提供刷新入口，而不是依赖每帧全局查询。
+- 部分 HUD / UI 脚本仍保留 `FindFirstObjectByType` 兜底查找。
+- 白模阶段可以接受；后续镜头系统、HUD 和头顶 UI 稳定后，应优先提供显式 `viewReference` 或集中绑定入口，未配置时再 fallback 到缓存主相机。
+
+## 长期工程注意
+
+### 静态事件订阅规范
+
+- `CombatEventsBus`、`PartyCombatRouter.CommandRequested` 等静态事件存在长期订阅风险。
+- 新增订阅者必须保持订阅和退订成对出现，通常在 `OnEnable` / `OnDisable` 或窗口打开 / 关闭中处理。
+- 如果事件总线订阅者明显增多，再考虑统一订阅封装或弱引用方案。
+
+### 移动、碰撞与战斗位移边界
+
+- 敌人挤开挡路角色、角色受击击退、吸聚、冲撞、霸体和外部位移属于不同规则，不应混用同一个接口表达所有位移。
+- 新增击退、吸聚、霸体、冲撞等战斗位移时，需要先确认：
+  - 位移来源是谁。
+  - 被移动者是否可抵抗。
+  - 是否影响 CharacterController / NavMeshAgent。
+  - 是否应该打断当前状态。
+  - 是否和敌人正常移动推挤互相叠加。
+
+### Unity 生成文件
+
+- `InputSystem_Actions.cs` 等 Unity 生成文件不手工维护。
+- 输入动作和绑定以 `.inputactions` 为源头，修改后在 Unity 中重新 Generate C# Class。
+
