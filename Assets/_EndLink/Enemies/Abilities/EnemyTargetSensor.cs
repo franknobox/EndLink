@@ -5,7 +5,8 @@ namespace EndLink.Enemies
 {
     /// <summary>
     /// 敌人索敌感知组件。
-    /// 第一版只负责在一定距离内发现玩家目标，并控制 Alert 到 Combat 的累积流程；
+    /// 第一版负责在一定距离内发现玩家目标，并控制 Alert 到 Combat 的累积流程；
+    /// Return 期间会等待玩家离开后重新进入警戒范围，再次触发 Alert。
     /// 不负责移动、攻击、仇恨排序或行为树细节，后续敌人索敌机制会继续从这里扩展。
     /// </summary>
     [DisallowMultipleComponent]
@@ -20,6 +21,8 @@ namespace EndLink.Enemies
         private Transform _currentDetectedTarget;
         private float _alertTimer;
         private bool _externalAlertControlApplied;
+        private bool _returnDetectionArmed;
+        private EnemyStateId _lastObservedState = EnemyStateId.None;
 
         /// <summary>当前传感器发现的目标。</summary>
         public Transform CurrentDetectedTarget => _currentDetectedTarget;
@@ -57,22 +60,36 @@ namespace EndLink.Enemies
         private void OnEnable()
         {
             CacheComponents();
+            _lastObservedState = EnemyStateId.None;
+            _returnDetectionArmed = false;
             ApplyExternalAlertControl(DetectionEnabled);
         }
 
         private void OnDisable()
         {
-            ResetDetectionState(clearStateMachineTarget: true);
+            ResetDetectionState(clearStateMachineTarget: CurrentStateCanStartAlert());
+            _lastObservedState = EnemyStateId.None;
+            _returnDetectionArmed = false;
             ApplyExternalAlertControl(false);
         }
 
         private void Update()
         {
             ApplyExternalAlertControl(DetectionEnabled);
+            EnemyStateId currentState = _stateMachine != null
+                ? _stateMachine.CurrentStateId
+                : EnemyStateId.None;
+            RefreshReturnDetectionGate(currentState);
 
             if (!DetectionEnabled || !CanDetect())
             {
-                ResetDetectionState(clearStateMachineTarget: CurrentStateIsBeforeCombat());
+                ResetDetectionState(clearStateMachineTarget: CurrentStateCanStartAlert());
+                return;
+            }
+
+            if (CurrentStateOwnsCombatTarget() && _stateMachine.HasValidTarget)
+            {
+                ClearAlertTracking();
                 return;
             }
 
@@ -80,7 +97,18 @@ namespace EndLink.Enemies
 
             if (detectedTarget == null)
             {
-                ResetDetectionState(clearStateMachineTarget: CurrentStateIsBeforeCombat());
+                if (currentState == EnemyStateId.Return)
+                {
+                    _returnDetectionArmed = true;
+                }
+
+                ResetDetectionState(clearStateMachineTarget: CurrentStateCanStartAlert());
+                return;
+            }
+
+            if (currentState == EnemyStateId.Return && !_returnDetectionArmed)
+            {
+                ClearAlertTracking();
                 return;
             }
 
@@ -99,7 +127,7 @@ namespace EndLink.Enemies
 
             if (!enabled)
             {
-                ResetDetectionState(clearStateMachineTarget: true);
+                ResetDetectionState(clearStateMachineTarget: CurrentStateCanStartAlert());
             }
 
             ApplyExternalAlertControl(enabled);
@@ -116,12 +144,23 @@ namespace EndLink.Enemies
                 Log($"detected target={detectedTarget.name}");
             }
 
+            if (CurrentStateOwnsCombatTarget())
+            {
+                if (!_stateMachine.HasValidTarget)
+                {
+                    _stateMachine.SetTarget(detectedTarget);
+                }
+
+                return;
+            }
+
             _stateMachine.SetTarget(detectedTarget);
 
-            if (CurrentStateIsBeforeCombat())
+            if (CurrentStateCanStartAlert())
             {
                 if (_stateMachine.CurrentStateId == EnemyStateId.Idle
-                    || _stateMachine.CurrentStateId == EnemyStateId.None)
+                    || _stateMachine.CurrentStateId == EnemyStateId.None
+                    || _stateMachine.CurrentStateId == EnemyStateId.Return)
                 {
                     _stateMachine.RequestAlert(detectedTarget);
                 }
@@ -217,11 +256,46 @@ namespace EndLink.Enemies
             return _health == null || !_health.IsDead;
         }
 
-        private bool CurrentStateIsBeforeCombat()
+        private bool CurrentStateCanStartAlert()
         {
-            return _stateMachine != null
-                && _stateMachine.CurrentStateId != EnemyStateId.Combat
-                && _stateMachine.CurrentStateId != EnemyStateId.Dead;
+            if (_stateMachine == null)
+            {
+                return false;
+            }
+
+            EnemyStateId stateId = _stateMachine.CurrentStateId;
+            return stateId == EnemyStateId.None
+                || stateId == EnemyStateId.Idle
+                || stateId == EnemyStateId.Alert
+                || stateId == EnemyStateId.Return;
+        }
+
+        private void RefreshReturnDetectionGate(EnemyStateId currentState)
+        {
+            if (currentState == _lastObservedState)
+            {
+                return;
+            }
+
+            _lastObservedState = currentState;
+            _returnDetectionArmed = false;
+        }
+
+        private bool CurrentStateOwnsCombatTarget()
+        {
+            if (_stateMachine == null)
+            {
+                return false;
+            }
+
+            EnemyStateId stateId = _stateMachine.CurrentStateId;
+            return stateId == EnemyStateId.Combat || stateId == EnemyStateId.Hit;
+        }
+
+        private void ClearAlertTracking()
+        {
+            _currentDetectedTarget = null;
+            _alertTimer = 0f;
         }
 
         private bool IsTargetInRange(Transform target)

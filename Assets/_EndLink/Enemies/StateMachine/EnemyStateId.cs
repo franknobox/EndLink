@@ -11,6 +11,7 @@ namespace EndLink.Enemies
         Alert = 2,
         Combat = 3,
         Hit = 4,
-        Dead = 5
+        Dead = 5,
+        Return = 6
     }
 }

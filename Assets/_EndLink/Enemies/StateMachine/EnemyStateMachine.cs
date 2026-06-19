@@ -2,12 +2,13 @@ using System.Collections.Generic;
 using EndLink.Combat;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Serialization;
 
 namespace EndLink.Enemies
 {
     /// <summary>
     /// 敌人有限状态机。
-    /// 当前管理 Idle、Alert、Combat、Hit、Dead 这些大状态；
+    /// 当前管理 Idle、Alert、Combat、Hit、Return、Dead 这些大状态；
     /// 更细的攻击、技能、撤退和复杂站位行为会放进 Combat 内部的行为树。
     /// </summary>
     [DisallowMultipleComponent]
@@ -86,9 +87,23 @@ namespace EndLink.Enemies
         [SerializeField, Min(0f)]
         private float combatAttackInnerOffset = 0.1f;
 
-        [Tooltip("目标离敌人超过该距离时脱战并回到 Idle。小于等于 0 表示不按距离脱战。")]
+        [Header("脱战与归位")]
+        [Tooltip("敌人的归位参考点。为空时记录敌人创建时的世界坐标作为 Home。")]
+        [SerializeField]
+        private Transform homePoint;
+
+        [FormerlySerializedAs("combatLeashDistance")]
+        [Tooltip("敌人距离 Home 超过该半径时停止追击并进入 Return。小于等于 0 表示不限制最大追击半径。")]
         [SerializeField, Min(0f)]
-        private float combatLeashDistance = 18f;
+        private float maxChaseRadius = 18f;
+
+        [Tooltip("当前战斗目标失效后等待重新获取目标的时间。等待结束仍无目标时进入 Return。")]
+        [SerializeField, Min(0f)]
+        private float lostTargetDelay = 0.75f;
+
+        [Tooltip("返回 Home 时允许的水平停止距离。进入该范围后恢复 Idle。")]
+        [SerializeField, Min(0f)]
+        private float returnStopDistance = 0.2f;
 
         [Header("调试")]
         [Tooltip("是否打印敌人大状态切换日志。排查受击、进战和死亡流程时开启。")]
@@ -114,7 +129,10 @@ namespace EndLink.Enemies
         private Material _stateIndicatorMaterial;
         private Renderer _stateIndicatorRenderer;
         private bool _alertTransitionExternallyControlled;
+        private EnemyStateId _alertFallbackState = EnemyStateId.Idle;
         private float _nextHitReactTime;
+        private Vector3 _capturedHomePosition;
+        private bool _hasCapturedHome;
 
         /// <summary>当前状态标识，方便 Inspector 和调试工具观察。</summary>
         public EnemyStateId CurrentStateId => _currentState?.StateId ?? EnemyStateId.None;
@@ -164,8 +182,17 @@ namespace EndLink.Enemies
         /// <summary>Combat 状态接近攻击目标时，相对动作极限距离向内靠近的距离。</summary>
         public float CombatAttackInnerOffset => combatAttackInnerOffset;
 
-        /// <summary>Combat 状态目标超过该距离时脱战。小于等于 0 表示不按距离脱战。</summary>
-        public float CombatLeashDistance => combatLeashDistance;
+        /// <summary>敌人的归位位置。配置 Home Point 时实时读取，否则使用创建时记录的位置。</summary>
+        public Vector3 HomePosition => homePoint != null ? homePoint.position : _capturedHomePosition;
+
+        /// <summary>敌人距离 Home 允许的最大追击半径。小于等于 0 表示不限制。</summary>
+        public float MaxChaseRadius => maxChaseRadius;
+
+        /// <summary>战斗目标失效后等待重新获取目标的时间。</summary>
+        public float LostTargetDelay => lostTargetDelay;
+
+        /// <summary>Return 状态抵达 Home 使用的水平停止距离。</summary>
+        public float ReturnStopDistance => returnStopDistance;
 
         /// <summary>Alert 到 Combat / Idle 的转换是否由外部索敌组件控制。</summary>
         public bool AlertTransitionExternallyControlled => _alertTransitionExternallyControlled;
@@ -175,6 +202,7 @@ namespace EndLink.Enemies
             EnsureDetectionDefaults();
             _actor = GetComponent<EnemyActor>();
             _health = GetComponent<EnemyHealth>();
+            CaptureHomeIfNeeded();
 
             EnemyStateContext context = new EnemyStateContext(
                 this,
@@ -187,6 +215,7 @@ namespace EndLink.Enemies
             RegisterState(new EnemyCombatState(context));
             RegisterState(new EnemyHitState(context));
             RegisterState(new EnemyDeadState(context));
+            RegisterState(new EnemyReturnState(context));
             CacheEnemyBoundsComponents();
         }
 
@@ -199,11 +228,8 @@ namespace EndLink.Enemies
 
             _health.OnDamaged.AddListener(HandleDamaged);
             _health.OnDead.AddListener(HandleDead);
-        }
-
-        private void Start()
-        {
-            ChangeState(_health != null && _health.IsDead ? EnemyStateId.Dead : initialState);
+            _health.ResetPerformed += HandleHealthReset;
+            ResetRuntimeState();
         }
 
         private void Update()
@@ -225,6 +251,13 @@ namespace EndLink.Enemies
 
             _health.OnDamaged.RemoveListener(HandleDamaged);
             _health.OnDead.RemoveListener(HandleDead);
+            _health.ResetPerformed -= HandleHealthReset;
+
+            _currentState?.Exit();
+            _currentState = null;
+            _currentTarget = null;
+            _actor?.CombatDriver?.CancelCurrentAction();
+            SetStateIndicatorVisible(false);
         }
 
         private void OnValidate()
@@ -238,7 +271,9 @@ namespace EndLink.Enemies
             combatChaseStopDistance = Mathf.Max(0f, combatChaseStopDistance);
             combatAttackRangeTolerance = Mathf.Max(0f, combatAttackRangeTolerance);
             combatAttackInnerOffset = Mathf.Max(0f, combatAttackInnerOffset);
-            combatLeashDistance = Mathf.Max(0f, combatLeashDistance);
+            maxChaseRadius = Mathf.Max(0f, maxChaseRadius);
+            lostTargetDelay = Mathf.Max(0f, lostTargetDelay);
+            returnStopDistance = Mathf.Max(0f, returnStopDistance);
             EnsureDetectionDefaults();
             CacheEnemyBoundsComponents();
         }
@@ -283,6 +318,36 @@ namespace EndLink.Enemies
         }
 
         /// <summary>
+        /// 把敌人当前位置记录为新的 Home。
+        /// 对象池或刷新系统在移动敌人到新出生点后可以调用该入口。
+        /// </summary>
+        public void CaptureCurrentPositionAsHome()
+        {
+            homePoint = null;
+            _capturedHomePosition = transform.position;
+            _hasCapturedHome = true;
+        }
+
+        /// <summary>
+        /// 清理当前目标、动作和状态运行数据，并按当前生命状态重新进入初始状态或 Dead。
+        /// 用于敌人重新启用、生命重置和后续对象池复用。
+        /// </summary>
+        public void ResetRuntimeState()
+        {
+            _currentState?.Exit();
+            _currentState = null;
+            _currentTarget = null;
+            _alertFallbackState = EnemyStateId.Idle;
+            _nextHitReactTime = 0f;
+            _actor?.CombatDriver?.ResetRuntimeState();
+
+            EnemyStateId resetState = _health != null && _health.IsDead
+                ? EnemyStateId.Dead
+                : initialState;
+            ChangeState(resetState);
+        }
+
+        /// <summary>
         /// 请求进入 Alert 状态。
         /// 可选目标不为空时会先更新当前目标。
         /// </summary>
@@ -291,6 +356,13 @@ namespace EndLink.Enemies
             if (!CanAcceptNonDeadRequest())
             {
                 return false;
+            }
+
+            if (CurrentStateId != EnemyStateId.Alert)
+            {
+                _alertFallbackState = CurrentStateId == EnemyStateId.Return
+                    ? EnemyStateId.Return
+                    : EnemyStateId.Idle;
             }
 
             if (target != null)
@@ -313,6 +385,8 @@ namespace EndLink.Enemies
                 return false;
             }
 
+            _alertFallbackState = EnemyStateId.Idle;
+
             if (target != null)
             {
                 SetTarget(target);
@@ -323,8 +397,23 @@ namespace EndLink.Enemies
         }
 
         /// <summary>
+        /// Alert 失去目标时返回进入警觉前的安全状态。
+        /// 从 Return 进入的 Alert 会继续归位，其余情况回到 Idle。
+        /// </summary>
+        public void ReturnFromAlert()
+        {
+            EnemyStateId fallbackState = _alertFallbackState == EnemyStateId.Return
+                ? EnemyStateId.Return
+                : EnemyStateId.Idle;
+
+            _alertFallbackState = EnemyStateId.Idle;
+            SetTarget(null);
+            ChangeState(fallbackState);
+        }
+
+        /// <summary>
         /// 请求进入 Hit 状态。
-        /// 受击可以打断 Idle、Alert 和 Combat，但不能覆盖 Dead。
+        /// 受击可以打断 Idle、Alert、Combat 和 Return，但不能覆盖 Dead。
         /// </summary>
         public bool RequestHit()
         {
@@ -345,6 +434,18 @@ namespace EndLink.Enemies
         {
             ChangeState(EnemyStateId.Dead);
             return CurrentStateId == EnemyStateId.Dead;
+        }
+
+        /// <summary>请求停止当前战斗并返回 Home。</summary>
+        public bool RequestReturn()
+        {
+            if (!CanAcceptNonDeadRequest())
+            {
+                return false;
+            }
+
+            ChangeState(EnemyStateId.Return);
+            return CurrentStateId == EnemyStateId.Return;
         }
 
         /// <summary>
@@ -425,6 +526,24 @@ namespace EndLink.Enemies
             RequestDead();
         }
 
+        private void HandleHealthReset()
+        {
+            if (!isActiveAndEnabled)
+            {
+                return;
+            }
+
+            EnemyStateId expectedState = _health != null && _health.IsDead
+                ? EnemyStateId.Dead
+                : initialState;
+            if (CurrentStateId == expectedState && _currentTarget == null)
+            {
+                return;
+            }
+
+            ResetRuntimeState();
+        }
+
         private bool CanAcceptNonDeadRequest()
         {
             return CurrentStateId != EnemyStateId.Dead && (_health == null || !_health.IsDead);
@@ -493,6 +612,17 @@ namespace EndLink.Enemies
             {
                 targetLayerMask = GetDefaultPlayerLayerMask();
             }
+        }
+
+        private void CaptureHomeIfNeeded()
+        {
+            if (_hasCapturedHome || homePoint != null)
+            {
+                return;
+            }
+
+            _capturedHomePosition = transform.position;
+            _hasCapturedHome = true;
         }
 
         private static LayerMask GetDefaultPlayerLayerMask()

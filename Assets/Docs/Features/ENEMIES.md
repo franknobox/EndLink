@@ -23,6 +23,7 @@
 - `EnemyActor` 持有 `EnemyMotorBase` 和 `EnemyCombatDriver` 引用，状态机通过 Actor 读取敌人能力，而不是直接查找具体实现。
 - `EnemyHealth` 负责正式敌人的血量、受击、死亡、死亡事件和白模调试反馈。
 - `EnemyHealth` 实现 `IHitReceiver`、`IDamageable` 和 `ICombatTargetLifeState`，不再重复实现目标身份。
+- `EnemyHealth` 完成生命重置后会通知状态机同步清理目标、动作、冷却和死亡状态，支持敌人重新启用及后续对象池复用。
 - `CombatTarget` 统一提供敌人的根身份、存活/可选状态、锁定点和 Collider 表面距离；敌人死亡后会自动失效。
 - `EnemyHealth` 死亡后会立即让目标失效，可选禁用非 Trigger Collider，并在延迟后隐藏敌人根物体，作为当前无死亡动画阶段的最小退场流程。
 - `EnemyDummy` 保留为早期轻量命中测试对象，用于快速验证 Hitbox、扣血和死亡显示；正式敌人能力以本节敌人基底为准。
@@ -73,16 +74,23 @@
 <summary>展开详情</summary>
 
 功能说明：
-- `EnemyStateMachine` 管理 `Idle`、`Alert`、`Combat`、`Hit`、`Dead` 五个敌人大状态。
+- `EnemyStateMachine` 管理 `Idle`、`Alert`、`Combat`、`Hit`、`Return`、`Dead` 六个敌人大状态。
 - `EnemyStateMachine` 集中暴露索敌配置，`EnemyTargetSensor` 只作为执行器读取状态机参数，不在自身 Inspector 中重复配置。
 - `EnemyTargetSensor` 负责第一版敌人索敌：玩家进入发现范围后请求进入 `Alert`，持续停留达到警觉时间后请求进入 `Combat`。
+- `EnemyTargetSensor` 在 `Idle` / `Alert` 阶段建立目标；进入 `Combat` / `Hit` 后由状态机持有当前战斗目标，Sensor 仅在该目标失效时重新扫描接管。
 - 自动索敌可以在 `EnemyStateMachine` 中关闭，关闭后不会主动触发 `Alert` / `Combat`。
 - `Combat` 当前负责基础追击、攻击距离停位、面向目标和普通攻击循环；追击位置取自目标 Collider 最近表面点，攻击距离来自敌人 Basic Attack 动作的 `EffectiveAttackRange`。
+- `Combat` 的最大追击距离以出生区域 `Home` 为圆心计算，不再使用敌人与当前目标的距离；越界后进入 `Return`。
+- 战斗目标失效后会等待 `lostTargetDelay`，期间允许 Sensor 重新获取目标；延迟结束仍无目标时进入 `Return`。
+- `Return` 会清除战斗目标、取消当前动作并返回 `Home`，抵达出生区域后恢复 `Idle`。
+- Return 开始时仍处于警戒范围内的玩家不会立刻重新触发；玩家离开后再次进入范围会转入 `Alert`，警戒失败则继续 Return，警戒完成则重新进入 Combat。
 - 没有配置 `EnemyCombatDriver` 或 Basic Attack 动作的敌人仍保持只追击和面向目标，方便制作不会攻击的测试敌人。
 - `Combat` 后续作为行为树的外层挂载点，内部再承载站位、技能、撤退和复杂攻击选择等细节行为。
 - `Hit` 作为独立大状态处理受击打断，不放进 Combat 行为树，方便后续加入硬直、霸体、击倒等规则。
 - 敌人受到有效伤害时，会优先把当前战斗目标切换为伤害来源；轻击只让敌人接战，重击才进入 `Hit` 状态并短暂停止移动。
 - `Hit` 状态触发带有短冷却，避免多段 Hitbox 在极短时间内反复刷新受击打断。
+- 离开 `Combat`、进入 `Hit` / `Dead` 或禁用敌人时会取消尚未结束的动作时间线，避免受击或死亡后继续生成攻击判定。
+- 状态机每次启用都会按当前生命状态重新进入初始状态或 `Dead`；生命重置会同步恢复初始状态。
 
 对应脚本：
 - `Assets/_EndLink/Enemies/Abilities/EnemyTargetSensor.cs`
@@ -95,6 +103,7 @@
 - `Assets/_EndLink/Enemies/StateMachine/EnemyAlertState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyCombatState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyHitState.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyReturnState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyDeadState.cs`
 
 相关物体：
@@ -120,6 +129,10 @@
 - `combatChaseStopDistance`：Combat 追击时保留的目标表面间隔，实际停止距离会额外加上敌人自身碰撞半径
 - `combatAttackRangeTolerance`：Combat 判断普通攻击可进入攻击距离时的容差
 - `combatAttackInnerOffset`：Combat 接近攻击目标时相对动作极限距离向内靠近的距离
+- `homePoint`：敌人的归位参考点；留空时自动记录创建位置
+- `maxChaseRadius`：相对 Home 的最大水平追击半径；小于等于 0 表示不限制
+- `lostTargetDelay`：战斗目标失效后等待重新获取目标的时间
+- `returnStopDistance`：Return 抵达 Home 时允许的水平停止距离
 
 </details>
 
@@ -137,6 +150,7 @@
 - `EnemyMotorBase` 在水平追击移动后会抑制碰撞带来的异常上抬，重力在 `LateUpdate` 中补充处理。
 - `EnemyMotorBase` 在正常移动撞到实现 `IExternalDisplacementReceiver` 的玩家或队友时，会把挡路角色沿敌人移动方向挤开；敌人自身不接收这条外部位移，因此队友和玩家不会反向顶动敌人。
 - `EnemyCombatDriver` 是敌人战斗执行器，按 `CombatActionDefinition` 生成 Hitbox、记录冷却并广播动作开始事件。
+- `EnemyCombatDriver` 暴露当前动作、执行阶段和取消入口；完整运行时重置会同时清理当前动作与动作冷却。
 - `EnemyCombatDriver` 当前由 `EnemyCombatState` 在攻击距离内调用 Basic Attack；后续行为树接入后，出手时机和动作选择会转交给行为层。
 
 对应脚本：

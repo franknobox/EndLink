@@ -66,7 +66,16 @@ namespace EndLink.Enemies
         /// <summary>Combat 状态接近攻击目标时，相对动作极限距离向内靠近的距离。</summary>
         public float CombatAttackInnerOffset => StateMachine.CombatAttackInnerOffset;
 
-        /// <summary>Combat 状态目标超过该距离时脱战。小于等于 0 表示不按距离脱战。</summary>
-        public float CombatLeashDistance => StateMachine.CombatLeashDistance;
+        /// <summary>敌人的归位位置。</summary>
+        public Vector3 HomePosition => StateMachine.HomePosition;
+
+        /// <summary>敌人距离 Home 允许的最大追击半径。</summary>
+        public float MaxChaseRadius => StateMachine.MaxChaseRadius;
+
+        /// <summary>当前目标失效后等待重新获取目标的时间。</summary>
+        public float LostTargetDelay => StateMachine.LostTargetDelay;
+
+        /// <summary>Return 状态抵达 Home 使用的水平停止距离。</summary>
+        public float ReturnStopDistance => StateMachine.ReturnStopDistance;
     }
 }

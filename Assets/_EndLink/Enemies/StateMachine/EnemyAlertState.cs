@@ -29,7 +29,7 @@ namespace EndLink.Enemies
             {
                 if (!Context.HasValidTarget)
                 {
-                    Context.StateMachine.ChangeState(EnemyStateId.Idle);
+                    Context.StateMachine.ReturnFromAlert();
                     return;
                 }
 
@@ -44,7 +44,13 @@ namespace EndLink.Enemies
                 return;
             }
 
-            Context.StateMachine.ChangeState(Context.HasValidTarget ? EnemyStateId.Combat : EnemyStateId.Idle);
+            if (Context.HasValidTarget)
+            {
+                Context.StateMachine.RequestCombat(Context.CurrentTarget);
+                return;
+            }
+
+            Context.StateMachine.ReturnFromAlert();
         }
     }
 }

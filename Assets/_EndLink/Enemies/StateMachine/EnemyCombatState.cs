@@ -14,6 +14,7 @@ namespace EndLink.Enemies
 
         private float _selfPlanarRadius;
         private float _nextAttackAttemptTime;
+        private float _lostTargetElapsed;
         private bool _loggedMissingHitbox;
 
         public EnemyCombatState(EnemyStateContext context) : base(context)
@@ -28,39 +29,34 @@ namespace EndLink.Enemies
         {
             _selfPlanarRadius = EstimateSelfPlanarRadius();
             _nextAttackAttemptTime = 0f;
+            _lostTargetElapsed = 0f;
             _loggedMissingHitbox = false;
-
-            if (!Context.HasValidTarget)
-            {
-                Context.StateMachine.ChangeState(EnemyStateId.Idle);
-            }
         }
 
         /// <inheritdoc />
         public override void Exit()
         {
             Context.Motor?.Stop();
+            Context.CombatDriver?.CancelCurrentAction();
         }
 
         /// <inheritdoc />
         public override void Tick(float deltaTime)
         {
+            if (IsBeyondHomeLeash())
+            {
+                Context.StateMachine.RequestReturn();
+                return;
+            }
+
             if (!Context.HasValidTarget)
             {
-                Context.Motor?.Stop();
-                Context.StateMachine.ChangeState(EnemyStateId.Idle);
+                TickLostTarget(deltaTime);
                 return;
             }
 
+            _lostTargetElapsed = 0f;
             Transform target = Context.CurrentTarget;
-
-            if (IsTargetBeyondLeash(target))
-            {
-                Context.Motor?.Stop();
-                Context.StateMachine.SetTarget(null);
-                Context.StateMachine.ChangeState(EnemyStateId.Idle);
-                return;
-            }
 
             if (TryGetBasicAttackAction(out CombatActionDefinition basicAttackAction))
             {
@@ -69,6 +65,20 @@ namespace EndLink.Enemies
             }
 
             TickChaseOnly(target, deltaTime);
+        }
+
+        private void TickLostTarget(float deltaTime)
+        {
+            Context.Motor?.Stop();
+            _lostTargetElapsed += Mathf.Max(0f, deltaTime);
+
+            if (_lostTargetElapsed < Context.LostTargetDelay)
+            {
+                return;
+            }
+
+            Context.StateMachine.SetTarget(null);
+            Context.StateMachine.RequestReturn();
         }
 
         private void TickChaseOnly(Transform target, float deltaTime)
@@ -189,16 +199,16 @@ namespace EndLink.Enemies
             return 0f;
         }
 
-        private bool IsTargetBeyondLeash(Transform target)
+        private bool IsBeyondHomeLeash()
         {
-            if (target == null || Context.CombatLeashDistance <= 0f)
+            if (Context.MaxChaseRadius <= 0f)
             {
                 return false;
             }
 
-            return CombatTargetUtility.GetSurfaceDistance(
-                target,
-                Context.Transform.position) > Context.CombatLeashDistance;
+            Vector3 offset = Context.Transform.position - Context.HomePosition;
+            offset.y = 0f;
+            return offset.sqrMagnitude > Context.MaxChaseRadius * Context.MaxChaseRadius;
         }
     }
 }

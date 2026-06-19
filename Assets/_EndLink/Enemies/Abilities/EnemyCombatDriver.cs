@@ -49,6 +49,17 @@ namespace EndLink.Enemies
         /// <summary>敌人技能动作。</summary>
         public CombatActionDefinition SkillAction => skillAction;
 
+        /// <summary>当前是否仍有动作时间线正在推进。</summary>
+        public bool IsExecutingAction => _currentActionTimeline != null;
+
+        /// <summary>当前动作所处阶段。没有动作时返回 Completed。</summary>
+        public CombatActionPhase CurrentActionPhase => _currentActionTimeline != null
+            ? _currentActionTimeline.Phase
+            : CombatActionPhase.Completed;
+
+        /// <summary>当前正在执行的动作配置。没有动作时为空。</summary>
+        public CombatActionDefinition CurrentAction => _currentActionDefinition;
+
         /// <summary>是否已经配置普通攻击动作。</summary>
         public bool HasBasicAttackAction => basicAttackAction != null;
 
@@ -78,6 +89,11 @@ namespace EndLink.Enemies
         private void Update()
         {
             TickCurrentAction(Time.deltaTime);
+        }
+
+        private void OnDisable()
+        {
+            CancelCurrentAction();
         }
 
         /// <summary>
@@ -127,6 +143,26 @@ namespace EndLink.Enemies
         public bool ExecuteBasicAttack(Transform target)
         {
             return TryExecute(basicAttackAction, target);
+        }
+
+        /// <summary>
+        /// 取消当前尚未结束的动作时间线。
+        /// 已经记录的动作冷却不会回退；已经生成的 Hitbox 或弹体继续遵循自身生命周期。
+        /// </summary>
+        public void CancelCurrentAction()
+        {
+            ClearCurrentActionExecution();
+        }
+
+        /// <summary>
+        /// 重置动作执行器的全部运行时状态，包括当前动作、动作冷却和最近执行动作。
+        /// 用于敌人生命重置、重新启用和后续对象池复用。
+        /// </summary>
+        public void ResetRuntimeState()
+        {
+            ClearCurrentActionExecution();
+            _nextReadyTimes.Clear();
+            _lastExecutedAction = null;
         }
 
         /// <summary>

@@ -105,6 +105,12 @@ namespace EndLink.Enemies
         /// <summary>死亡事件。</summary>
         public UnityEvent OnDead => onDead;
 
+        /// <summary>
+        /// 生命值和死亡标记完成重置后触发。
+        /// 供状态机、对象池或后续敌人刷新流程同步清理运行时状态。
+        /// </summary>
+        public event System.Action ResetPerformed;
+
         private void Awake()
         {
             CacheComponents();
@@ -181,6 +187,7 @@ namespace EndLink.Enemies
             RestoreColliders();
             SetBaseColor(_originalColor);
             UpdateDebugDisplay();
+            ResetPerformed?.Invoke();
         }
 
         private void CacheComponents()

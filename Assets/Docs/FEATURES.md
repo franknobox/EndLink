@@ -74,7 +74,7 @@
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [敌人身份与生命目标](Features/ENEMIES.md#feature-enemy-identity-health) | 已完成分类基础版 | 提供正式敌人根身份、根类别、战斗定位、生命受击、死亡事件、目标有效性、死亡退场、战斗标签容器和基础调试显示。 |
-| [敌人感知与大状态机](Features/ENEMIES.md#feature-enemy-state-sensor) | 已完成基础攻击版 | 提供 Idle、Alert、Combat、Hit、Dead 大状态，以及距离发现、警觉累计、受击接战、追击停位和普通攻击循环。 |
+| [敌人感知与大状态机](Features/ENEMIES.md#feature-enemy-state-sensor) | 已完成脱战归位版 | 提供 Idle、Alert、Combat、Hit、Return、Dead 大状态，以及距离发现、警觉累计、战斗目标持有、受击动作打断、Home 追击半径、目标丢失延迟、脱战归位和普通攻击循环。 |
 | [敌人移动与战斗能力](Features/ENEMIES.md#feature-enemy-motor-combat) | 已完成 NavMesh 接线版 | 提供基于 CharacterController 的地面移动、追击、转向、重力、碰撞推挤和敌人战斗执行器基底；存在有效 NavMeshAgent 时可切换为 NavMesh 路径移动。 |
 
 #### UI
