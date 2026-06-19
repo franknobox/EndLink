@@ -14,13 +14,13 @@ namespace EndLink.Enemies
     public sealed class EnemyActor : MonoBehaviour, ICharacterStatsTypeProvider
     {
         [Header("分类")]
-        [Tooltip("敌人的根类别。用于归纳敌人设定来源和分类配置入口，不表示封装、继承、多态等战斗特性。")]
+        [Tooltip("敌人的根类别。异常程序的显壳态和游离态直接在这里区分；封装、继承、多态等战斗特性不放在这里。")]
         [SerializeField]
-        private EnemyKind enemyKind = EnemyKind.AberrantProgram;
+        private EnemyKind enemyKind = EnemyKind.APShell;
 
-        [Tooltip("异常程序的实体形态。只有敌人类别为 Aberrant Program 时生效；游离态不接受结构伤害，显壳态可接受结构伤害与运行伤害。")]
+        [Tooltip("敌人的战斗定位。只用于描述基础战斗职责，不会自动覆盖动作、移动、感知或数值配置。")]
         [SerializeField]
-        private AberrantProgramForm aberrantProgramForm = AberrantProgramForm.ManifestedShell;
+        private EnemyCombatRole combatRole = EnemyCombatRole.GroundMelee;
 
         [Header("视觉")]
         [Tooltip("视觉根节点。用于动画、受击反馈、特效挂点或后续表现系统定位。")]
@@ -57,12 +57,15 @@ namespace EndLink.Enemies
         /// <summary>敌人的根类别。</summary>
         public EnemyKind EnemyKind => enemyKind;
 
-        /// <summary>异常程序的实体形态。非异常程序敌人会忽略该值。</summary>
-        public AberrantProgramForm AberrantProgramForm => aberrantProgramForm;
+        /// <summary>敌人在战斗中的基础定位。</summary>
+        public EnemyCombatRole CombatRole => combatRole;
 
+        /// <summary>当前敌人是否为异常程序。</summary>
+        public bool IsAberrantProgram => enemyKind == EnemyKind.APShell
+            || enemyKind == EnemyKind.APFree;
+        
         /// <summary>当前敌人是否为游离态异常程序。</summary>
-        public bool IsFreeAberrantProgram => enemyKind == EnemyKind.AberrantProgram
-            && aberrantProgramForm == AberrantProgramForm.FreeState;
+        public bool IsFreeAberrantProgram => enemyKind == EnemyKind.APFree;
 
         /// <summary>判断当前敌人是否接受指定伤害类型。</summary>
         public bool CanReceiveDamageType(CombatDamageType damageType)

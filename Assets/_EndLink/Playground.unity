@@ -12878,7 +12878,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Enemies.EnemyActor
   enemyKind: 0
-  aberrantProgramForm: 1
   bodyRoot: {fileID: 1284033434}
   motor: {fileID: 1284033437}
   combatDriver: {fileID: 1284033438}
@@ -13016,6 +13015,8 @@ MonoBehaviour:
   groundedStickForce: 2
   preventPlanarCollisionLift: 1
   autoAlignControllerToFeet: 1
+  useNavMeshWhenAvailable: 1
+  navMeshSampleDistance: 1.5
   pushExternalDisplacementReceivers: 1
   collisionPushMultiplier: 1
   maxCollisionPushDistance: 0.35
@@ -25247,9 +25248,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2012491627}
+  - component: {fileID: 2012491624}
   - component: {fileID: 2012491626}
   - component: {fileID: 2012491625}
-  - component: {fileID: 2012491624}
   - component: {fileID: 2012491623}
   - component: {fileID: 2012491622}
   - component: {fileID: 2012491621}
@@ -25307,6 +25308,8 @@ MonoBehaviour:
   groundedStickForce: 2
   preventPlanarCollisionLift: 1
   autoAlignControllerToFeet: 1
+  useNavMeshWhenAvailable: 1
+  navMeshSampleDistance: 1.5
   pushExternalDisplacementReceivers: 1
   collisionPushMultiplier: 1
   maxCollisionPushDistance: 0.35
@@ -25385,7 +25388,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Enemies.EnemyActor
   enemyKind: 0
-  aberrantProgramForm: 1
   bodyRoot: {fileID: 2012491627}
   motor: {fileID: 2012491620}
   combatDriver: {fileID: 2012491621}

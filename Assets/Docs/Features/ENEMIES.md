@@ -14,8 +14,10 @@
 
 功能说明：
 - `EnemyActor` 是正式敌人的根入口组件，只暴露敌人身份和能力组件引用，并要求同物体存在 `CombatTarget`。
-- `EnemyActor.enemyKind` 记录敌人的根类别，当前分为 `AberrantProgram`、`DelinkedAgent`、`RogueSystemUnit`，用于后续创建具体敌人时快速归纳设定来源。
-- `EnemyActor.aberrantProgramForm` 记录异常程序内部形态，当前分为游离态和显壳态；游离态不接受结构伤害，显壳态可以接受结构伤害与运行伤害。
+- `EnemyActor.enemyKind` 记录敌人的根类别，当前分为 `APShell`、`APFree`、`DAgent`、`RSUnit`，用于后续创建具体敌人时快速归纳设定来源。
+- `EnemyActor.combatRole` 记录敌人的战斗定位，当前分为 `GroundMelee`、`GroundRanged`、`FlyingRanged`，用于区分基础地面近战、地面远程和浮空远程等行为方向。
+- `APShell` 表示异常程序显壳态，可以接受运行伤害与结构伤害；`APFree` 表示异常程序游离态，不接受结构伤害。
+- `EnemyCombatRole` 只做定位标记和查询，不自动覆盖动作、移动、感知或数值配置；后续如果需要一键套模板，再由独立数据资产承载。
 - 敌人类别不表示封装、继承、多态等战斗特性；这些应作为后续独立特性、标签、配置或能力系统处理。
 - `EnemyActor` 要求同物体挂载 `CombatTagContainer`，保证正式敌人天然支持战斗标签、持续标签和协议反应。
 - `EnemyActor` 持有 `EnemyMotorBase` 和 `EnemyCombatDriver` 引用，状态机通过 Actor 读取敌人能力，而不是直接查找具体实现。
@@ -28,7 +30,7 @@
 对应脚本：
 - `Assets/_EndLink/Enemies/EnemyActor.cs`
 - `Assets/_EndLink/Enemies/EnemyKind.cs`
-- `Assets/_EndLink/Enemies/AberrantProgramForm.cs`
+- `Assets/_EndLink/Enemies/EnemyCombatRole.cs`
 - `Assets/_EndLink/Enemies/EnemyHealth.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagContainer.cs`
 - `Assets/_EndLink/Combat/Target/ICombatTarget.cs`
@@ -47,8 +49,8 @@
   - Layer 设置为 `Enemy`
 
 关键配置：
-- `enemyKind`：敌人根类别，当前用于归纳异常程序、受污染智能体和失控系统单元
-- `aberrantProgramForm`：异常程序形态；游离态不接受结构伤害，显壳态接受结构伤害与运行伤害
+- `enemyKind`：敌人根类别；`APShell` / `APFree` 分别代表异常程序显壳态和游离态，`DAgent` 代表受污染智能体，`RSUnit` 代表失控系统单元
+- `combatRole`：敌人战斗定位；当前用于标记地面近战、地面远程和浮空远程，不直接改动其它组件配置
 - `CombatTarget.lockPoint`：锁定、瞄准和攻击朝向参考点，空则使用敌人根物体
 - `motor`：敌人移动能力引用，普通地面敌人拖 `EnemyMotorBase`
 - `combatDriver`：敌人战斗执行器引用，需要攻击能力的敌人拖 `EnemyCombatDriver`
@@ -83,7 +85,7 @@
 - `Hit` 状态触发带有短冷却，避免多段 Hitbox 在极短时间内反复刷新受击打断。
 
 对应脚本：
-- `Assets/_EndLink/Enemies/EnemyTargetSensor.cs`
+- `Assets/_EndLink/Enemies/Abilities/EnemyTargetSensor.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyStateMachine.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyStateId.cs`
 - `Assets/_EndLink/Enemies/StateMachine/IEnemyState.cs`

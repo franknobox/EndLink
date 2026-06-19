@@ -6,13 +6,16 @@ namespace EndLink.Enemies
     /// </summary>
     public enum EnemyKind
     {
-        /// <summary>污染区中最常见的普通敌人，通常没有完整人格或核心模型。</summary>
-        AberrantProgram = 0,
+        /// <summary>AP Shell：异常程序显壳态。有实体框架外壳，可以接受运行伤害与结构伤害。</summary>
+        APShell = 0,
 
-        /// <summary>受污染的智能体，与玩家和队友同源，可拥有智能体专属机制。</summary>
-        DelinkedAgent = 1,
+        /// <summary>D Agent：受污染的智能体，与玩家和队友同源，可拥有智能体专属机制。</summary>
+        DAgent = 1,
 
-        /// <summary>区域级失控系统单元，通常用于 Boss 或大型机制单位。</summary>
-        RogueSystemUnit = 2
+        /// <summary>RS Unit：区域级失控系统单元，通常用于 Boss 或大型机制单位。</summary>
+        RSUnit = 2,
+
+        /// <summary>AP Free：异常程序游离态。无实体框架，不接受结构伤害。</summary>
+        APFree = 3
     }
 }

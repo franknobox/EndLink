@@ -33,7 +33,7 @@ Assets/_EndLink/
 │  └─ ScenesData/        场景关联数据，例如 NavMesh 烘焙资产
 ├─ Editor/               Unity Editor 工具窗口和自定义 Inspector
 ├─ Enemies/              正式敌人基底、感知、状态机和能力组件
-│  ├─ Abilities/         敌人移动和战斗执行能力
+│  ├─ Abilities/         敌人感知、移动和战斗执行能力
 │  └─ StateMachine/      敌人大状态机
 ├─ Party/                固定三人小队、小队上下文和战斗路由
 ├─ Player/               玩家战斗、生命、索敌和状态机

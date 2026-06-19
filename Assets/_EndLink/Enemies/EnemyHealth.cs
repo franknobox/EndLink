@@ -222,7 +222,7 @@ namespace EndLink.Enemies
                 if (logHits)
                 {
                     Debug.Log(
-                        $"Enemy ignored {damageResult.DamageType} damage due to enemy form: {_actor.EnemyKind}/{_actor.AberrantProgramForm}",
+                        $"Enemy ignored {damageResult.DamageType} damage due to enemy kind: {_actor.EnemyKind}",
                         this);
                 }
 
