@@ -28,6 +28,15 @@ namespace EndLink.Core
         [SerializeField, Range(0f, 1f)]
         private float attackMoveInputScale = 0f;
 
+        [Tooltip("攻击动作期间朝当前软锁目标平滑转向的速度。0 表示攻击开始后不继续跟随目标。")]
+        [SerializeField, Min(0f)]
+        private float attackTrackingRotationSharpness = 8f;
+
+        [Header("输入缓冲")]
+        [Tooltip("普攻输入缓冲时间。攻击、技能或短暂冷却结束前按下攻击，可在该时间内自动衔接下一次普攻。")]
+        [SerializeField, Min(0f)]
+        private float attackInputBufferDuration = 0.15f;
+
         [Header("技能状态")]
         [Tooltip("通用技能状态的基础持续时间。胶囊白模阶段先用时间控制，接动画和技能配置后可改为数据或动画事件驱动。")]
         [SerializeField, Min(0.01f)]
@@ -70,11 +79,13 @@ namespace EndLink.Core
 
         private readonly Dictionary<PlayerStateId, IPlayerState> _states = new();
         private IPlayerState _currentState;
+        private PlayerInputReader _inputReader;
         private PlayerCombatDriver _combatDriver;
         private CombatActionDefinition _currentAction;
         private Transform _currentActionTarget;
         private bool _actionRequested;
         private float _nextDodgeAllowedTime;
+        private float _attackBufferExpiresAt = float.NegativeInfinity;
 
         /// <summary>
         /// 当前状态标识，便于调试面板或 Inspector 观察。
@@ -99,6 +110,9 @@ namespace EndLink.Core
         /// 攻击状态移动输入倍率。
         /// </summary>
         public float AttackMoveInputScale => attackMoveInputScale;
+
+        /// <summary>攻击动作期间向软锁目标平滑转向的速度。</summary>
+        public float AttackTrackingRotationSharpness => attackTrackingRotationSharpness;
 
         /// <summary>
         /// 技能状态持续时间。
@@ -149,16 +163,18 @@ namespace EndLink.Core
 
         private void Awake()
         {
-            PlayerInputReader inputReader = GetComponent<PlayerInputReader>();
+            _inputReader = GetComponent<PlayerInputReader>();
             PlayerController controller = GetComponent<PlayerController>();
             _combatDriver = GetComponent<PlayerCombatDriver>();
+            TryGetComponent(out PlayerTargeting targeting);
 
             PlayerStateContext context = new PlayerStateContext(
                 this,
                 transform,
-                inputReader,
+                _inputReader,
                 controller,
-                _combatDriver);
+                _combatDriver,
+                targeting);
 
             RegisterState(new PlayerIdleState(context));
             RegisterState(new PlayerMoveState(context));
@@ -176,12 +192,20 @@ namespace EndLink.Core
 
         private void Update()
         {
+            CaptureAttackInput();
             _currentState?.Tick(Time.deltaTime);
+        }
+
+        private void OnDisable()
+        {
+            ClearAttackBuffer();
         }
 
         private void OnValidate()
         {
             attackDuration = Mathf.Max(0.01f, attackDuration);
+            attackTrackingRotationSharpness = Mathf.Max(0f, attackTrackingRotationSharpness);
+            attackInputBufferDuration = Mathf.Max(0f, attackInputBufferDuration);
             skillDuration = Mathf.Max(0.01f, skillDuration);
             dodgeDuration = Mathf.Max(0.01f, dodgeDuration);
             dodgeDistance = Mathf.Max(0f, dodgeDistance);
@@ -280,8 +304,30 @@ namespace EndLink.Core
         /// </summary>
         public void RequestDead()
         {
+            ClearAttackBuffer();
             ClearCurrentAction();
             ChangeState(PlayerStateId.Dead);
+        }
+
+        /// <summary>
+        /// 尝试消费仍在有效期内的普攻输入。
+        /// 只有动作真正可执行时才会清空缓冲，短暂冷却不会提前吃掉输入。
+        /// </summary>
+        internal bool TryConsumeAttackBuffer(bool canExecute)
+        {
+            if (Time.time > _attackBufferExpiresAt)
+            {
+                ClearAttackBuffer();
+                return false;
+            }
+
+            if (!canExecute)
+            {
+                return false;
+            }
+
+            ClearAttackBuffer();
+            return true;
         }
 
         /// <summary>
@@ -315,11 +361,23 @@ namespace EndLink.Core
 
         private PlayerStateId GetDefaultLocomotionState()
         {
-            PlayerInputReader inputReader = GetComponent<PlayerInputReader>();
-            return inputReader != null
-                && inputReader.MoveInput.sqrMagnitude > PlayerStateBase.MoveInputDeadZoneSqr
+            return _inputReader != null
+                && _inputReader.MoveInput.sqrMagnitude > PlayerStateBase.MoveInputDeadZoneSqr
                     ? PlayerStateId.Move
                     : PlayerStateId.Idle;
+        }
+
+        private void CaptureAttackInput()
+        {
+            if (_inputReader != null && _inputReader.ConsumeAttackPressed())
+            {
+                _attackBufferExpiresAt = Time.time + attackInputBufferDuration;
+            }
+        }
+
+        private void ClearAttackBuffer()
+        {
+            _attackBufferExpiresAt = float.NegativeInfinity;
         }
 
         private void RegisterState(IPlayerState state)

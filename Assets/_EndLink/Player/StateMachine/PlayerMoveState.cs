@@ -32,7 +32,7 @@ namespace EndLink.Core
                 return;
             }
 
-            if (Context.ConsumeAttackPressed() && Context.CanStartAttack)
+            if (Context.TryConsumeBufferedAttack())
             {
                 Context.StateMachine.ChangeState(PlayerStateId.Attack);
                 return;

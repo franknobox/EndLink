@@ -149,6 +149,7 @@
 - `EnemyMotorBase` 支持按“根物体在脚底”的白模约定自动校正 `CharacterController.center.y`，避免第一次移动时因胶囊底部埋入地面而被弹起。
 - `EnemyMotorBase` 在水平追击移动后会抑制碰撞带来的异常上抬，重力在 `LateUpdate` 中补充处理。
 - `EnemyMotorBase` 在正常移动撞到实现 `IExternalDisplacementReceiver` 的玩家或队友时，会把挡路角色沿敌人移动方向挤开；敌人自身不接收这条外部位移，因此队友和玩家不会反向顶动敌人。
+- 敌人受到战斗击退时会停止当前移动和 NavMesh 路径，通过 `CombatKnockbackMotion` 逐帧衰减后退，并持续同步 Agent 位置。
 - `EnemyCombatDriver` 是敌人战斗执行器，按 `CombatActionDefinition` 生成 Hitbox、记录冷却并广播动作开始事件。
 - `EnemyCombatDriver` 暴露当前动作、执行阶段和取消入口；完整运行时重置会同时清理当前动作与动作冷却。
 - `EnemyCombatDriver` 当前由 `EnemyCombatState` 在攻击距离内调用 Basic Attack；后续行为树接入后，出手时机和动作选择会转交给行为层。
@@ -173,5 +174,6 @@
 - `EnemyMotorBase.pushExternalDisplacementReceivers`：敌人正常移动撞到玩家或队友时，是否把挡路角色挤开
 - `EnemyMotorBase.collisionPushMultiplier`：敌人本帧移动量转换为推挤位移的倍率
 - `EnemyMotorBase.maxCollisionPushDistance`：单次碰撞最多传递给玩家或队友的位移
+- `EnemyMotorBase.combatKnockbackDuration`：战斗击退的衰减持续时间，默认 `0.12` 秒
 
 </details>

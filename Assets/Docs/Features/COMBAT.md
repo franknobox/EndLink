@@ -217,11 +217,14 @@
 <details>
 <summary>展开详情</summary>
 功能说明：
-- Hitbox 实际造成伤害后，通过 `CombatKnockback` 统一计算并分发瞬时击退；免伤、无伤害和击退距离为 `0` 时不会产生位移。
+- Hitbox 实际造成伤害后，通过 `CombatKnockback` 统一计算并分发总击退位移；免伤、无伤害和击退距离为 `0` 时不会产生位移。
 - 第一版最终击退距离为 `基础击退距离 × CharacterStats.KnockbackTakenMultiplier`，未挂载 `CharacterStats` 的目标默认按 `1` 倍处理。
 - `CombatKnockback` 会先通过 `CombatTarget` 归一到目标 `RootTransform`，再向父级查找 `CharacterStats` 和 `ICombatKnockbackReceiver`，避免命中子 Collider 时击退丢失。
 - `ICombatKnockbackReceiver` 只负责攻击命中的战斗击退，与敌人移动碰撞使用的外部推挤接口保持分离。
-- `PlayerController`、`AllyFollowMotor` 和 `EnemyMotorBase` 已接入统一击退协议，第一版只产生 XZ 平面的瞬时位移，不处理击飞和持续受力。
+- `CombatKnockbackMotion` 会把总击退距离按先快后慢的曲线拆成逐帧水平位移，并保证累计位移不变；连续受击会叠加剩余位移并刷新持续时间。
+- `PlayerController` 和 `EnemyMotorBase` 默认在 `0.12` 秒内执行衰减击退；敌人执行时会停止当前路径并同步 `NavMeshAgent`。
+- `AllyFollowMotor` 仍实现同一击退接口，但暂时保留瞬时位移，等队友战斗表现继续开发时再接入共享衰减运动。
+- 当前击退只处理 XZ 平面，不包含击飞或持续物理受力。
 - 当前不新增硬直等级、可打断规则或额外受击组件；现有 Hit 状态行为保持不变。
 - 死亡后的 Collider 开关逻辑保持现状，本次没有修改。
 
@@ -374,7 +377,7 @@
 关键配置：
 - `targetLayerMask`：允许命中的目标 Layer，默认 Enemy
 - `damageAmount`：Hitbox 携带的固定伤害部分；完整动作伤害由伤害结算管线计算
-- `knockbackForce`：基础瞬时击退距离，最终位移会乘以受击者 `CharacterStats.KnockbackTakenMultiplier`
+- `knockbackForce`：基础总击退距离，最终位移会乘以受击者 `CharacterStats.KnockbackTakenMultiplier`
 - `combatTagToApply`：命中战斗标签资产
 - `combatTagDuration`：命中战斗标签持续时间，小于等于 0 表示永久标签
 - `combatTagStackCount`：命中时添加的战斗标签层数

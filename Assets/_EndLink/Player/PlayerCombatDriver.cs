@@ -296,10 +296,12 @@ namespace EndLink.Combat
                 return;
             }
 
+            // 判定生成时读取角色实时正前方，使前摇期间的软锁跟随转向能同步影响 Hitbox 朝向。
+            Vector3 spawnForward = ResolveCurrentForward(_currentActionForward);
             Vector3 spawnPosition = transform.position
-                + _currentActionForward * _currentActionDefinition.HitboxSpawnDistance
+                + spawnForward * _currentActionDefinition.HitboxSpawnDistance
                 + Vector3.up * _currentActionDefinition.HitboxSpawnHeight;
-            Quaternion spawnRotation = Quaternion.LookRotation(_currentActionForward, Vector3.up);
+            Quaternion spawnRotation = Quaternion.LookRotation(spawnForward, Vector3.up);
 
             GameObject hitboxInstance = Instantiate(_currentActionDefinition.HitboxPrefab, spawnPosition, spawnRotation);
             ConfigureHitbox(hitboxInstance, _currentActionDefinition);

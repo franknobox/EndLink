@@ -49,12 +49,18 @@ namespace EndLink.Core
         [SerializeField, Min(0f)]
         private float jumpCooldown = 0.1f;
 
+        [Header("受击后退")]
+        [Tooltip("一次战斗击退分摊到多少秒内完成。时间越短冲击越直接，越长后退越柔和。")]
+        [SerializeField, Min(0.01f)]
+        private float combatKnockbackDuration = CombatKnockback.DefaultMotionDuration;
+
         [Header("方向参考")]
         [Tooltip("移动方向参考。拖 Main Camera 后，WASD/左摇杆会按相机朝向转换为世界移动方向。")]
         [SerializeField]
         private Transform movementReference;
 
         private CharacterController _characterController;
+        private readonly CombatKnockbackMotion _combatKnockbackMotion = new();
 
         // 当前水平速度。只保存 XZ 平面的速度，Y 轴交给重力单独处理。
         private Vector3 _planarVelocity;
@@ -128,6 +134,16 @@ namespace EndLink.Core
         private void Awake()
         {
             _characterController = GetComponent<CharacterController>();
+        }
+
+        private void LateUpdate()
+        {
+            TickCombatKnockback(Time.deltaTime);
+        }
+
+        private void OnDisable()
+        {
+            _combatKnockbackMotion.Clear();
         }
 
         /// <summary>
@@ -205,10 +221,19 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 璁╃帺瀹舵湰鍦?Z 杞存鏂瑰悜闈㈠悜鎸囧畾涓栫晫鏂瑰悜銆?
-        /// 鏀诲嚮銆佹妧鑳芥垨鍚庣画閿佸畾鍔ㄤ綔鍙互璋冪敤瀹冿紝璁╄鑹叉湞鍚戝拰鏀诲嚮鍔ㄧ敾姝ｉ潰淇濇寔涓€鑷淬€?
+        /// 让玩家本地 Z 轴正方向面向指定世界方向。
+        /// 攻击、技能或锁定动作可以调用它，让角色朝向与动作正面保持一致。
         /// </summary>
         public void FaceDirection(Vector3 worldDirection, bool instant)
+        {
+            FaceDirection(worldDirection, instant, Time.deltaTime, rotationSharpness);
+        }
+
+        /// <summary>
+        /// 使用调用方提供的帧间隔与转向速度面向指定方向。
+        /// 攻击状态使用该重载独立调整软锁跟随速度，不影响普通移动转向参数。
+        /// </summary>
+        public void FaceDirection(Vector3 worldDirection, bool instant, float deltaTime, float sharpness)
         {
             Vector3 planarDirection = Vector3.ProjectOnPlane(worldDirection, Vector3.up);
 
@@ -219,13 +244,13 @@ namespace EndLink.Core
 
             Quaternion targetRotation = Quaternion.LookRotation(planarDirection.normalized, Vector3.up);
 
-            if (instant || rotationSharpness <= 0f)
+            if (instant || sharpness <= 0f)
             {
                 transform.rotation = targetRotation;
                 return;
             }
 
-            float lerpFactor = 1f - Mathf.Exp(-rotationSharpness * Time.deltaTime);
+            float lerpFactor = 1f - Mathf.Exp(-sharpness * Mathf.Max(0f, deltaTime));
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, lerpFactor);
         }
 
@@ -257,12 +282,12 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 接收攻击命中的瞬时击退。
-        /// 第一版复用 CharacterController 的水平外部位移入口，不处理击飞或持续受力。
+        /// 接收攻击命中的总击退位移，并转换为短时衰减后退。
+        /// 该通道只处理水平战斗击退，不影响普通碰撞推挤。
         /// </summary>
         public void ApplyCombatKnockback(Vector3 displacement)
         {
-            AddExternalDisplacement(displacement);
+            _combatKnockbackMotion.AddDisplacement(displacement, combatKnockbackDuration);
         }
 
         private void OnValidate()
@@ -272,6 +297,16 @@ namespace EndLink.Core
             groundedStickForce = -Mathf.Abs(groundedStickForce);
             jumpHeight = Mathf.Max(0f, jumpHeight);
             jumpCooldown = Mathf.Max(0f, jumpCooldown);
+            combatKnockbackDuration = Mathf.Max(0.01f, combatKnockbackDuration);
+        }
+
+        private void TickCombatKnockback(float deltaTime)
+        {
+            Vector3 displacement = _combatKnockbackMotion.Tick(deltaTime);
+            if (displacement.sqrMagnitude > MoveInputDeadZoneSqr)
+            {
+                AddExternalDisplacement(displacement);
+            }
         }
 
         private void SmoothPlanarVelocity(Vector3 targetPlanarVelocity, float deltaTime)

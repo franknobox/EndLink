@@ -17,7 +17,7 @@
 - 玩家移动输入和相机输入分开读取，避免输入读取器承担移动或相机逻辑。
 - 移动输入读取 `Player/Move`。
 - 跳跃输入读取 `Player/Jump`，默认键位为键盘 `Space`、手柄 `buttonSouth`。
-- 攻击输入读取 `Player/Attack`，由状态机消费后决定是否进入攻击状态。
+- 攻击输入读取 `Player/Attack`，由状态机统一捕获并写入短时攻击缓冲，再决定是否进入攻击状态。
 - 闪避输入读取 `Player/Dodge`，默认键位为键盘 `Left Ctrl`、手柄 `buttonEast`。
 - 主控主动技能读取 `Player/PlayerSkill`，默认键位 Q。
 - 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`，默认键位 E / F。
@@ -53,12 +53,13 @@
 - 使用 `Mathf.SmoothDamp` 做平滑加速和减速。
 - 支持手动重力和贴地速度。
 - 移动时角色本地 Z 轴正方向会平滑转向移动方向。
-- 暴露面向指定世界方向的接口，供攻击和自动软锁目标在出手前让角色正面与动作方向一致。
+- 暴露即时或指定速度面向世界方向的接口，供攻击开始转向和攻击期间软锁跟随共用。
 - 支持移动方向参考，拖入 `Main Camera` 后可实现相机相对移动。
 - 支持按住 `Left Shift` 冲刺；当前冲刺作为移动速度修饰，不单独进入状态机大状态。
 - 支持基础单段跳，跳跃高度和冷却由 `PlayerController` 配置，垂直速度继续走现有手动重力。
 - 支持状态机驱动的闪避位移，闪避期间由 `PlayerDodgeState` 决定方向、速度和持续时间。
 - 支持接收敌人移动碰撞带来的外部位移，玩家可以被敌人正常前进时挤开，但不会通过该通道反向推动敌人。
+- 战斗命中产生的总击退距离会通过 `CombatKnockbackMotion` 在短时间内逐帧衰减执行，不再单帧瞬移。
 - 移动调用由 `PlayerStateMachine` 驱动，`PlayerController` 通过 `TickMovement` 执行实际位移。
 
 对应脚本：
@@ -81,6 +82,7 @@
 - `rotationSharpness`：转向响应
 - `jumpHeight`：单次跳跃目标高度
 - `jumpCooldown`：两次跳跃之间的最短间隔
+- `combatKnockbackDuration`：战斗击退的衰减持续时间，默认 `0.12` 秒
 - `movementReference`：移动方向参考，通常拖 `Main Camera`
 
 </details>
@@ -148,10 +150,12 @@
 - 当前包含 `Idle`、`Move`、`Attack`、`Skill`、`Dodge`、`Hit`、`Dead` 七个状态。
 - `Idle` 和 `Move` 会优先消费闪避输入，检查闪避冷却后切换到 `Dodge`。
 - `Idle` 和 `Move` 会消费跳跃输入，满足贴地和冷却条件时由 `PlayerController` 写入向上的垂直初速度；第一版不单独进入空中状态。
-- `Idle` 和 `Move` 会消费攻击输入，检查攻击冷却后切换到 `Attack`。
+- 状态机每帧统一捕获攻击输入，并写入默认 `0.15` 秒的短时缓冲；动作暂时不可执行时不会提前消费，成功进入攻击或超时后清空。
+- `Idle` 和 `Move` 会在缓冲有效且普攻可执行时切换到 `Attack`。
 - `Skill` 是通用技能状态，当前由 `PartyCombatRouter` 发起请求，状态机决定是否进入，进入状态后再调用 `PlayerCombatDriver` 执行技能表现和判定。
 - `Attack` 状态进入时调用 `PlayerCombatDriver.ExecuteAttack()`，攻击持续时间结束后根据移动输入回到 `Move` 或 `Idle`。
 - 攻击期间移动输入会乘以 `attackMoveInputScale`，当前默认可以做站桩攻击。
+- 攻击期间会按 `attackTrackingRotationSharpness` 平滑跟随当前软锁点；目标失效或参数为 `0` 时保持当前朝向。
 - `Dodge` 状态负责主控闪避：有移动输入时按输入方向闪避，没有移动输入时默认向角色正后方后撤。
 - 闪避期间普通移动、攻击和技能不会响应；闪避结束后根据移动输入回到 `Move` 或 `Idle`。
 - 闪避开始时会刷新冷却，并给 `CharacterHealth` 设置短暂临时免伤窗口。
@@ -183,6 +187,8 @@
 - `initialState`：初始状态
 - `attackDuration`：攻击状态持续时间
 - `attackMoveInputScale`：攻击期间移动输入倍率
+- `attackTrackingRotationSharpness`：攻击期间软锁跟随转向速度，`0` 表示关闭持续跟随
+- `attackInputBufferDuration`：普攻输入缓冲时间，默认 `0.15` 秒
 - `skillDuration`：通用技能状态持续时间
 - `skillMoveInputScale`：技能期间移动输入倍率
 - `dodgeDuration`：闪避状态持续时间
@@ -252,7 +258,7 @@
 - `CameraForward` 模式会同时考虑视角/朝向夹角和距离。
 - 当前目标离开搜索范围、Layer 不匹配、死亡、被设为不可选或被销毁时，会自动清除。
 - 对外提供 `TryAcquireTarget()`、`SetCurrentTarget(Transform target)` 和 `ClearTarget()`。
-- `PlayerCombatDriver` 会读取当前软锁目标；有目标时先让玩家正面瞬间转向目标，再沿玩家正面生成 Hitbox / 远程技能；没有目标时继续按玩家自身前方生成。
+- `PlayerCombatDriver` 会读取当前软锁目标；有目标时攻击开始先让玩家正面转向目标，Attack 状态期间继续平滑跟随，判定生成时按角色实时正前方生成 Hitbox / 远程技能。
 
 对应脚本：
 - `Assets/_EndLink/Player/PlayerTargeting.cs`
@@ -297,7 +303,7 @@
 - 状态机决定能否攻击，`PlayerCombatDriver` 只负责执行攻击表现和判定。
 - 支持通过 `CombatActionDefinition` 配置普攻、主动技能、连携技的伤害、击退、`CombatTagDefinition` 标签、标签持续时间、冷却、Hitbox 和生成参数。
 - `PlayerCombatDriver` 执行的动作必须来自 `CombatActionDefinition`。
-- 当前执行内容是生成指定 Hitbox prefab；有自动软锁目标时先让玩家正面瞬间转向目标，再按玩家正前方生成，没有目标时按角色当前正前方生成。
+- 当前执行内容是生成指定 Hitbox prefab；有自动软锁目标时先让玩家正面转向目标，判定生成瞬间读取角色实时正前方，使前摇期间的跟随转向能同步影响 Hitbox 朝向。
 - 普攻、主动技能和连携技按各自 `CombatActionDefinition` 独立记录冷却。
 - 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 区分普攻、技能和连携槽。
 - 实现 `ICombatActionExecutor`，状态机通过统一 `CanExecute` / `TryExecute` 入口检查和执行动作。
@@ -331,7 +337,7 @@
 <summary>展开详情</summary>
 
 当前约定：
-- 输入读取器只读输入，不做业务逻辑。
+- 输入读取器只读并缓存原始输入，不做状态与动作决策；普攻缓冲有效期由 `PlayerStateMachine` 管理。
 - `PlayerStateMachine` 决定当前状态，负责 Idle、Move、Attack 等流程切换。
 - `PlayerController` 负责移动能力和朝向，不负责读取输入或判断是否允许移动。
 - `PlayerAnimatorDriver` 只把状态机和移动速度同步到 Animator 参数，不反向控制状态机。

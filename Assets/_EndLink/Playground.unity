@@ -6008,11 +6008,11 @@ PrefabInstance:
     - target: {fileID: 588281943933395610, guid: e52459d456d33ba4084c66a231937284, type: 3}
       propertyPath: enemyHealth
       value: 
-      objectReference: {fileID: 1284033433}
+      objectReference: {fileID: 2012491626}
     - target: {fileID: 588281943933395610, guid: e52459d456d33ba4084c66a231937284, type: 3}
       propertyPath: combatTarget
       value: 
-      objectReference: {fileID: 7100000000000000005}
+      objectReference: {fileID: 7100000000000000006}
     - target: {fileID: 1603789125496188497, guid: e52459d456d33ba4084c66a231937284, type: 3}
       propertyPath: m_Name
       value: PF_EnemyHealthBar
@@ -6852,6 +6852,7 @@ MonoBehaviour:
   groundedStickForce: -2
   jumpHeight: 1.6
   jumpCooldown: 0.1
+  combatKnockbackDuration: 0.12
   movementReference: {fileID: 330585546}
 --- !u!114 &509600057
 MonoBehaviour:
@@ -6922,6 +6923,8 @@ MonoBehaviour:
   initialState: 1
   attackDuration: 0.45
   attackMoveInputScale: 0
+  attackTrackingRotationSharpness: 8
+  attackInputBufferDuration: 0.15
   skillDuration: 0.65
   skillMoveInputScale: 0
   dodgeDuration: 0.25
@@ -12861,7 +12864,10 @@ MonoBehaviour:
   combatChaseStopDistance: 0.5
   combatAttackRangeTolerance: 0.15
   combatAttackInnerOffset: 0.1
-  combatLeashDistance: 18
+  homePoint: {fileID: 0}
+  maxChaseRadius: 18
+  lostTargetDelay: 0.75
+  returnStopDistance: 0.2
   logStateChanges: 0
   logSensorChanges: 0
   drawDetectionGizmo: 1
@@ -12878,6 +12884,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Enemies.EnemyActor
   enemyKind: 0
+  combatRole: 0
   bodyRoot: {fileID: 1284033434}
   motor: {fileID: 1284033437}
   combatDriver: {fileID: 1284033438}
@@ -13020,6 +13027,7 @@ MonoBehaviour:
   pushExternalDisplacementReceivers: 1
   collisionPushMultiplier: 1
   maxCollisionPushDistance: 0.35
+  combatKnockbackDuration: 0.12
 --- !u!114 &1284033438
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -25313,6 +25321,7 @@ MonoBehaviour:
   pushExternalDisplacementReceivers: 1
   collisionPushMultiplier: 1
   maxCollisionPushDistance: 0.35
+  combatKnockbackDuration: 0.12
 --- !u!114 &2012491621
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -25371,7 +25380,10 @@ MonoBehaviour:
   combatChaseStopDistance: 0.5
   combatAttackRangeTolerance: 0.15
   combatAttackInnerOffset: 0.1
-  combatLeashDistance: 18
+  homePoint: {fileID: 0}
+  maxChaseRadius: 18
+  lostTargetDelay: 0.75
+  returnStopDistance: 0.2
   logStateChanges: 0
   logSensorChanges: 0
   drawDetectionGizmo: 1
@@ -25388,6 +25400,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Enemies.EnemyActor
   enemyKind: 0
+  combatRole: 0
   bodyRoot: {fileID: 2012491627}
   motor: {fileID: 2012491620}
   combatDriver: {fileID: 2012491621}

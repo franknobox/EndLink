@@ -32,6 +32,7 @@ namespace EndLink.Core
 
             Vector2 attackMoveInput = Context.InputReader.MoveInput * Context.AttackMoveInputScale;
             Context.Controller.TickMovement(attackMoveInput, deltaTime);
+            Context.TickAttackTargetFacing(deltaTime);
 
             if (_elapsedTime < Context.AttackDuration)
             {

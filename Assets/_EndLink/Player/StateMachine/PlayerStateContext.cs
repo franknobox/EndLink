@@ -16,13 +16,15 @@ namespace EndLink.Core
             Transform transform,
             PlayerInputReader inputReader,
             PlayerController controller,
-            PlayerCombatDriver combatDriver)
+            PlayerCombatDriver combatDriver,
+            PlayerTargeting targeting)
         {
             StateMachine = stateMachine;
             Transform = transform;
             InputReader = inputReader;
             Controller = controller;
             CombatDriver = combatDriver;
+            Targeting = targeting;
         }
 
         /// <summary>
@@ -49,6 +51,9 @@ namespace EndLink.Core
         /// 玩家战斗驱动器。状态机决定是否进入攻击，战斗驱动器只负责执行攻击表现和判定。
         /// </summary>
         public PlayerCombatDriver CombatDriver { get; }
+
+        /// <summary>玩家自动软锁定组件。为空时攻击仍可按角色当前朝向正常执行。</summary>
+        public PlayerTargeting Targeting { get; }
 
         /// <summary>玩家战斗动作的统一执行接口。</summary>
         public ICombatActionExecutor ActionExecutor => CombatDriver;
@@ -88,6 +93,9 @@ namespace EndLink.Core
         /// 攻击期间移动输入倍率。0 表示站桩攻击，1 表示完全保留移动。
         /// </summary>
         public float AttackMoveInputScale => StateMachine.AttackMoveInputScale;
+
+        /// <summary>攻击期间朝软锁目标平滑转向的速度。</summary>
+        public float AttackTrackingRotationSharpness => StateMachine.AttackTrackingRotationSharpness;
 
         /// <summary>
         /// 通用技能状态的基础持续时间。
@@ -167,11 +175,38 @@ namespace EndLink.Core
         public bool CanStartJump => Controller.CanJump;
 
         /// <summary>
-        /// 消费一次攻击输入。
+        /// 尝试消费一次仍在有效期内的攻击缓冲。
+        /// 动作暂时不可执行时不会提前清空输入。
         /// </summary>
-        public bool ConsumeAttackPressed()
+        public bool TryConsumeBufferedAttack()
         {
-            return InputReader.ConsumeAttackPressed();
+            return StateMachine.TryConsumeAttackBuffer(CanStartAttack);
+        }
+
+        /// <summary>
+        /// 攻击期间让角色继续平滑朝向当前软锁点。
+        /// 没有目标或转向速度为 0 时保持当前朝向。
+        /// </summary>
+        public bool TickAttackTargetFacing(float deltaTime)
+        {
+            if (Targeting == null
+                || !Targeting.HasTarget
+                || Targeting.CurrentLockPoint == null
+                || AttackTrackingRotationSharpness <= 0f)
+            {
+                return false;
+            }
+
+            Vector3 toTarget = Targeting.CurrentLockPoint.position - Transform.position;
+            toTarget.y = 0f;
+
+            if (toTarget.sqrMagnitude <= PlayerStateBase.MoveInputDeadZoneSqr)
+            {
+                return false;
+            }
+
+            Controller.FaceDirection(toTarget, false, deltaTime, AttackTrackingRotationSharpness);
+            return true;
         }
 
         /// <summary>

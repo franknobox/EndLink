@@ -68,7 +68,13 @@ namespace EndLink.Enemies
         [SerializeField, Min(0f)]
         private float maxCollisionPushDistance = 0.35f;
 
+        [Header("受击后退")]
+        [Tooltip("一次战斗击退分摊到多少秒内完成。时间越短冲击越直接，越长后退越柔和。")]
+        [SerializeField, Min(0.01f)]
+        private float combatKnockbackDuration = CombatKnockback.DefaultMotionDuration;
+
         private CharacterController _characterController;
+        private readonly CombatKnockbackMotion _combatKnockbackMotion = new();
         private Vector3 _horizontalVelocity;
         private Vector3 _horizontalVelocitySmoothRef;
         private float _verticalVelocity;
@@ -101,6 +107,12 @@ namespace EndLink.Enemies
         protected virtual void LateUpdate()
         {
             TickGravity(Time.deltaTime);
+            TickCombatKnockback(Time.deltaTime);
+        }
+
+        protected virtual void OnDisable()
+        {
+            _combatKnockbackMotion.Clear();
         }
 
         protected virtual void OnValidate()
@@ -112,6 +124,7 @@ namespace EndLink.Enemies
             navMeshSampleDistance = Mathf.Max(0.1f, navMeshSampleDistance);
             collisionPushMultiplier = Mathf.Max(0f, collisionPushMultiplier);
             maxCollisionPushDistance = Mathf.Max(0f, maxCollisionPushDistance);
+            combatKnockbackDuration = Mathf.Max(0.01f, combatKnockbackDuration);
             AlignControllerToFeetIfNeeded();
             ConfigureNavMeshAgent();
         }
@@ -227,7 +240,7 @@ namespace EndLink.Enemies
         }
 
         /// <summary>
-        /// 接收攻击命中的瞬时水平击退。
+        /// 接收攻击命中的总水平击退位移，并转换为短时衰减后退。
         /// 该入口与普通移动碰撞推挤分离，因此不会让玩家或队友通过接触反向顶动敌人。
         /// </summary>
         public virtual void ApplyCombatKnockback(Vector3 displacement)
@@ -238,13 +251,32 @@ namespace EndLink.Enemies
                 return;
             }
 
-            if (_characterController != null && _characterController.enabled)
+            Stop();
+            _combatKnockbackMotion.AddDisplacement(displacement, combatKnockbackDuration);
+        }
+
+        private void TickCombatKnockback(float deltaTime)
+        {
+            if (!_combatKnockbackMotion.IsActive)
             {
-                MovePlanar(displacement);
                 return;
             }
 
-            transform.position += displacement;
+            EnsureCharacterController();
+            if (_characterController == null || !_characterController.enabled)
+            {
+                _combatKnockbackMotion.Clear();
+                return;
+            }
+
+            Vector3 displacement = _combatKnockbackMotion.Tick(deltaTime);
+            if (displacement.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            MovePlanar(displacement);
+            SyncNavMeshAgentToTransform();
         }
 
         private void MovePlanar(Vector3 displacement)
