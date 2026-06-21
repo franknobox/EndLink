@@ -105,3 +105,7 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Local design documents. Keep private planning notes out of the repository.
+/Assets/Docs/Design/
+/Assets/Docs/Design.meta
