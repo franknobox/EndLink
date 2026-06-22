@@ -1,24 +1,20 @@
-using EndLink.Combat;
 using UnityEngine;
 
 namespace EndLink.Enemies
 {
     /// <summary>
     /// 敌人战斗大状态。
-    /// 当前负责基础追击、攻击距离停位、面向目标和普通攻击循环；
-    /// 之后可在这里接入行为树，处理站位、攻击和技能细节。
+    /// 负责 Combat 生命周期、Home 追击边界和目标丢失处理；
+    /// 接近、定位、攻击和恢复由内部 EnemyCombatBehavior 推进。
     /// </summary>
     public sealed class EnemyCombatState : EnemyStateBase
     {
-        private const float MissingHitboxRetryInterval = 1f;
-
-        private float _selfPlanarRadius;
-        private float _nextAttackAttemptTime;
+        private readonly EnemyCombatBehavior _combatBehavior;
         private float _lostTargetElapsed;
-        private bool _loggedMissingHitbox;
 
         public EnemyCombatState(EnemyStateContext context) : base(context)
         {
+            _combatBehavior = new EnemyCombatBehavior(context);
         }
 
         /// <inheritdoc />
@@ -27,17 +23,14 @@ namespace EndLink.Enemies
         /// <inheritdoc />
         public override void Enter()
         {
-            _selfPlanarRadius = EstimateSelfPlanarRadius();
-            _nextAttackAttemptTime = 0f;
             _lostTargetElapsed = 0f;
-            _loggedMissingHitbox = false;
+            _combatBehavior.Enter();
         }
 
         /// <inheritdoc />
         public override void Exit()
         {
-            Context.Motor?.Stop();
-            Context.CombatDriver?.CancelCurrentAction();
+            _combatBehavior.Exit();
         }
 
         /// <inheritdoc />
@@ -56,15 +49,7 @@ namespace EndLink.Enemies
             }
 
             _lostTargetElapsed = 0f;
-            Transform target = Context.CurrentTarget;
-
-            if (TryGetBasicAttackAction(out CombatActionDefinition basicAttackAction))
-            {
-                TickMeleeAttack(target, basicAttackAction, deltaTime);
-                return;
-            }
-
-            TickChaseOnly(target, deltaTime);
+            _combatBehavior.Tick(deltaTime);
         }
 
         private void TickLostTarget(float deltaTime)
@@ -79,124 +64,6 @@ namespace EndLink.Enemies
 
             Context.StateMachine.SetTarget(null);
             Context.StateMachine.RequestReturn();
-        }
-
-        private void TickChaseOnly(Transform target, float deltaTime)
-        {
-            MoveTowardTargetSurface(target, GetChaseOnlyStopDistance(), deltaTime);
-            Context.Motor?.FaceTarget(target, deltaTime);
-        }
-
-        private void TickMeleeAttack(Transform target, CombatActionDefinition action, float deltaTime)
-        {
-            float surfaceDistance = CombatTargetUtility.GetSurfaceDistance(
-                target,
-                Context.Transform.position);
-
-            if (surfaceDistance > GetAttackEnterDistance(action))
-            {
-                MoveTowardTargetSurface(target, GetAttackApproachStopDistance(action), deltaTime);
-                return;
-            }
-
-            Context.Motor?.Stop();
-            Context.Motor?.FaceTarget(target, deltaTime);
-            TryExecuteBasicAttack(target, action);
-        }
-
-        private void MoveTowardTargetSurface(Transform target, float stopDistance, float deltaTime)
-        {
-            Vector3 approachPoint = CombatTargetUtility.GetClosestPoint(
-                target,
-                Context.Transform.position);
-
-            Context.Motor?.MoveTo(approachPoint, stopDistance, deltaTime);
-        }
-
-        private bool TryGetBasicAttackAction(out CombatActionDefinition action)
-        {
-            action = Context.CombatDriver != null ? Context.CombatDriver.BasicAttackAction : null;
-            return action != null;
-        }
-
-        private void TryExecuteBasicAttack(Transform target, CombatActionDefinition action)
-        {
-            if (Context.ActionExecutor == null || action == null)
-            {
-                return;
-            }
-
-            float currentTime = Time.time;
-            if (currentTime < _nextAttackAttemptTime)
-            {
-                return;
-            }
-
-            if (action.HitboxPrefab == null)
-            {
-                if (!_loggedMissingHitbox)
-                {
-                    Context.ActionExecutor.TryExecute(action, target);
-                    _loggedMissingHitbox = true;
-                }
-
-                _nextAttackAttemptTime = currentTime + MissingHitboxRetryInterval;
-                return;
-            }
-
-            if (!Context.ActionExecutor.CanExecute(action))
-            {
-                return;
-            }
-
-            if (Context.ActionExecutor.TryExecute(action, target))
-            {
-                _nextAttackAttemptTime = currentTime + GetAttackLockDuration(action);
-            }
-        }
-
-        private float GetChaseOnlyStopDistance()
-        {
-            return _selfPlanarRadius + Mathf.Max(0f, Context.CombatChaseStopDistance);
-        }
-
-        private float GetAttackEnterDistance(CombatActionDefinition action)
-        {
-            return Mathf.Max(
-                0.01f,
-                action.EffectiveAttackRange + Context.CombatAttackRangeTolerance);
-        }
-
-        private float GetAttackApproachStopDistance(CombatActionDefinition action)
-        {
-            return Mathf.Max(
-                0.01f,
-                action.EffectiveAttackRange - Context.CombatAttackInnerOffset);
-        }
-
-        private static float GetAttackLockDuration(CombatActionDefinition action)
-        {
-            if (action == null)
-            {
-                return 0f;
-            }
-
-            return Mathf.Max(0f, action.Cooldown, action.TotalDuration);
-        }
-
-        private float EstimateSelfPlanarRadius()
-        {
-            CharacterController characterController = Context.Transform.GetComponent<CharacterController>();
-            if (characterController != null)
-            {
-                float scale = Mathf.Max(
-                    Mathf.Abs(characterController.transform.lossyScale.x),
-                    Mathf.Abs(characterController.transform.lossyScale.z));
-
-                return Mathf.Max(0f, characterController.radius * scale);
-            }
-
-            return 0f;
         }
 
         private bool IsBeyondHomeLeash()

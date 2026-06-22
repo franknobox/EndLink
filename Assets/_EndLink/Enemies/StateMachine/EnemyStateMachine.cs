@@ -9,7 +9,7 @@ namespace EndLink.Enemies
     /// <summary>
     /// 敌人有限状态机。
     /// 当前管理 Idle、Alert、Combat、Hit、Return、Dead 这些大状态；
-    /// 更细的攻击、技能、撤退和复杂站位行为会放进 Combat 内部的行为树。
+    /// Combat 内部先由轻量战斗行为状态机处理基础循环，后续可替换或扩展为行为树。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyActor))]
@@ -79,7 +79,7 @@ namespace EndLink.Enemies
         [SerializeField, Min(0f)]
         private float combatChaseStopDistance = 0.2f;
 
-        [Tooltip("Combat 内部普通攻击的攻击距离容差。实际进入攻击距离 = Basic Attack 的 Effective Attack Range + 该值。")]
+        [Tooltip("Combat 内部定位阶段的退出距离容差。目标离开 Effective Attack Range + 该值后，敌人才重新进入 Approach，避免临界距离反复切换。")]
         [SerializeField, Min(0f)]
         private float combatAttackRangeTolerance = 0.15f;
 
@@ -176,7 +176,7 @@ namespace EndLink.Enemies
         /// <summary>Combat 状态追击目标时的停止距离。</summary>
         public float CombatChaseStopDistance => combatChaseStopDistance;
 
-        /// <summary>Combat 状态进入普通攻击距离时额外放宽的容差。</summary>
+        /// <summary>Combat 定位阶段退出攻击范围时使用的距离容差。</summary>
         public float CombatAttackRangeTolerance => combatAttackRangeTolerance;
 
         /// <summary>Combat 状态接近攻击目标时，相对动作极限距离向内靠近的距离。</summary>
@@ -376,7 +376,7 @@ namespace EndLink.Enemies
 
         /// <summary>
         /// 请求进入 Combat 大状态。
-        /// Combat 当前负责基础追击和面向目标，复杂攻击决策之后由行为树接管。
+        /// Combat 内部负责基础接近、定位、攻击和恢复，复杂决策后续由行为树接管。
         /// </summary>
         public bool RequestCombat(Transform target = null)
         {

@@ -79,13 +79,15 @@
 - `EnemyTargetSensor` 负责第一版敌人索敌：玩家进入发现范围后请求进入 `Alert`，持续停留达到警觉时间后请求进入 `Combat`。
 - `EnemyTargetSensor` 在 `Idle` / `Alert` 阶段建立目标；进入 `Combat` / `Hit` 后由状态机持有当前战斗目标，Sensor 仅在该目标失效时重新扫描接管。
 - 自动索敌可以在 `EnemyStateMachine` 中关闭，关闭后不会主动触发 `Alert` / `Combat`。
-- `Combat` 当前负责基础追击、攻击距离停位、面向目标和普通攻击循环；追击位置取自目标 Collider 最近表面点，攻击距离来自敌人 Basic Attack 动作的 `EffectiveAttackRange`。
+- `Combat` 通过轻量 `EnemyCombatBehavior` 推进单人战斗行为，当前包含 `Approach`、`Position`、`Attack`、`Recover` 四个内部阶段。
+- `Approach` 负责向目标表面接近；`Position` 负责停位、面向目标并等待动作可执行；`Attack` 提交一次普通攻击并跟随 startup / active 时序；`Recover` 等待动作 recovery 结束后重新判断距离。
+- 定位阶段使用距离滞回：进入距离由 Basic Attack 的 `EffectiveAttackRange - combatAttackInnerOffset` 决定，退出距离由 `EffectiveAttackRange + combatAttackRangeTolerance` 决定，避免敌人在攻击边界反复切换移动和停位。
 - `Combat` 的最大追击距离以出生区域 `Home` 为圆心计算，不再使用敌人与当前目标的距离；越界后进入 `Return`。
 - 战斗目标失效后会等待 `lostTargetDelay`，期间允许 Sensor 重新获取目标；延迟结束仍无目标时进入 `Return`。
 - `Return` 会清除战斗目标、取消当前动作并返回 `Home`，抵达出生区域后恢复 `Idle`。
 - Return 开始时仍处于警戒范围内的玩家不会立刻重新触发；玩家离开后再次进入范围会转入 `Alert`，警戒失败则继续 Return，警戒完成则重新进入 Combat。
 - 没有配置 `EnemyCombatDriver` 或 Basic Attack 动作的敌人仍保持只追击和面向目标，方便制作不会攻击的测试敌人。
-- `Combat` 后续作为行为树的外层挂载点，内部再承载站位、技能、撤退和复杂攻击选择等细节行为。
+- 当前行为层只处理单个敌人面对单个目标的基础普通攻击，不包含多敌人围攻令牌、环形站位、技能选择和复杂撤退；后续可在 `Position` 的出手条件前接入协同许可，或整体替换为行为树。
 - `Hit` 作为独立大状态处理受击打断，不放进 Combat 行为树，方便后续加入硬直、霸体、击倒等规则。
 - 敌人受到有效伤害时，会优先把当前战斗目标切换为伤害来源；轻击只让敌人接战，重击才进入 `Hit` 状态并短暂停止移动。
 - `Hit` 状态触发带有短冷却，避免多段 Hitbox 在极短时间内反复刷新受击打断。
@@ -101,6 +103,7 @@
 - `Assets/_EndLink/Enemies/StateMachine/EnemyStateContext.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyIdleState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyAlertState.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyCombatBehavior.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyCombatState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyHitState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyReturnState.cs`
@@ -127,8 +130,8 @@
 - `heavyHitDamageThreshold`：实际伤害达到多少才触发 `Hit` 状态；小于等于 0 表示所有有效伤害都会触发
 - `hitReactCooldown`：两次 `Hit` 触发之间的最短间隔
 - `combatChaseStopDistance`：Combat 追击时保留的目标表面间隔，实际停止距离会额外加上敌人自身碰撞半径
-- `combatAttackRangeTolerance`：Combat 判断普通攻击可进入攻击距离时的容差
-- `combatAttackInnerOffset`：Combat 接近攻击目标时相对动作极限距离向内靠近的距离
+- `combatAttackRangeTolerance`：Position 退出攻击范围时向外增加的容差，用于距离滞回
+- `combatAttackInnerOffset`：Approach 进入 Position 前相对动作极限距离向内靠近的距离
 - `homePoint`：敌人的归位参考点；留空时自动记录创建位置
 - `maxChaseRadius`：相对 Home 的最大水平追击半径；小于等于 0 表示不限制
 - `lostTargetDelay`：战斗目标失效后等待重新获取目标的时间
@@ -152,7 +155,7 @@
 - 敌人受到战斗击退时会停止当前移动和 NavMesh 路径，通过 `CombatKnockbackMotion` 逐帧衰减后退，并持续同步 Agent 位置。
 - `EnemyCombatDriver` 是敌人战斗执行器，按 `CombatActionDefinition` 生成 Hitbox、记录冷却并广播动作开始事件。
 - `EnemyCombatDriver` 暴露当前动作、执行阶段和取消入口；完整运行时重置会同时清理当前动作与动作冷却。
-- `EnemyCombatDriver` 当前由 `EnemyCombatState` 在攻击距离内调用 Basic Attack；后续行为树接入后，出手时机和动作选择会转交给行为层。
+- `EnemyCombatDriver` 当前由 `EnemyCombatBehavior` 的 `Position` 阶段请求执行 Basic Attack，Driver 仍只负责动作时序、Hitbox、冷却和事件。
 
 对应脚本：
 - `Assets/_EndLink/Enemies/Abilities/EnemyMotorBase.cs`

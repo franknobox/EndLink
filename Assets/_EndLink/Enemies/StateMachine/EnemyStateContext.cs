@@ -60,7 +60,7 @@ namespace EndLink.Enemies
         /// <summary>Combat 状态追击目标时保留的表面间隔。</summary>
         public float CombatChaseStopDistance => StateMachine.CombatChaseStopDistance;
 
-        /// <summary>Combat 状态进入普通攻击距离时额外放宽的容差。</summary>
+        /// <summary>Combat 定位阶段退出攻击范围时使用的距离容差。</summary>
         public float CombatAttackRangeTolerance => StateMachine.CombatAttackRangeTolerance;
 
         /// <summary>Combat 状态接近攻击目标时，相对动作极限距离向内靠近的距离。</summary>
