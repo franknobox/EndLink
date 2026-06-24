@@ -1,3 +1,4 @@
+using EndLink.Core;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -89,6 +90,10 @@ namespace EndLink.Combat
         private float synergyGainOnLink;
 
         [Header("冷却与时序")]
+        [Tooltip("动作时序来源。DataDriven 使用动作数据中的前摇/有效/后摇；AnimationEventDriven 预留给后续动画事件驱动。当前 Driver 尚未接入动画事件模式。")]
+        [SerializeField]
+        private CombatActionTimingSource timingSource = CombatActionTimingSource.DataDriven;
+
         [Tooltip("动作冷却时间。冷却未结束时不应再次释放同一个动作。")]
         [SerializeField, Min(0f)]
         private float cooldown = 0.45f;
@@ -155,6 +160,9 @@ namespace EndLink.Combat
 
         /// <summary>该连携动作成功释放后增加的全队协同率。</summary>
         public float SynergyGainOnLink => Mathf.Max(0f, synergyGainOnLink);
+
+        /// <summary>动作时序来源。</summary>
+        public CombatActionTimingSource TimingSource => timingSource;
 
         /// <summary>冷却时间。</summary>
         public float Cooldown => cooldown;

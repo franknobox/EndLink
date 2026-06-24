@@ -214,9 +214,18 @@
 - 同步 `MoveSpeed`、`IsMoving`、`StateId`、`IsDead` 等 Animator 参数。
 - 进入 `Attack`、`Skill`、`Hit`、`Dead` 状态时，可分别触发对应 Trigger 参数。
 - 参数名都可以在 Inspector 修改；Animator Controller 不存在对应参数时会安全跳过。
+- `CombatAnimatorParams` 定义后续玩家、队友和敌人可共用的 Animator 参数名和 Hash，不绑定具体连段或动画状态名。
+- `CombatAnimationEventReceiver` 作为动画事件接收器，负责把 Clip 上的事件转发给同角色上的监听者，避免动画事件直接依赖具体 Driver 或状态机。
+- `ICombatRootMotionReceiver` 预留 Root Motion 位移接入口，后续可让动画驱动位移再交给角色移动层处理。
+- `ICombatActionLockReceiver` 预留动作锁定、可取消、结束和打断通知，后续用于动画事件驱动动作退出。
 
 对应脚本：
 - `Assets/_EndLink/Control/PlayerAnimatorDriver.cs`
+- `Assets/_EndLink/Control/Animation/CombatAnimatorParams.cs`
+- `Assets/_EndLink/Control/Animation/CombatAnimationEventReceiver.cs`
+- `Assets/_EndLink/Control/Animation/ICombatAnimationEventListener.cs`
+- `Assets/_EndLink/Control/Animation/ICombatRootMotionReceiver.cs`
+- `Assets/_EndLink/Control/Animation/ICombatActionLockReceiver.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerStateMachine.cs`
 
 相关物体：

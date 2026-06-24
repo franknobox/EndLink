@@ -134,10 +134,12 @@
 - 主控、队友和敌人后续可以共用同一套动作类型，释放者来源应由后续战斗事件数据携带。
 - 动作配置包含固定伤害 `FlatDamage`、攻击力倍率 `AtkPowerMultiplier`、伤害类型、击退、`CombatTagDefinition` 命中标签、标签持续时间、标签层数、连携协同率收益、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置和 AI 有效攻击距离。
 - 动作伤害基础公式为 `FlatDamage + AttackPower × AtkPowerMultiplier`，因此可配置纯固定伤害、纯倍率伤害或两者混合。
+- 动作配置包含 `TimingSource`：默认 `DataDriven` 使用 `startup / active / recovery` 数据推进；`AnimationEventDriven` 预留给后续 Animator 事件驱动，当前 Driver 尚未接入该模式。
 - `SynergyGainOnLink` 只在动作类型为 `LinkAttack` 且连携技成功释放时由 `PartyUltimateContext` 读取，用于提升全队终链奥义协同率。
 
 对应脚本：
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
+- `Assets/_EndLink/Control/Animation/CombatActionTimingSource.cs`
 
 相关资产：
 - `CombatActionDefinition` 数据资产：可通过 `Create > EndLink > Combat > Combat Action Definition` 创建
