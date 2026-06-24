@@ -44,6 +44,7 @@ namespace EndLink.Enemies
 
             if (!Context.HasValidTarget)
             {
+                _combatBehavior.CancelCurrentAttempt();
                 TickLostTarget(deltaTime);
                 return;
             }

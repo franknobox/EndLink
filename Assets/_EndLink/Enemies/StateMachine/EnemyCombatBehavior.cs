@@ -27,6 +27,10 @@ namespace EndLink.Enemies
         private readonly EnemyStateContext _context;
         private float _selfPlanarRadius;
         private float _nextAttackAttemptTime;
+        private float _attackWaitElapsed;
+        private Transform _grantedAttackTarget;
+        private EnemyCombatCoordinator _lastAttackCoordinator;
+        private EnemyCombatCoordinator _grantedAttackCoordinator;
         private bool _loggedMissingHitbox;
 
         public EnemyCombatBehavior(EnemyStateContext context)
@@ -42,6 +46,10 @@ namespace EndLink.Enemies
         {
             _selfPlanarRadius = EstimateSelfPlanarRadius();
             _nextAttackAttemptTime = 0f;
+            _attackWaitElapsed = 0f;
+            _grantedAttackTarget = null;
+            _lastAttackCoordinator = null;
+            _grantedAttackCoordinator = null;
             _loggedMissingHitbox = false;
             CurrentPhase = EnemyCombatPhase.Approach;
         }
@@ -49,8 +57,17 @@ namespace EndLink.Enemies
         /// <summary>离开 Combat 大状态时停止移动并取消尚未完成的动作。</summary>
         public void Exit()
         {
+            CancelCurrentAttempt();
+        }
+
+        /// <summary>取消当前攻击尝试并释放围攻名额，用于目标丢失、受击打断、脱战或死亡。</summary>
+        public void CancelCurrentAttempt()
+        {
+            ReleaseAttackSlot();
             _context?.Motor?.Stop();
             _context?.CombatDriver?.CancelCurrentAction();
+            _attackWaitElapsed = 0f;
+            CurrentPhase = EnemyCombatPhase.Approach;
         }
 
         /// <summary>推进一次 Combat 内部战斗决策。</summary>
@@ -97,6 +114,7 @@ namespace EndLink.Enemies
 
             if (surfaceDistance > positionEnterDistance)
             {
+                _attackWaitElapsed = 0f;
                 MoveTowardTargetSurface(target, positionEnterDistance, deltaTime);
                 return;
             }
@@ -111,12 +129,14 @@ namespace EndLink.Enemies
             if (GetSurfaceDistance(target) > GetPositionExitDistance(action))
             {
                 CurrentPhase = EnemyCombatPhase.Approach;
+                _attackWaitElapsed = 0f;
                 TickApproach(target, action, deltaTime);
                 return;
             }
 
             _context.Motor?.Stop();
             _context.Motor?.FaceTarget(target, deltaTime);
+            _attackWaitElapsed += Mathf.Max(0f, deltaTime);
             TryStartAttack(target, action);
         }
 
@@ -147,6 +167,7 @@ namespace EndLink.Enemies
                 return;
             }
 
+            ReleaseAttackSlot();
             CurrentPhase = GetSurfaceDistance(target) > GetPositionExitDistance(action)
                 ? EnemyCombatPhase.Approach
                 : EnemyCombatPhase.Position;
@@ -184,10 +205,72 @@ namespace EndLink.Enemies
                 return;
             }
 
-            if (actionExecutor.CanExecute(action) && actionExecutor.TryExecute(action, target))
+            if (!actionExecutor.CanExecute(action) || !TryAcquireAttackPermission(target, action))
             {
+                return;
+            }
+
+            if (actionExecutor.TryExecute(action, target))
+            {
+                NotifyAttackStarted(target);
+                _attackWaitElapsed = 0f;
                 CurrentPhase = EnemyCombatPhase.Attack;
             }
+        }
+
+        private bool TryAcquireAttackPermission(Transform target, CombatActionDefinition action)
+        {
+            EnemyCombatCoordinator coordinator = _context.CombatCoordinator;
+            if (coordinator == null)
+            {
+                return true;
+            }
+
+            float score = CalculateAttackScore(target, action);
+            _lastAttackCoordinator = coordinator;
+            return coordinator.RequestAttackPermission(
+                _context.Transform,
+                target,
+                score);
+        }
+
+        private float CalculateAttackScore(Transform target, CombatActionDefinition action)
+        {
+            float surfaceDistance = GetSurfaceDistance(target);
+            float rangeCloseness = Mathf.Clamp01(1f - surfaceDistance / Mathf.Max(0.01f, action.EffectiveAttackRange));
+            float waitScore = Mathf.Clamp(_attackWaitElapsed, 0f, 5f);
+            EnemyCombatCoordinator coordinator = _context.CombatCoordinator;
+            float distanceWeight = coordinator != null ? coordinator.AttackScoreDistanceWeight : 1f;
+            float waitWeight = coordinator != null ? coordinator.AttackScoreWaitWeight : 0f;
+            return rangeCloseness * distanceWeight + waitScore * waitWeight;
+        }
+
+        private void NotifyAttackStarted(Transform target)
+        {
+            EnemyCombatCoordinator coordinator = _lastAttackCoordinator != null
+                ? _lastAttackCoordinator
+                : _context.CombatCoordinator;
+            if (coordinator == null)
+            {
+                return;
+            }
+
+            _grantedAttackTarget = target;
+            _grantedAttackCoordinator = coordinator;
+            coordinator.NotifyAttackStarted(_context.Transform, target);
+        }
+
+        private void ReleaseAttackSlot()
+        {
+            if (_grantedAttackCoordinator != null && _grantedAttackTarget != null)
+            {
+                _grantedAttackCoordinator.NotifyAttackEnded(_context.Transform, _grantedAttackTarget);
+            }
+
+            _lastAttackCoordinator?.CancelAttacker(_context.Transform);
+            _grantedAttackTarget = null;
+            _lastAttackCoordinator = null;
+            _grantedAttackCoordinator = null;
         }
 
         private void MoveTowardTargetSurface(Transform target, float stopDistance, float deltaTime)

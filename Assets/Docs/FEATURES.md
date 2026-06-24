@@ -74,7 +74,7 @@
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [敌人身份与生命目标](Features/ENEMIES.md#feature-enemy-identity-health) | 已完成分类基础版 | 提供正式敌人根身份、根类别、战斗定位、生命受击、死亡事件、目标有效性、死亡退场、战斗标签容器和基础调试显示。 |
-| [敌人感知与大状态机](Features/ENEMIES.md#feature-enemy-state-sensor) | 已完成单人战斗行为版 | 提供 Idle、Alert、Combat、Hit、Return、Dead 大状态，以及 Combat 内部 Approach、Position、Attack、Recover 四阶段基础战斗循环。 |
+| [敌人感知与大状态机](Features/ENEMIES.md#feature-enemy-state-sensor) | 已完成区域协调第一版 | 提供 Idle、Alert、Combat、Hit、Return、Dead 大状态，Combat 内部基础战斗循环，以及区域敌人协调器驱动的多敌人出手控制。 |
 | [敌人移动与战斗能力](Features/ENEMIES.md#feature-enemy-motor-combat) | 已完成受击后退版 | 提供地面移动、NavMesh 追击、转向、重力、碰撞推挤、衰减击退和敌人战斗执行器基底。 |
 
 #### UI

@@ -66,6 +66,9 @@ namespace EndLink.Enemies
         /// <summary>Combat 状态接近攻击目标时，相对动作极限距离向内靠近的距离。</summary>
         public float CombatAttackInnerOffset => StateMachine.CombatAttackInnerOffset;
 
+        /// <summary>当前归属的敌人战斗协调器。为空时不参与区域围攻限制。</summary>
+        public EnemyCombatCoordinator CombatCoordinator => StateMachine.CombatCoordinator;
+
         /// <summary>敌人的归位位置。</summary>
         public Vector3 HomePosition => StateMachine.HomePosition;
 

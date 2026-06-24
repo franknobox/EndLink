@@ -133,6 +133,9 @@ namespace EndLink.Enemies
         private float _nextHitReactTime;
         private Vector3 _capturedHomePosition;
         private bool _hasCapturedHome;
+        private EnemyCombatCoordinator _combatCoordinator;
+        private float _combatCoordinatorDistanceSqr = float.PositiveInfinity;
+        private int _combatCoordinatorPriority = int.MinValue;
 
         /// <summary>当前状态标识，方便 Inspector 和调试工具观察。</summary>
         public EnemyStateId CurrentStateId => _currentState?.StateId ?? EnemyStateId.None;
@@ -181,6 +184,9 @@ namespace EndLink.Enemies
 
         /// <summary>Combat 状态接近攻击目标时，相对动作极限距离向内靠近的距离。</summary>
         public float CombatAttackInnerOffset => combatAttackInnerOffset;
+
+        /// <summary>当前归属的敌人战斗协调器。为空时仍可按自身行为攻击，但不参与区域围攻限制。</summary>
+        public EnemyCombatCoordinator CombatCoordinator => _combatCoordinator;
 
         /// <summary>敌人的归位位置。配置 Home Point 时实时读取，否则使用创建时记录的位置。</summary>
         public Vector3 HomePosition => homePoint != null ? homePoint.position : _capturedHomePosition;
@@ -244,19 +250,18 @@ namespace EndLink.Enemies
 
         private void OnDisable()
         {
-            if (_health == null)
+            if (_health != null)
             {
-                return;
+                _health.OnDamaged.RemoveListener(HandleDamaged);
+                _health.OnDead.RemoveListener(HandleDead);
+                _health.ResetPerformed -= HandleHealthReset;
             }
-
-            _health.OnDamaged.RemoveListener(HandleDamaged);
-            _health.OnDead.RemoveListener(HandleDead);
-            _health.ResetPerformed -= HandleHealthReset;
 
             _currentState?.Exit();
             _currentState = null;
             _currentTarget = null;
             _actor?.CombatDriver?.CancelCurrentAction();
+            ClearCombatCoordinatorRuntime();
             SetStateIndicatorVisible(false);
         }
 
@@ -315,6 +320,51 @@ namespace EndLink.Enemies
         public void SetDetectionEnabled(bool enabled)
         {
             detectionEnabled = enabled;
+        }
+
+        /// <summary>
+        /// 尝试把敌人归属到指定战斗协调器。
+        /// 敌人正在 Combat / Hit 且已有协调器时不会切换，避免战斗中围攻规则跳变。
+        /// </summary>
+        public bool TryAssignCombatCoordinator(
+            EnemyCombatCoordinator coordinator,
+            float distanceSqr,
+            int coordinatorPriority)
+        {
+            if (coordinator == null || !CanAcceptCombatCoordinator(coordinator, distanceSqr, coordinatorPriority))
+            {
+                return false;
+            }
+
+            if (_combatCoordinator != null && _combatCoordinator != coordinator)
+            {
+                _combatCoordinator.UnregisterEnemy(this);
+            }
+
+            _combatCoordinator = coordinator;
+            _combatCoordinatorDistanceSqr = Mathf.Max(0f, distanceSqr);
+            _combatCoordinatorPriority = coordinatorPriority;
+            return true;
+        }
+
+        /// <summary>
+        /// 尝试清除当前战斗协调器。
+        /// 非强制模式下，Combat / Hit 中的敌人会保留当前协调器直到脱战。
+        /// </summary>
+        public bool TryClearCombatCoordinator(EnemyCombatCoordinator coordinator, bool force)
+        {
+            if (_combatCoordinator == null || _combatCoordinator != coordinator)
+            {
+                return false;
+            }
+
+            if (!force && (CurrentStateId == EnemyStateId.Combat || CurrentStateId == EnemyStateId.Hit))
+            {
+                return false;
+            }
+
+            ClearCombatCoordinatorRuntime();
+            return true;
         }
 
         /// <summary>
@@ -547,6 +597,53 @@ namespace EndLink.Enemies
         private bool CanAcceptNonDeadRequest()
         {
             return CurrentStateId != EnemyStateId.Dead && (_health == null || !_health.IsDead);
+        }
+
+        private bool CanAcceptCombatCoordinator(
+            EnemyCombatCoordinator candidate,
+            float distanceSqr,
+            int coordinatorPriority)
+        {
+            if (CurrentStateId == EnemyStateId.Dead)
+            {
+                return false;
+            }
+
+            if (_combatCoordinator == candidate)
+            {
+                return true;
+            }
+
+            if ((CurrentStateId == EnemyStateId.Combat || CurrentStateId == EnemyStateId.Hit)
+                && _combatCoordinator != null)
+            {
+                return false;
+            }
+
+            if (_combatCoordinator == null)
+            {
+                return true;
+            }
+
+            if (coordinatorPriority != _combatCoordinatorPriority)
+            {
+                return coordinatorPriority > _combatCoordinatorPriority;
+            }
+
+            return distanceSqr < _combatCoordinatorDistanceSqr;
+        }
+
+        private void ClearCombatCoordinatorRuntime()
+        {
+            EnemyCombatCoordinator previousCoordinator = _combatCoordinator;
+            _combatCoordinator = null;
+            _combatCoordinatorDistanceSqr = float.PositiveInfinity;
+            _combatCoordinatorPriority = int.MinValue;
+
+            if (previousCoordinator != null)
+            {
+                previousCoordinator.UnregisterEnemy(this);
+            }
         }
 
         private bool TryRetargetFromDamageSource()

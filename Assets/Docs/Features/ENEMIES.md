@@ -87,7 +87,13 @@
 - `Return` 会清除战斗目标、取消当前动作并返回 `Home`，抵达出生区域后恢复 `Idle`。
 - Return 开始时仍处于警戒范围内的玩家不会立刻重新触发；玩家离开后再次进入范围会转入 `Alert`，警戒失败则继续 Return，警戒完成则重新进入 Combat。
 - 没有配置 `EnemyCombatDriver` 或 Basic Attack 动作的敌人仍保持只追击和面向目标，方便制作不会攻击的测试敌人。
-- 当前行为层只处理单个敌人面对单个目标的基础普通攻击，不包含多敌人围攻令牌、环形站位、技能选择和复杂撤退；后续可在 `Position` 的出手条件前接入协同许可，或整体替换为行为树。
+- `EnemyCombatCoordinator` 是区域级敌人战斗协调器，挂在战斗区域的 `EnemyCoordinator` 物体上，通过半径扫描自动接管范围内敌人。
+- 同一目标周围的敌人会在 `Position` 阶段按距离和等待时间计算攻击评分，并向当前区域协调器竞争有限的攻击名额。
+- `maxSimultaneousAttackers` 控制同一目标同时允许多少个敌人进入攻击动作；未获准的敌人会继续停留在 `Position`，面向目标等待下一次评分结果。
+- 敌人在非战斗状态下可按协调器优先级和距离切换归属；进入 `Combat` / `Hit` 后会保留当前协调器，避免战斗中围攻规则跳变。
+- 攻击评分当前只处理自然出手节奏，不做环形站位槽；侧移、重新定位、攻击令牌和更复杂的多敌人包围策略留给后续 AI 表现层扩展。
+- 敌人目标失效、离开 Combat、受击打断、死亡或动作恢复结束时，会释放当前攻击名额，避免长期占用围攻槽位。
+- 当前行为层只处理敌人面对单个目标的基础普通攻击，不包含技能选择和复杂撤退；后续可在 `Position` 的出手条件前继续扩展协同许可，或整体替换为行为树。
 - `Hit` 作为独立大状态处理受击打断，不放进 Combat 行为树，方便后续加入硬直、霸体、击倒等规则。
 - 敌人受到有效伤害时，会优先把当前战斗目标切换为伤害来源；轻击只让敌人接战，重击才进入 `Hit` 状态并短暂停止移动。
 - `Hit` 状态触发带有短冷却，避免多段 Hitbox 在极短时间内反复刷新受击打断。
@@ -101,6 +107,7 @@
 - `Assets/_EndLink/Enemies/StateMachine/IEnemyState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyStateBase.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyStateContext.cs`
+- `Assets/_EndLink/Enemies/EnemyCombatCoordinator.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyIdleState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyAlertState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyCombatBehavior.cs`
@@ -113,6 +120,8 @@
 - 正式敌人根物体
   - `EnemyStateMachine`
   - `EnemyTargetSensor`
+- 战斗区域物体
+  - `EnemyCombatCoordinator`
 
 关键配置：
 - `initialState`：敌人启用后的初始大状态，通常为 `Idle`
@@ -132,6 +141,15 @@
 - `combatChaseStopDistance`：Combat 追击时保留的目标表面间隔，实际停止距离会额外加上敌人自身碰撞半径
 - `combatAttackRangeTolerance`：Position 退出攻击范围时向外增加的容差，用于距离滞回
 - `combatAttackInnerOffset`：Approach 进入 Position 前相对动作极限距离向内靠近的距离
+- `EnemyCombatCoordinator.coordinationRadius`：区域协调器自动接管敌人的半径
+- `EnemyCombatCoordinator.enemyLayerMask`：区域扫描敌人使用的 LayerMask，通常为 Enemy
+- `EnemyCombatCoordinator.scanInterval`：自动扫描敌人的间隔，默认 0.5 秒
+- `EnemyCombatCoordinator.priority`：多个协调器范围重叠时的接管优先级
+- `EnemyCombatCoordinator.attackCoordinationEnabled`：是否启用该区域的攻击协调；关闭后区域敌人不限制同时出手数量
+- `EnemyCombatCoordinator.maxSimultaneousAttackers`：同一目标最多允许多少个敌人同时进入攻击动作，当前第一版建议 1-2
+- `EnemyCombatCoordinator.attackGrantInterval`：同一目标两次授予攻击许可之间的最短间隔，用于控制多敌人轮流出手的整体攻击频率
+- `EnemyCombatCoordinator.attackScoreDistanceWeight`：攻击评分中的距离权重，越高越偏向让离目标更近的敌人先出手
+- `EnemyCombatCoordinator.attackScoreWaitWeight`：攻击评分中的等待时间权重，越高越偏向让等待更久的敌人获得下一次出手机会
 - `homePoint`：敌人的归位参考点；留空时自动记录创建位置
 - `maxChaseRadius`：相对 Home 的最大水平追击半径；小于等于 0 表示不限制
 - `lostTargetDelay`：战斗目标失效后等待重新获取目标的时间
