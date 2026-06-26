@@ -39,6 +39,7 @@ Assets/_EndLink/
 ├─ Player/               玩家战斗、生命、索敌和状态机
 │  └─ StateMachine/      玩家状态机
 ├─ Tests/                临时或必要测试脚本
+├─ World/                灰盒地图中的门、电梯、机关等世界交互底座
 └─ UI/                   运行时 HUD、动作槽位和血条组件
 ```
 
@@ -77,6 +78,7 @@ Feature 子文档：
 - `Features/PARTY.md`
 - `Features/ALLY.md`
 - `Features/ENEMIES.md`
+- `Features/WORLD.md`
 - `Features/UI.md`
 - `Features/TOOLS.md`
 

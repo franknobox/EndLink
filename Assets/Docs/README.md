@@ -23,6 +23,7 @@
 | `Features/PARTY.md` | 小队管理、小队战斗上下文和连携窗口。 |
 | `Features/ALLY.md` | 队友状态机、助战和跟随表现。 |
 | `Features/ENEMIES.md` | 敌人身份与生命目标、敌人感知与大状态机、敌人移动与战斗能力。 |
+| `Features/WORLD.md` | 灰盒地图中的门、电梯、机关等世界交互底座。 |
 | `Features/UI.md` | 运行时 HUD、动作槽位和通用 UI 组件。 |
 | `Features/TOOLS.md` | Editor 工具、数据创建工具和调试监视窗口。 |
 

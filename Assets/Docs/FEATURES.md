@@ -12,6 +12,7 @@
 - [PARTY](Features/PARTY.md)：小队管理、小队战斗上下文和连携窗口。
 - [ALLY](Features/ALLY.md)：队友状态机、助战和跟随表现。
 - [ENEMIES](Features/ENEMIES.md)：正式敌人身份、生命、感知、状态机和基础移动。
+- [WORLD](Features/WORLD.md)：灰盒地图中的门、电梯、机关等世界交互底座。
 - [UI](Features/UI.md)：运行时 HUD、动作槽位和通用 UI 组件。
 - [TOOLS](Features/TOOLS.md)：Editor 工具、数据创建工具和调试监视窗口。
 
@@ -19,7 +20,7 @@
 
 ### 当前情况概览
 
-项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party`、`Assets/_EndLink/Enemies` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、统一 Combat Target、统一 Action 执行接口、玩家 Animator 桥接、动画协议接口骨架、基础攻击驱动、基础 Hitbox 配置、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动与动态站位第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架和战斗 UI 基础。
+项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party`、`Assets/_EndLink/Enemies`、`Assets/_EndLink/World` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，世界交互代码使用 `EndLink.World`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、统一 Combat Target、统一 Action 执行接口、玩家 Animator 桥接、动画协议接口骨架、基础攻击驱动、基础 Hitbox 配置、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动与动态站位第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架、世界交互底座和战斗 UI 基础。
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
@@ -76,6 +77,12 @@
 | [敌人身份与生命目标](Features/ENEMIES.md#feature-enemy-identity-health) | 已完成分类基础版 | 提供正式敌人根身份、根类别、战斗定位、生命受击、死亡事件、目标有效性、死亡退场、战斗标签容器和基础调试显示。 |
 | [敌人感知与大状态机](Features/ENEMIES.md#feature-enemy-state-sensor) | 已完成区域协调第一版 | 提供 Idle、Alert、Combat、Hit、Return、Dead 大状态，Combat 内部基础战斗循环，以及区域敌人协调器驱动的多敌人出手控制。 |
 | [敌人移动与战斗能力](Features/ENEMIES.md#feature-enemy-motor-combat) | 已完成受击后退版 | 提供地面移动、NavMesh 追击、转向、重力、碰撞推挤、衰减击退和敌人战斗执行器基底。 |
+
+#### WORLD
+
+| 功能名 | 当前状态 | 内容说明 |
+| --- | --- | --- |
+| [世界交互底座](Features/WORLD.md#feature-world-interaction) | 已完成第一版 | 提供可复用的可交互对象接口、基类、范围扫描器和玩家输入桥接，用于后续门、电梯、开关等灰盒机关扩展。 |
 
 #### UI
 
