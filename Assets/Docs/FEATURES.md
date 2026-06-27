@@ -30,9 +30,9 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成第一版 | 负责读取玩家移动、跳跃、相机旋转和鼠标滚轮缩放输入，并把输入缓存为控制层可使用的数据。 |
+| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成第一版 | 负责读取玩家移动、跳跃和相机旋转等输入，并把输入缓存为控制层可使用的数据。 |
 | [玩家 CharacterController 移动](Features/PLAYER.md#feature-player-movement) | 已完成受击后退版 | 负责玩家平滑移动、基础跳跃、重力贴地、转向，以及战斗击退的短时衰减后退。 |
-| [第三人称自由相机](Features/PLAYER.md#feature-third-person-camera) | 已完成第一版 | 负责越肩第三人称视角、自由旋转、上下角度限制、滚轮缩放和较开阔的战斗观察距离。 |
+| [第三人称自由相机](Features/PLAYER.md#feature-third-person-camera) | 已完成自动景别版 | 负责越肩第三人称视角、自由旋转和上下角度限制，并在脱战待机时缓慢拉近、移动或战斗时较快拉远。 |
 | [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成攻击缓冲版 | 负责 Idle、Move、Attack、Skill、Dodge、Hit、Dead 的状态切换，并提供短时普攻输入缓冲与攻击期间软锁跟随转向。 |
 | [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成协议骨架版 | 负责把玩家状态、移动速度和状态进入触发器同步到 Animator 参数，并预留通用 Animator 参数协议、动画事件、Root Motion 和动作锁定/退出接口。 |
 | [玩家自动软锁定](Features/PLAYER.md#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按固定间隔自动选择当前战斗目标，默认优先最近敌人，并显示轻量目标点。 |

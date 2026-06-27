@@ -25,7 +25,6 @@
 - 全队终链奥义读取 `Player/PartyUltimate`，默认键位 V，可由 `PartyCombatRouter` 在运行时覆盖。
 - 手柄第一版临时绑定：主控技能 `rightShoulder`，队友 A 技能 `leftShoulder`，队友 B 技能 `rightTrigger`，主控/队友连携为 D-Pad 上/左/右，全队极限技为 D-Pad 下；后续可根据实际手柄手感统一调整。
 - 相机旋转读取 `Player/Look`。
-- 鼠标滚轮缩放通过 `Mouse.current.scroll` 读取。
 
 对应脚本：
 - `Assets/_EndLink/Control/InputSystem_Actions.cs`
@@ -100,7 +99,9 @@
 - 支持越肩、较高、较开阔的第三人称视角。
 - 支持自由旋转。
 - 支持 pitch 限制，避免镜头过低或过度俯视。
-- 支持滚轮缩放，并限制最近和最远距离。
+- 支持根据玩家状态机和 `PartyCombatContext` 自动切换镜头距离。
+- 移动、攻击、技能、闪避、受击、死亡或处于战斗上下文时使用远景；脱战 Idle 时使用近景。
+- 脱战 Idle 持续 `1` 秒后开始缓慢拉近；移动或战斗持续 `0.5` 秒后开始较快拉远，避免短时状态切换造成镜头反复伸缩。
 - 支持鼠标锁定，方便第三人称自由视角操作。
 
 对应脚本：
@@ -121,11 +122,13 @@
   - `CinemachineThirdPersonFollow`
   - `PlayerCameraInputReader`
   - `ThirdPersonCameraController`
+  - 显式绑定场景中的 `PartyCombatContext`；`PlayerStateMachine` 可从 `followTarget` 自动获取
 
 关键配置：
-- `defaultDistance`：默认相机距离
-- `minDistance` / `maxDistance`：缩放范围
-- `zoomSpeed` / `zoomSmoothTime`：缩放速度和平滑
+- `idleDistance`：脱战待机时的近景距离
+- `activeDistance`：移动和战斗时的远景距离
+- `idleDistanceSmoothTime`：镜头缓慢拉近的平滑时间
+- `activeDistanceSmoothTime`：镜头较快拉远的平滑时间
 - `minPitch` / `maxPitch`：上下视角限制
 - `mouseYawSensitivity` / `mousePitchSensitivity`：鼠标灵敏度
 - `gamepadYawSpeed` / `gamepadPitchSpeed`：手柄视角速度

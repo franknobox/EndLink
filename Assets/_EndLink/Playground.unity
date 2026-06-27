@@ -5007,6 +5007,7 @@ MonoBehaviour:
   priority: 0
   attackCoordinationEnabled: 1
   maxSimultaneousAttackers: 1
+  attackGrantInterval: 0.35
   attackScoreDistanceWeight: 1
   attackScoreWaitWeight: 0.45
   drawGizmo: 1
@@ -6537,6 +6538,46 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!114 &417825189
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 509600055}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b687c8067ed54309826c4ca0b158d999, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.World.PlayerInteractor
+  inputReader: {fileID: 509600057}
+  stateMachine: {fileID: 509600060}
+  worldInteractor: {fileID: 417825190}
+  requireLocomotionState: 1
+--- !u!114 &417825190
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 509600055}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3ee21cc827247dcb78a9eaaac663930, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EndLink.World.WorldInteractor
+  origin: {fileID: 0}
+  interactionRadius: 2.2
+  interactableLayers:
+    serializedVersion: 2
+    m_Bits: 4294967291
+  refreshInterval: 0.1
+  maxCandidates: 16
+  requireLineOfSight: 0
+  obstructionLayers:
+    serializedVersion: 2
+    m_Bits: 4294967291
+  logInteractionAttempts: 0
 --- !u!1 &477616046
 GameObject:
   m_ObjectHideFlags: 0
@@ -6879,6 +6920,8 @@ GameObject:
   - component: {fileID: 509600063}
   - component: {fileID: 509600065}
   - component: {fileID: 7100000000000000001}
+  - component: {fileID: 417825190}
+  - component: {fileID: 417825189}
   m_Layer: 3
   m_Name: Player_Root
   m_TagString: Untagged
@@ -25569,7 +25612,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a1c54f692db847a6bb817dd7ec6fd602, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Core.PlayerCameraInputReader
-  mouseScrollUnitsPerStep: 120
 --- !u!114 &2084252735
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -25584,6 +25626,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Core.ThirdPersonCameraController
   followTarget: {fileID: 509600059}
   cameraTarget: {fileID: 1415436549}
+  playerStateMachine: {fileID: 0}
+  partyCombatContext: {fileID: 163565090}
   targetWorldOffset: {x: 0, y: 1, z: -0.1}
   gamepadYawSpeed: 190
   gamepadPitchSpeed: 120
@@ -25592,11 +25636,10 @@ MonoBehaviour:
   minPitch: -30
   maxPitch: 55
   invertY: 0
-  defaultDistance: 6.5
-  minDistance: 5
-  maxDistance: 8
-  zoomSpeed: 10
-  zoomSmoothTime: 0.1
+  idleDistance: 5.5
+  activeDistance: 7
+  idleDistanceSmoothTime: 1.2
+  activeDistanceSmoothTime: 0.25
   shoulderOffset: {x: 0.5, y: 1.45, z: 0}
   verticalArmLength: 0
   cameraSide: 1

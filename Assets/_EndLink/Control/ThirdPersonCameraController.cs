@@ -1,11 +1,22 @@
+using EndLink.Party;
 using Unity.Cinemachine;
 using UnityEngine;
 
 namespace EndLink.Core
 {
     /// <summary>
+    /// 第三人称相机当前采用的自动距离模式。
+    /// Idle 用于脱战待机近景，Active 用于移动和战斗远景。
+    /// </summary>
+    public enum CameraDistanceMode
+    {
+        Idle,
+        Active
+    }
+
+    /// <summary>
     /// 第三人称相机控制器。
-    /// 负责把玩家相机输入转换为 CameraTarget 的旋转，以及 CinemachineThirdPersonFollow 的缩放距离。
+    /// 负责把玩家相机输入转换为 CameraTarget 的旋转，并根据玩家状态自动调整跟随距离。
     /// 实际跟随、缓动、越肩构图仍交给 Cinemachine 处理。
     /// </summary>
     [DisallowMultipleComponent]
@@ -14,6 +25,12 @@ namespace EndLink.Core
     [RequireComponent(typeof(CinemachineThirdPersonFollow))]
     public sealed class ThirdPersonCameraController : MonoBehaviour
     {
+        /// <summary>持续处于脱战 Idle 多久后，镜头才开始拉近。</summary>
+        public const float IdleDistanceDelay = 1f;
+
+        /// <summary>持续处于移动或战斗多久后，镜头才开始拉远。</summary>
+        public const float ActiveDistanceDelay = 0.5f;
+
         [Header("目标")]
         [Tooltip("玩家根节点。CameraTarget 会跟随这个对象的位置，但不会直接旋转玩家本体。")]
         [SerializeField]
@@ -22,6 +39,14 @@ namespace EndLink.Core
         [Tooltip("相机旋转中心。建议放在玩家子物体 CameraTarget 上，高度在胸口到头部之间。")]
         [SerializeField]
         private Transform cameraTarget;
+
+        [Tooltip("主控玩家状态机。为空时会尝试从 Follow Target 自动获取。")]
+        [SerializeField]
+        private PlayerStateMachine playerStateMachine;
+
+        [Tooltip("小队战斗上下文。处于战斗时，即使玩家当前 Idle，镜头也会保持远距离。")]
+        [SerializeField]
+        private PartyCombatContext partyCombatContext;
 
         [Tooltip("CameraTarget 相对玩家根节点的世界空间偏移。Y 越大，视角中心越高。")]
         [SerializeField]
@@ -56,26 +81,22 @@ namespace EndLink.Core
         [SerializeField]
         private bool invertY;
 
-        [Header("缩放")]
-        [Tooltip("默认相机距离。进入场景时镜头会从这个距离开始，主要决定初始远近。")]
-        [SerializeField]
-        private float defaultDistance = 6.5f;
-
-        [Tooltip("允许缩放到的最近距离。数值越小，滚轮拉近时越贴近角色。")]
-        [SerializeField]
-        private float minDistance = 5f;
-
-        [Tooltip("允许缩放到的最远距离。数值越大，滚轮拉远时视野越开阔。")]
-        [SerializeField]
-        private float maxDistance = 8f;
-
-        [Tooltip("滚轮缩放速度。数值越大，每次滚轮改变的相机距离越多。")]
-        [SerializeField, Min(0f)]
-        private float zoomSpeed = 10f;
-
-        [Tooltip("缩放平滑时间。数值越大，镜头远近变化越柔和但响应更慢。")]
+        [Header("自动距离")]
+        [Tooltip("脱战且保持 Idle 后的近景距离。数值越小，静止观察时镜头越贴近角色。")]
         [SerializeField, Min(0.01f)]
-        private float zoomSmoothTime = 0.1f;
+        private float idleDistance = 5.5f;
+
+        [Tooltip("移动、攻击或处于战斗上下文时的远景距离。数值越大，战斗视野越开阔。")]
+        [SerializeField, Min(0.01f)]
+        private float activeDistance = 7f;
+
+        [Tooltip("镜头从远景缓慢拉近到静止距离所用的平滑时间。")]
+        [SerializeField, Min(0.01f)]
+        private float idleDistanceSmoothTime = 1.2f;
+
+        [Tooltip("镜头从近景较快拉远到移动/战斗距离所用的平滑时间。")]
+        [SerializeField, Min(0.01f)]
+        private float activeDistanceSmoothTime = 0.25f;
 
         [Header("Cinemachine 越肩构图")]
         [Tooltip("越肩支点偏移。X 影响左右越肩偏移，Y 影响镜头支点高度，Z 通常保持 0。")]
@@ -109,9 +130,11 @@ namespace EndLink.Core
 
         private float _yaw;
         private float _pitch;
-        private float _targetDistance;
         private float _currentDistance;
-        private float _zoomSmoothVelocity;
+        private float _distanceSmoothVelocity;
+        private float _distanceRequestDuration;
+        private bool _lastActiveDistanceRequested = true;
+        private CameraDistanceMode _distanceMode = CameraDistanceMode.Active;
         private bool _createdRuntimeCameraTarget;
 
         /// <summary>
@@ -128,17 +151,33 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 根据缩放输入计算目标相机距离。
-        /// zoomInput 为正时拉近镜头，为负时拉远镜头。
+        /// 根据玩家状态判断是否应请求移动/战斗远景。
+        /// 当前只有真正脱战待机的 Idle 使用近景；未初始化和终止状态保持远景，避免镜头意外贴近。
         /// </summary>
-        public static float CalculateZoomDistance(float currentDistance, float zoomInput, float minDistance, float maxDistance)
+        public static bool IsActiveCameraState(PlayerStateId stateId)
         {
-            if (minDistance > maxDistance)
+            return stateId != PlayerStateId.Idle;
+        }
+
+        /// <summary>
+        /// 根据持续请求时间决定是否完成近景/远景模式切换。
+        /// 延迟只负责防止短暂停顿或点按移动造成镜头反复伸缩。
+        /// </summary>
+        public static CameraDistanceMode ResolveDistanceMode(
+            CameraDistanceMode currentMode,
+            bool activeRequested,
+            float requestDuration)
+        {
+            if (activeRequested)
             {
-                (minDistance, maxDistance) = (maxDistance, minDistance);
+                return currentMode == CameraDistanceMode.Idle && requestDuration >= ActiveDistanceDelay
+                    ? CameraDistanceMode.Active
+                    : currentMode;
             }
 
-            return Mathf.Clamp(currentDistance - zoomInput, minDistance, maxDistance);
+            return currentMode == CameraDistanceMode.Active && requestDuration >= IdleDistanceDelay
+                ? CameraDistanceMode.Idle
+                : currentMode;
         }
 
         private void Awake()
@@ -169,12 +208,20 @@ namespace EndLink.Core
                 }
             }
 
+            if (playerStateMachine == null && followTarget != null)
+            {
+                playerStateMachine = followTarget.GetComponentInParent<PlayerStateMachine>();
+            }
+
             Vector3 eulerAngles = cameraTarget != null ? cameraTarget.rotation.eulerAngles : transform.rotation.eulerAngles;
             _yaw = eulerAngles.y;
             _pitch = NormalizePitch(eulerAngles.x);
 
-            _targetDistance = Mathf.Clamp(defaultDistance, minDistance, maxDistance);
-            _currentDistance = _targetDistance;
+            // 开场使用远景。只有确认玩家持续脱战待机后，镜头才会自然拉近。
+            _distanceMode = CameraDistanceMode.Active;
+            _lastActiveDistanceRequested = true;
+            _distanceRequestDuration = 0f;
+            _currentDistance = activeDistance;
 
             ApplyCinemachineSettings();
         }
@@ -227,15 +274,16 @@ namespace EndLink.Core
 
             UpdateCameraTargetPosition();
             UpdateRotation(Time.deltaTime);
-            UpdateZoom(Time.deltaTime);
+            UpdateAutomaticDistance(Time.deltaTime);
             ApplyCinemachineSettings();
         }
 
         private void OnValidate()
         {
-            minDistance = Mathf.Max(0.01f, minDistance);
-            maxDistance = Mathf.Max(minDistance, maxDistance);
-            defaultDistance = Mathf.Clamp(defaultDistance, minDistance, maxDistance);
+            idleDistance = Mathf.Max(0.01f, idleDistance);
+            activeDistance = Mathf.Max(idleDistance, activeDistance);
+            idleDistanceSmoothTime = Mathf.Max(0.01f, idleDistanceSmoothTime);
+            activeDistanceSmoothTime = Mathf.Max(0.01f, activeDistanceSmoothTime);
 
             if (minPitch > maxPitch)
             {
@@ -278,18 +326,51 @@ namespace EndLink.Core
             cameraTarget.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
         }
 
-        private void UpdateZoom(float deltaTime)
+        private void UpdateAutomaticDistance(float deltaTime)
         {
-            float zoomDelta = _inputReader.ZoomInput * zoomSpeed;
-            _targetDistance = CalculateZoomDistance(_targetDistance, zoomDelta, minDistance, maxDistance);
+            bool activeRequested = IsActiveDistanceRequested();
+
+            if (activeRequested != _lastActiveDistanceRequested)
+            {
+                _lastActiveDistanceRequested = activeRequested;
+                _distanceRequestDuration = 0f;
+            }
+            else
+            {
+                _distanceRequestDuration += deltaTime;
+            }
+
+            _distanceMode = ResolveDistanceMode(
+                _distanceMode,
+                activeRequested,
+                _distanceRequestDuration);
+
+            float targetDistance = _distanceMode == CameraDistanceMode.Active
+                ? activeDistance
+                : idleDistance;
+            float smoothTime = _distanceMode == CameraDistanceMode.Active
+                ? activeDistanceSmoothTime
+                : idleDistanceSmoothTime;
 
             _currentDistance = Mathf.SmoothDamp(
                 _currentDistance,
-                _targetDistance,
-                ref _zoomSmoothVelocity,
-                zoomSmoothTime,
+                targetDistance,
+                ref _distanceSmoothVelocity,
+                smoothTime,
                 Mathf.Infinity,
                 deltaTime);
+        }
+
+        private bool IsActiveDistanceRequested()
+        {
+            if (partyCombatContext != null && partyCombatContext.IsInCombat)
+            {
+                return true;
+            }
+
+            // 缺少状态机引用时保守地维持远景，不让配置缺失造成镜头突然贴近。
+            return playerStateMachine == null
+                || IsActiveCameraState(playerStateMachine.CurrentStateId);
         }
 
         private void ApplyCinemachineSettings()
