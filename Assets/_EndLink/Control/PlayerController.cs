@@ -89,7 +89,7 @@ namespace EndLink.Core
             && gravity < 0f
             && Time.time >= _nextJumpAllowedTime;
 
-        /// <summary>玩家是否能被敌人的正常移动挤开。</summary>
+        /// <summary>玩家当前是否可以接收敌人推挤、移动平台等外部位移。</summary>
         public bool CanReceiveExternalDisplacement => isActiveAndEnabled;
 
         /// <summary>
@@ -255,13 +255,11 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 接收敌人移动碰撞带来的外部位移。
-        /// 这里只处理 XZ 平面，避免敌人水平移动把玩家顶上天；真正的击飞、击退之后应走战斗受击流程。
+        /// 接收敌人推挤、移动平台等系统传来的本帧三维位移。
+        /// 敌人推挤调用方仍只传 XZ 位移；电梯可以通过同一入口稳定带动 CharacterController 上下移动。
         /// </summary>
         public void AddExternalDisplacement(Vector3 displacement)
         {
-            displacement.y = 0f;
-
             if (displacement.sqrMagnitude <= MoveInputDeadZoneSqr)
             {
                 return;

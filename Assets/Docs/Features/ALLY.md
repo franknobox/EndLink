@@ -74,7 +74,7 @@
 - `Follow` 在有跟随目标时每帧调用 `AllyFollowMotor.TickFollow(deltaTime)`，实际移动由跟随移动组件负责。
 - `Assist` 是队友助战大状态，内部先接近目标，进入攻击距离后持续攻击；目标拉开距离后在 Assist 内部回到接近阶段。
 - `Assist` 当前内部使用轻量 `Approach / Attack` 阶段，后续可以替换为行为树。
-- `Action` 是队友通用动作状态，当前用于 E/F 主动技能；进入时执行一次 `CombatActionDefinition`，动作窗口结束后回到 Assist 或 Follow / Idle。
+- `Action` 是队友通用动作状态，用于承接队友主动技能；当前不绑定键盘，进入时执行一次 `CombatActionDefinition`，动作窗口结束后回到 Assist 或 Follow / Idle。
 - 目标死亡、目标丢失或主控距离过远时，助战流程会取消并回到 Follow / Idle。
 - `Hit` 表示队友受击硬直状态，可打断 Follow、Assist 和 Action；结束后优先恢复被打断前的 Assist，目标失效或主控过远时回到 Follow / Idle。
 - `LinkDown` 是队友生命归零后的链接中断状态，不再响应跟随、助战、动作和受击请求；队友不按普通死亡消失，后续会接救助交互和半透明漂浮表现。
@@ -136,7 +136,7 @@
 - 归位过程中会同步更新死区圆心，避免动态槽位或重新归位后残留旧死区中心。
 - `AllyFollowMotor` 会常驻绘制跟随死区 Gizmo，运行时以该队友当前死区中心为圆心，非运行时以队友自身为圆心；当前使用深蓝色常态显示，不再依赖选中状态。
 - 支持第一版简易避让：离主控太近时会被推开，配置 `avoidanceLayerMask` 后也能对其他队友做局部排斥。
-- 支持接收敌人移动碰撞带来的外部位移：队友可以被敌人正常前进时挤开，但不会反向顶动敌人。
+- 支持接收敌人推挤和移动平台带来的三维外部位移，并在位移后同步跟随死区与 NavMeshAgent。
 - `formationOffset` 由 `PartyManager` 的队友槽位统一配置，并写入 `AllyFollowMotor`。
 - `SetFormationOffset` 在偏移未变化时不会重复触发重新归位，降低动态槽位评估带来的抖动。
 - 当前的跟随规则层仍然由 `AllyFollowMotor` 自己负责死区、追赶、瞬移归位、局部避让和动态站位；`NavMeshAgent` 只负责把这些目标点转成可走路径，避免队友直穿坡体、跑进空中或贴着障碍走直线。

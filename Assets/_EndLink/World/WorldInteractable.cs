@@ -36,7 +36,7 @@ namespace EndLink.World
         public bool IsInteractionEnabled => interactionEnabled && isActiveAndEnabled;
 
         /// <inheritdoc />
-        public string InteractionPrompt => interactionPrompt;
+        public virtual string InteractionPrompt => interactionPrompt;
 
         /// <summary>
         /// 交互成功事件。

@@ -144,7 +144,7 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 消费一次队友 A 主动技能输入，默认键位 E。
+        /// 消费一次队友 A 主动技能输入。当前默认不绑定键盘。
         /// </summary>
         public bool ConsumeAllySlotASkillPressed()
         {
@@ -152,7 +152,7 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 消费一次队友 B 主动技能输入，默认键位 F。
+        /// 消费一次队友 B 主动技能输入。当前默认不绑定键盘。
         /// </summary>
         public bool ConsumeAllySlotBSkillPressed()
         {

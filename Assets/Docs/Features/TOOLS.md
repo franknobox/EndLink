@@ -46,7 +46,7 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 - Panel Prefab 本身只保留推荐锚点和尺寸，根 RectTransform 的位置与 Z 会在生成时归零，拖到 Canvas 后再手动调整摆放。
 - 左上生成 `PF_PartyStatusPanel`，包含生命条占位、主控头像和两个队友头像。
 - 成员头像挂载 `UIPartyMemberPortrait`，用于显示 1/2/3 连携键位、连携窗口高亮和 Link Down 灰化。
-- 左下生成 `PF_SkillPanel`，挂载 `UIPartyCombatAction`，并自动绑定 Q/E/F 三个主动技能槽。
+- 左下生成 `PF_SkillPanel`，挂载 `UIPartyCombatAction`；主控技能槽显示 Q，两个队友技能槽保留但键位文本留空。
 - 右下生成 `PF_UltimatePanel`，挂载 `UIPartyUltimateBar`，显示当前奥义键位、协同率和终链奥义就绪颜色。
 - 右上生成 `PF_DebugPanel`，挂载 `HUDDebugLogPanel`，用于按分类筛选显示运行时战斗、队友和小队命令日志。
 - 生成的可见占位文案默认不放英文说明文字，只保留键位和运行时动态内容，避免白模阶段默认 HUD 出现无用英文标签。

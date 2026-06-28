@@ -158,7 +158,7 @@ namespace EndLink.Ally
         /// <summary>队友间避让检测 Layer。</summary>
         public LayerMask AvoidanceLayerMask => avoidanceLayerMask;
 
-        /// <summary>队友是否能被敌人的正常移动挤开。</summary>
+        /// <summary>队友当前是否可以接收敌人推挤、移动平台等外部位移。</summary>
         public bool CanReceiveExternalDisplacement => isActiveAndEnabled;
 
         /// <summary>最近一次计算得到的世界队形点，方便调试和后续可视化。</summary>
@@ -997,13 +997,11 @@ namespace EndLink.Ally
         }
 
         /// <summary>
-        /// 接收敌人正常移动时传来的外部位移。
-        /// 被挤开后同步死区圆心，避免队友被推走后仍然使用旧站位作为死区中心。
+        /// 接收敌人推挤、移动平台等系统传来的本帧三维位移。
+        /// 位移后同步死区圆心和 NavMeshAgent，避免外部移动与跟随位置脱节。
         /// </summary>
         public void AddExternalDisplacement(Vector3 displacement)
         {
-            displacement.y = 0f;
-
             if (displacement.sqrMagnitude <= 0.0001f)
             {
                 return;
@@ -1048,15 +1046,15 @@ namespace EndLink.Ally
             transform.position += worldDisplacement;
         }
 
-        private void MoveImmediate(Vector3 planarDisplacement)
+        private void MoveImmediate(Vector3 worldDisplacement)
         {
             if (_characterController != null && _characterController.enabled)
             {
-                _characterController.Move(planarDisplacement);
+                _characterController.Move(worldDisplacement);
                 return;
             }
 
-            transform.position += planarDisplacement;
+            transform.position += worldDisplacement;
         }
 
         private void ApplyGrounding(float deltaTime)

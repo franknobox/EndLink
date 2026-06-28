@@ -209,19 +209,19 @@ namespace EndLink.Editor
             SetBottomLeft(playerSkill.GetComponent<RectTransform>(), new Vector2(0f, 150f), new Vector2(78f, 78f));
 
             UICombatActionSlot allyASkill = CreateActionSlot(
-                "Skill_E",
+                "Skill_AllyA",
                 panel.transform,
                 UICombatActionSlotId.AllySlotASkill,
-                "E",
+                string.Empty,
                 circleSprite,
                 new Color(0.58f, 0.69f, 0.86f, 0.95f));
             SetBottomLeft(allyASkill.GetComponent<RectTransform>(), new Vector2(82f, 78f), new Vector2(78f, 78f));
 
             UICombatActionSlot allyBSkill = CreateActionSlot(
-                "Skill_F",
+                "Skill_AllyB",
                 panel.transform,
                 UICombatActionSlotId.AllySlotBSkill,
-                "F",
+                string.Empty,
                 circleSprite,
                 new Color(0.55f, 0.75f, 0.66f, 0.95f));
             SetBottomLeft(allyBSkill.GetComponent<RectTransform>(), new Vector2(162f, 4f), new Vector2(78f, 78f));

@@ -2,6 +2,8 @@
 
 本文件记录灰盒地图、机关和世界交互相关的已完成功能。
 
+<a id="feature-world-interaction"></a>
+
 ## Feature: 世界交互底座
 
 ### 当前状态
@@ -15,7 +17,7 @@
 - 交互者在半径内低频扫描候选对象，自动选中最近的可用对象。
 - 玩家通过已有新版 Input System 的 `Player/Interact` 动作触发当前交互。
 - 玩家默认只在 Idle / Move 状态允许交互，避免攻击、闪避、受击过程中误触机关。
-- 具体门、电梯逻辑暂不写死，第一版可直接挂 `WorldInteractable` 用事件测试，后续再通过继承基类扩展。
+- 普通机关可直接挂 `WorldInteractable` 用事件测试；专用机关通过继承基类扩展具体行为。
 
 ### 对应脚本
 - `Assets/_EndLink/World/IWorldInteractable.cs`
@@ -28,4 +30,30 @@
 - 玩家根物体可挂 `WorldInteractor` 和 `PlayerInteractor`。
 - 可交互机关根物体可直接挂 `WorldInteractable`，或挂继承自它的专用机关脚本，并需要有可被扫描到的 Collider。
 - `WorldInteractor` 的 `Interactable Layers` 后续建议指向专用 Interactable Layer，避免扫描无关碰撞体。
-- `Player/Interact` 已存在于 Input Actions 中，当前系统只消费输入，不手工维护生成文件。
+- `Player/Interact` 已存在于 Input Actions 中，当前默认绑定键盘 `F` 单击和手柄 `buttonNorth`；系统只消费输入，不手工维护生成文件。
+
+<a id="feature-elevator-platform"></a>
+
+## Feature: 两层移动电梯
+
+### 当前状态
+已完成第一版。
+
+### 功能说明
+- 玩家站在平台乘客范围内时，可以通过现有世界交互输入让电梯在上下两层间往返。
+- 电梯使用运动学 `Rigidbody.MovePosition` 驱动，并在起步和到站阶段自动缓入缓出。
+- 移动中拒绝重复运行请求，停靠后根据当前位置显示“上行”或“下行”。
+- 普通 Rigidbody 实体由物理接触带动；实现 `IExternalDisplacementReceiver` 的角色和普通 `CharacterController` 会获得平台三维位移补偿。
+- 提供开始运行、抵达下层和抵达上层事件，后续可以接电梯门、音效、灯光或关卡逻辑。
+
+### 对应脚本
+- `Assets/_EndLink/World/ElevatorPlatform.cs`
+- `Assets/_EndLink/World/ElevatorInteractable.cs`
+- `Assets/_EndLink/Control/IExternalDisplacementReceiver.cs`
+
+### 相关物体 / 配置
+- 电梯移动根物体挂 `Rigidbody`、`ElevatorPlatform` 和 `ElevatorInteractable`；脚本会把 Rigidbody 配置为 Kinematic。
+- ProBuilder 平台需要保留实体 Collider，并额外准备覆盖平台上方乘客区域的 Trigger Collider。
+- `Lower Stop` 和 `Upper Stop` 必须是电梯根物体之外的固定 Transform；电梯只读取它们的世界 Y 高度，平台 X/Z 始终保持进入场景时的初始值。
+- 乘客 Trigger 所在 Layer 需要包含在玩家 `WorldInteractor` 的 `Interactable Layers` 中。
+- 第一版只支持上下两个停靠点，不处理多楼层、外部呼叫队列和电梯门状态机。

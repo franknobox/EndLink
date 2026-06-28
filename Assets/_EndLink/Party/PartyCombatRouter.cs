@@ -94,13 +94,13 @@ namespace EndLink.Party
         [SerializeField]
         private Key playerSkillKey = Key.Q;
 
-        [Tooltip("队友 A 主动技能键位。默认 E。")]
+        [Tooltip("队友 A 主动技能键位。当前默认不绑定键盘；需要时可在此重新指定。")]
         [SerializeField]
-        private Key allySlotASkillKey = Key.E;
+        private Key allySlotASkillKey = Key.None;
 
-        [Tooltip("队友 B 主动技能键位。默认 F。")]
+        [Tooltip("队友 B 主动技能键位。当前默认不绑定键盘；需要时可在此重新指定。")]
         [SerializeField]
-        private Key allySlotBSkillKey = Key.F;
+        private Key allySlotBSkillKey = Key.None;
 
         [Header("连携请求键位")]
         [Tooltip("主控连携请求键位。默认 1。按下后只发出请求，必须由连携窗口确认可释放。")]
@@ -204,7 +204,7 @@ namespace EndLink.Party
         }
 
         /// <summary>
-        /// 把 Inspector 中配置的 Q/E/F、1/2/3 和终链奥义键位覆盖到运行时 InputAction。
+        /// 把 Inspector 中配置的主动技能、连携和终链奥义键位覆盖到运行时 InputAction。
         /// </summary>
         public void ApplyInputBindings()
         {

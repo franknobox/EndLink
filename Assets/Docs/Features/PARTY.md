@@ -107,7 +107,7 @@
 - `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害或标签；它只校验连携窗口并把技能/连携请求转发给对应角色状态机。
 - 当前第一版中，主控 `Skill` 命令会由 `PartyCombatRouter` 转发给 `PlayerStateMachine.RequestSkill()`，由玩家状态机决定能否进入 `Skill` 状态并执行动作。
 - 队友 `Skill` 命令会由 `PartyCombatRouter` 转发给对应 `AllyStateMachine.RequestAction(...)`，进入 `Action` 状态后再由 `AllyCombatDriver` 执行 `SkillAction`。
-- `PartyCombatRouter` Inspector 中可以覆盖 Q/E/F、1/2/3 和全队终链奥义对应的键位。
+- `PartyCombatRouter` Inspector 中可以覆盖主控/队友主动技能、1/2/3 连携和全队终链奥义键位；当前队友主动技能键盘配置留空。
 - `LinkAttack` 命令只有在 `PartyLinkContext` 窗口开启时才会被接受；请求成功后由对应角色状态机执行 `LinkAction` 并消费共享窗口。
 - `PartyUltimateContext` 维护全队协同率；成功释放连携技会按 `CombatActionDefinition.SynergyGainOnLink` 充能，奥义键在满值后消耗奥义就绪状态。
 - 后续队友 AI、连携规则或调试工具需要知道“谁是主控，谁是队友”时，可以从 `PartyManager` 查询。
@@ -144,7 +144,7 @@
 - `formationEvaluateInterval`：动态站位重新评估间隔
 - `formationSwitchMinImprovement`：交换后至少减少多少移动代价才允许换位
 - `formationSwitchCooldown`：站位交换冷却，避免频繁来回抢位
-- `playerSkillKey` / `allySlotASkillKey` / `allySlotBSkillKey`：主控和两个队友主动技能键位，默认 Q / E / F
+- `playerSkillKey` / `allySlotASkillKey` / `allySlotBSkillKey`：主控和两个队友主动技能键位；主控默认 Q，两个队友当前默认不绑定键盘
 - `playerLinkAttackKey` / `allySlotALinkAttackKey` / `allySlotBLinkAttackKey`：主控和两个队友连携请求键位，默认 1 / 2 / 3
 - `partyUltimateKey`：全队终链奥义键位，默认 V
 - `PartyUltimateContext.maxSynergyRate`：终链奥义协同率上限，默认 100

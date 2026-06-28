@@ -30,7 +30,7 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成第一版 | 负责读取玩家移动、跳跃和相机旋转等输入，并把输入缓存为控制层可使用的数据。 |
+| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成第一版 | 负责读取玩家移动、战斗、世界交互和相机等输入，并把输入缓存为控制层可使用的数据。 |
 | [玩家 CharacterController 移动](Features/PLAYER.md#feature-player-movement) | 已完成受击后退版 | 负责玩家平滑移动、基础跳跃、重力贴地、转向，以及战斗击退的短时衰减后退。 |
 | [第三人称自由相机](Features/PLAYER.md#feature-third-person-camera) | 已完成自动景别版 | 负责越肩第三人称视角、自由旋转和上下角度限制，并在脱战待机时缓慢拉近、移动或战斗时较快拉远。 |
 | [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成攻击缓冲版 | 负责 Idle、Move、Attack、Skill、Dodge、Hit、Dead 的状态切换，并提供短时普攻输入缓冲与攻击期间软锁跟随转向。 |
@@ -83,6 +83,7 @@
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [世界交互底座](Features/WORLD.md#feature-world-interaction) | 已完成第一版 | 提供可复用的可交互对象接口、基类、范围扫描器和玩家输入桥接，用于后续门、电梯、开关等灰盒机关扩展。 |
+| [两层移动电梯](Features/WORLD.md#feature-elevator-platform) | 已完成第一版 | 提供可交互的上下层往返平台，通过运动学 Rigidbody 驱动物理实体，并为 CharacterController 乘客补偿平台三维位移。 |
 
 #### UI
 
