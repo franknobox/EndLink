@@ -11,8 +11,10 @@ namespace EndLink.Enemies
     {
         Approach = 0,
         Position = 1,
-        Attack = 2,
-        Recover = 3
+        Engage = 2,
+        Attack = 3,
+        Recover = 4,
+        Reposition = 5
     }
 
     /// <summary>
@@ -31,6 +33,10 @@ namespace EndLink.Enemies
         private Transform _grantedAttackTarget;
         private EnemyCombatCoordinator _lastAttackCoordinator;
         private EnemyCombatCoordinator _grantedAttackCoordinator;
+        private Vector3 _softPosition;
+        private Vector3 _softPositionTargetAnchor;
+        private float _nextSoftPositionRefreshTime;
+        private bool _hasSoftPosition;
         private bool _loggedMissingHitbox;
 
         public EnemyCombatBehavior(EnemyStateContext context)
@@ -50,6 +56,10 @@ namespace EndLink.Enemies
             _grantedAttackTarget = null;
             _lastAttackCoordinator = null;
             _grantedAttackCoordinator = null;
+            _softPosition = default;
+            _softPositionTargetAnchor = default;
+            _nextSoftPositionRefreshTime = 0f;
+            _hasSoftPosition = false;
             _loggedMissingHitbox = false;
             CurrentPhase = EnemyCombatPhase.Approach;
         }
@@ -67,6 +77,7 @@ namespace EndLink.Enemies
             _context?.Motor?.Stop();
             _context?.CombatDriver?.CancelCurrentAction();
             _attackWaitElapsed = 0f;
+            _hasSoftPosition = false;
             CurrentPhase = EnemyCombatPhase.Approach;
         }
 
@@ -97,8 +108,16 @@ namespace EndLink.Enemies
                     TickAttack(target, action, deltaTime);
                     break;
 
+                case EnemyCombatPhase.Engage:
+                    TickEngage(target, action, deltaTime);
+                    break;
+
                 case EnemyCombatPhase.Recover:
                     TickRecover(target, action, deltaTime);
+                    break;
+
+                case EnemyCombatPhase.Reposition:
+                    TickReposition(target, action, deltaTime);
                     break;
 
                 default:
@@ -108,6 +127,16 @@ namespace EndLink.Enemies
         }
 
         private void TickApproach(Transform target, CombatActionDefinition action, float deltaTime)
+        {
+            if (UsesSoftPositioning() && TickSoftPositionMovement(target, deltaTime))
+            {
+                return;
+            }
+
+            TickDirectApproach(target, action, deltaTime);
+        }
+
+        private void TickDirectApproach(Transform target, CombatActionDefinition action, float deltaTime)
         {
             float surfaceDistance = GetSurfaceDistance(target);
             float positionEnterDistance = GetPositionEnterDistance(action);
@@ -126,6 +155,12 @@ namespace EndLink.Enemies
 
         private void TickPosition(Transform target, CombatActionDefinition action, float deltaTime)
         {
+            if (UsesSoftPositioning())
+            {
+                TickSoftPosition(target, action, deltaTime);
+                return;
+            }
+
             if (GetSurfaceDistance(target) > GetPositionExitDistance(action))
             {
                 CurrentPhase = EnemyCombatPhase.Approach;
@@ -138,6 +173,69 @@ namespace EndLink.Enemies
             _context.Motor?.FaceTarget(target, deltaTime);
             _attackWaitElapsed += Mathf.Max(0f, deltaTime);
             TryStartAttack(target, action);
+        }
+
+        private void TickSoftPosition(Transform target, CombatActionDefinition action, float deltaTime)
+        {
+            EnemyCombatCoordinator coordinator = _context.CombatCoordinator;
+            float targetMoveDistance = Mathf.Sqrt(GetPlanarDistanceSqr(
+                target.position,
+                _softPositionTargetAnchor));
+            bool crowded = coordinator != null
+                && coordinator.IsSoftPositionCrowded(_context.Transform, target);
+            if (!_hasSoftPosition
+                || ShouldRefreshSoftPosition(
+                    targetMoveDistance,
+                    coordinator != null ? coordinator.SoftPositionTargetRefreshDistance : 0.8f,
+                    _nextSoftPositionRefreshTime,
+                    Time.time,
+                    crowded))
+            {
+                _hasSoftPosition = false;
+                CurrentPhase = EnemyCombatPhase.Reposition;
+                TickReposition(target, action, deltaTime);
+                return;
+            }
+
+            _context.Motor?.Stop();
+            _context.Motor?.FaceTarget(target, deltaTime);
+            _attackWaitElapsed += Mathf.Max(0f, deltaTime);
+            TryBeginEngage(target, action);
+        }
+
+        private void TickEngage(Transform target, CombatActionDefinition action, float deltaTime)
+        {
+            EnemyCombatCoordinator coordinator = _grantedAttackCoordinator;
+            if (coordinator != null && !coordinator.HasAttackPermission(_context.Transform, target))
+            {
+                ReleaseAttackSlot();
+                _hasSoftPosition = false;
+                CurrentPhase = EnemyCombatPhase.Reposition;
+                TickReposition(target, action, deltaTime);
+                return;
+            }
+
+            if (GetSurfaceDistance(target) > GetPositionEnterDistance(action))
+            {
+                MoveTowardTargetSurface(target, GetPositionEnterDistance(action), deltaTime);
+                _context.Motor?.FaceTarget(target, deltaTime);
+                return;
+            }
+
+            _context.Motor?.Stop();
+            _context.Motor?.FaceTarget(target, deltaTime);
+            ICombatActionExecutor actionExecutor = _context.ActionExecutor;
+            if (actionExecutor == null || !actionExecutor.CanExecute(action))
+            {
+                return;
+            }
+
+            if (actionExecutor.TryExecute(action, target))
+            {
+                NotifyAttackStarted(target);
+                _attackWaitElapsed = 0f;
+                CurrentPhase = EnemyCombatPhase.Attack;
+            }
         }
 
         private void TickAttack(Transform target, CombatActionDefinition action, float deltaTime)
@@ -168,9 +266,26 @@ namespace EndLink.Enemies
             }
 
             ReleaseAttackSlot();
+            if (UsesSoftPositioning())
+            {
+                _hasSoftPosition = false;
+                CurrentPhase = EnemyCombatPhase.Reposition;
+                TickReposition(target, action, deltaTime);
+                return;
+            }
+
             CurrentPhase = GetSurfaceDistance(target) > GetPositionExitDistance(action)
                 ? EnemyCombatPhase.Approach
                 : EnemyCombatPhase.Position;
+        }
+
+        private void TickReposition(Transform target, CombatActionDefinition action, float deltaTime)
+        {
+            if (!UsesSoftPositioning() || !TickSoftPositionMovement(target, deltaTime))
+            {
+                CurrentPhase = EnemyCombatPhase.Approach;
+                TickDirectApproach(target, action, deltaTime);
+            }
         }
 
         private void TickChaseOnly(Transform target, float deltaTime)
@@ -218,6 +333,40 @@ namespace EndLink.Enemies
             }
         }
 
+        private void TryBeginEngage(Transform target, CombatActionDefinition action)
+        {
+            ICombatActionExecutor actionExecutor = _context.ActionExecutor;
+            if (actionExecutor == null || action == null)
+            {
+                return;
+            }
+
+            float currentTime = Time.time;
+            if (currentTime < _nextAttackAttemptTime)
+            {
+                return;
+            }
+
+            if (action.HitboxPrefab == null)
+            {
+                if (!_loggedMissingHitbox)
+                {
+                    actionExecutor.TryExecute(action, target);
+                    _loggedMissingHitbox = true;
+                }
+
+                _nextAttackAttemptTime = currentTime + MissingHitboxRetryInterval;
+                return;
+            }
+
+            if (!actionExecutor.CanExecute(action) || !TryAcquireAttackPermission(target, action))
+            {
+                return;
+            }
+
+            CurrentPhase = EnemyCombatPhase.Engage;
+        }
+
         private bool TryAcquireAttackPermission(Transform target, CombatActionDefinition action)
         {
             EnemyCombatCoordinator coordinator = _context.CombatCoordinator;
@@ -228,16 +377,24 @@ namespace EndLink.Enemies
 
             float score = CalculateAttackScore(target, action);
             _lastAttackCoordinator = coordinator;
-            return coordinator.RequestAttackPermission(
+            bool granted = coordinator.RequestAttackPermission(
                 _context.Transform,
                 target,
                 score);
+            if (granted)
+            {
+                _grantedAttackTarget = target;
+                _grantedAttackCoordinator = coordinator;
+            }
+
+            return granted;
         }
 
         private float CalculateAttackScore(Transform target, CombatActionDefinition action)
         {
             float surfaceDistance = GetSurfaceDistance(target);
-            float rangeCloseness = Mathf.Clamp01(1f - surfaceDistance / Mathf.Max(0.01f, action.EffectiveAttackRange));
+            float distanceOutsideRange = Mathf.Max(0f, surfaceDistance - action.EffectiveAttackRange);
+            float rangeCloseness = 1f / (1f + distanceOutsideRange);
             float waitScore = Mathf.Clamp(_attackWaitElapsed, 0f, 5f);
             EnemyCombatCoordinator coordinator = _context.CombatCoordinator;
             float distanceWeight = coordinator != null ? coordinator.AttackScoreDistanceWeight : 1f;
@@ -271,6 +428,83 @@ namespace EndLink.Enemies
             _grantedAttackTarget = null;
             _lastAttackCoordinator = null;
             _grantedAttackCoordinator = null;
+        }
+
+        private bool TickSoftPositionMovement(Transform target, float deltaTime)
+        {
+            EnemyCombatCoordinator coordinator = _context.CombatCoordinator;
+            if (coordinator == null)
+            {
+                return false;
+            }
+
+            if (!_hasSoftPosition)
+            {
+                if (!coordinator.TryGetSoftPosition(
+                        _context.Transform,
+                        target,
+                        _context.Transform.position,
+                        true,
+                        out _softPosition))
+                {
+                    return false;
+                }
+
+                _softPositionTargetAnchor = target.position;
+                _hasSoftPosition = true;
+            }
+
+            float arriveDistance = coordinator.SoftPositionArriveDistance;
+            if (GetPlanarDistanceSqr(_context.Transform.position, _softPosition)
+                <= arriveDistance * arriveDistance)
+            {
+                _context.Motor?.Stop();
+                _context.Motor?.FaceTarget(target, deltaTime);
+                ScheduleNextSoftPositionRefresh(coordinator);
+                CurrentPhase = EnemyCombatPhase.Position;
+                return true;
+            }
+
+            _context.Motor?.MoveTo(_softPosition, arriveDistance, deltaTime);
+            _context.Motor?.FaceTarget(target, deltaTime);
+            return true;
+        }
+
+        private void ScheduleNextSoftPositionRefresh(EnemyCombatCoordinator coordinator)
+        {
+            float minimum = coordinator != null ? coordinator.SoftRepositionIntervalMin : 3f;
+            float maximum = coordinator != null ? coordinator.SoftRepositionIntervalMax : 5f;
+            _nextSoftPositionRefreshTime = Time.time + Random.Range(minimum, maximum);
+        }
+
+        private bool UsesSoftPositioning()
+        {
+            return _context.CombatCoordinator != null
+                && _context.CombatCoordinator.SoftPositioningEnabled;
+        }
+
+        /// <summary>判断克制型等待敌人是否需要刷新软站位。</summary>
+        public static bool ShouldRefreshSoftPosition(
+            float targetMoveDistance,
+            float targetRefreshDistance,
+            float nextRefreshTime,
+            float currentTime,
+            bool crowded)
+        {
+            if (targetMoveDistance >= Mathf.Max(0.01f, targetRefreshDistance)
+                || currentTime >= nextRefreshTime)
+            {
+                return true;
+            }
+
+            return crowded && currentTime >= nextRefreshTime - 1f;
+        }
+
+        private static float GetPlanarDistanceSqr(Vector3 first, Vector3 second)
+        {
+            Vector3 offset = first - second;
+            offset.y = 0f;
+            return offset.sqrMagnitude;
         }
 
         private void MoveTowardTargetSurface(Transform target, float stopDistance, float deltaTime)
