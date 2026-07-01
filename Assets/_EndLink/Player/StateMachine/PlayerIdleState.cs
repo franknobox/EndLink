@@ -23,6 +23,12 @@ namespace EndLink.Core
                 return;
             }
 
+            if (Context.CanStartGuard)
+            {
+                Context.StateMachine.ChangeState(PlayerStateId.Guard);
+                return;
+            }
+
             if (Context.ConsumeJumpPressed() && Context.TryJump())
             {
                 Vector2 jumpMoveInput = Context.HasMoveInput ? Context.InputReader.MoveInput : Vector2.zero;

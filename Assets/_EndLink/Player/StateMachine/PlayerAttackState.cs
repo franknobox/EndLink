@@ -1,16 +1,18 @@
-using UnityEngine;
 using EndLink.Combat;
+using UnityEngine;
 
 namespace EndLink.Core
 {
     /// <summary>
-    /// 玩家攻击状态。
-    /// 进入时通过 PlayerCombatDriver 提交普攻动作，请求成立后由 CombatActionDefinition 的 startup / active / recovery 推进实际判定。
-    /// 状态持续时间当前仍保留一个最小兜底时长，并与普攻动作总时长取较大值。
+    /// 玩家普攻连段状态。
+    /// 每一段仍由 PlayerCombatDriver 和 CombatActionDefinition 执行；本状态只处理输入窗口、段落衔接、攻击踏步和状态退出。
     /// </summary>
     public sealed class PlayerAttackState : PlayerStateBase
     {
+        private CombatActionDefinition _currentAction;
+        private float _currentDuration;
         private float _elapsedTime;
+        private bool _actionStarted;
 
         public PlayerAttackState(PlayerStateContext context) : base(context)
         {
@@ -21,24 +23,118 @@ namespace EndLink.Core
         public override void Enter()
         {
             _elapsedTime = 0f;
-            ICombatActionExecutor executor = Context.ActionExecutor;
-            executor?.TryExecute(Context.CombatDriver.BasicAttackAction);
+            _actionStarted = false;
+
+            _currentAction = Context.ComboController != null
+                ? Context.ComboController.BeginCombo(Context.CombatDriver.BasicAttackAction)
+                : Context.CombatDriver.BasicAttackAction;
+
+            StartCurrentStep();
         }
 
         public override void Tick(float deltaTime)
         {
+            if (!_actionStarted)
+            {
+                ExitToLocomotion();
+                return;
+            }
+
             _elapsedTime += deltaTime;
             Context.ConsumeJumpPressed();
 
             Vector2 attackMoveInput = Context.InputReader.MoveInput * Context.AttackMoveInputScale;
             Context.Controller.TickMovement(attackMoveInput, deltaTime);
             Context.TickAttackTargetFacing(deltaTime);
+            Context.AttackMotion?.TickMotion(deltaTime);
 
-            if (_elapsedTime < Context.AttackDuration)
+            TryQueueNextStep();
+
+            if (_elapsedTime < _currentDuration)
             {
                 return;
             }
 
+            if (TryStartQueuedStep())
+            {
+                return;
+            }
+
+            if (Context.ComboController != null && Context.ComboController.HasQueuedNext)
+            {
+                // Driver 可能比状态机晚一帧结束当前时序，保留已缓存输入并在下一帧重试。
+                return;
+            }
+
+            ExitToLocomotion();
+        }
+
+        public override void Exit()
+        {
+            Context.ComboController?.ResetCombo();
+            Context.AttackMotion?.CancelMotion();
+            Context.CombatDriver?.CancelCurrentAction();
+            _currentAction = null;
+            _actionStarted = false;
+        }
+
+        private void TryQueueNextStep()
+        {
+            if (Context.ComboController == null || !Context.ComboController.HasNext || _currentDuration <= 0f)
+            {
+                return;
+            }
+
+            float normalizedTime = Mathf.Clamp01(_elapsedTime / _currentDuration);
+            bool canQueue = Context.ComboController.CanQueueNext(normalizedTime);
+            if (Context.StateMachine.TryConsumeAttackBuffer(canQueue))
+            {
+                Context.ComboController.TryQueueNext(normalizedTime);
+            }
+        }
+
+        private bool TryStartQueuedStep()
+        {
+            if (Context.ComboController == null
+                || !Context.ComboController.HasQueuedNext
+                || Context.CombatDriver.IsExecutingAction)
+            {
+                return false;
+            }
+
+            CombatActionDefinition nextAction = Context.ComboController.NextAction;
+            if (!Context.ActionExecutor.CanExecute(nextAction))
+            {
+                return false;
+            }
+
+            if (!Context.ComboController.TryAdvance())
+            {
+                return false;
+            }
+
+            _currentAction = Context.ComboController.CurrentAction;
+            StartCurrentStep();
+            return _actionStarted;
+        }
+
+        private void StartCurrentStep()
+        {
+            Transform target = Context.GetCurrentAttackTarget();
+            _actionStarted = Context.ActionExecutor != null
+                && Context.ActionExecutor.TryExecute(_currentAction, target);
+            if (!_actionStarted)
+            {
+                return;
+            }
+
+            _elapsedTime = 0f;
+            _currentDuration = Context.GetAttackDuration(_currentAction);
+            Context.AttackMotion?.BeginMotion(target, Context.Transform.forward);
+        }
+
+        private void ExitToLocomotion()
+        {
             Context.StateMachine.ChangeState(Context.HasMoveInput ? PlayerStateId.Move : PlayerStateId.Idle);
         }
     }

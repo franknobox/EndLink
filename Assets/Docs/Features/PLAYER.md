@@ -19,6 +19,7 @@
 - 跳跃输入读取 `Player/Jump`，默认键位为键盘 `Space`、手柄 `buttonSouth`。
 - 世界交互输入读取 `Player/Interact`，当前默认键位为键盘 `F` 单击和手柄 `buttonNorth`。
 - 攻击输入读取 `Player/Attack`，由状态机统一捕获并写入短时攻击缓冲，再决定是否进入攻击状态。
+- 防御输入读取 `Player/Guard`，默认键位为鼠标右键、手柄左扳机，只缓存当前是否按住。
 - 闪避输入读取 `Player/Dodge`，默认键位为键盘 `Left Ctrl`、手柄 `buttonEast`。
 - 主控主动技能读取 `Player/PlayerSkill`，默认键位 Q。
 - 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`；当前不绑定键盘，路由配置入口和手柄绑定继续保留。
@@ -151,15 +152,16 @@
 
 功能说明：
 - 使用代码状态机，不依赖 Animator StateMachine。
-- 当前包含 `Idle`、`Move`、`Attack`、`Skill`、`Dodge`、`Hit`、`Dead` 七个状态。
+- 当前包含 `Idle`、`Move`、`Attack`、`Skill`、`Dodge`、`Guard`、`Hit`、`Dead` 八个状态。
 - `Idle` 和 `Move` 会优先消费闪避输入，检查闪避冷却后切换到 `Dodge`。
 - `Idle` 和 `Move` 会消费跳跃输入，满足贴地和冷却条件时由 `PlayerController` 写入向上的垂直初速度；第一版不单独进入空中状态。
 - 状态机每帧统一捕获攻击输入，并写入默认 `0.15` 秒的短时缓冲；动作暂时不可执行时不会提前消费，成功进入攻击或超时后清空。
 - `Idle` 和 `Move` 会在缓冲有效且普攻可执行时切换到 `Attack`。
 - `Skill` 是通用技能状态，当前由 `PartyCombatRouter` 发起请求，状态机决定是否进入，进入状态后再调用 `PlayerCombatDriver` 执行技能表现和判定。
-- `Attack` 状态进入时调用 `PlayerCombatDriver.ExecuteAttack()`，攻击持续时间结束后根据移动输入回到 `Move` 或 `Idle`。
+- `Attack` 状态按当前连段 Action 调用 `PlayerCombatDriver`；窗口内再次输入普攻会缓存下一段，当前段结束后继续执行。
 - 攻击期间移动输入会乘以 `attackMoveInputScale`，当前默认可以做站桩攻击。
 - 攻击期间会按 `attackTrackingRotationSharpness` 平滑跟随当前软锁点；目标失效或参数为 `0` 时保持当前朝向。
+- `Guard` 由按住防御输入进入，松开后回到 `Move` 或 `Idle`；第一版允许从防御直接闪避。
 - `Dodge` 状态负责主控闪避：有移动输入时按输入方向闪避，没有移动输入时默认向角色正后方后撤。
 - 闪避期间普通移动、攻击和技能不会响应；闪避结束后根据移动输入回到 `Move` 或 `Idle`。
 - 闪避开始时会刷新冷却，并给 `CharacterHealth` 设置短暂临时免伤窗口。
@@ -176,6 +178,7 @@
 - `Assets/_EndLink/Player/StateMachine/PlayerAttackState.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerSkillState.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerDodgeState.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerGuardState.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerHitState.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerDeadState.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerStateMachine.cs`
@@ -193,6 +196,7 @@
 - `attackMoveInputScale`：攻击期间移动输入倍率
 - `attackTrackingRotationSharpness`：攻击期间软锁跟随转向速度，`0` 表示关闭持续跟随
 - `attackInputBufferDuration`：普攻输入缓冲时间，默认 `0.15` 秒
+- `guardMoveInputScale`：防御期间保留的移动输入倍率，默认 `0`
 - `skillDuration`：通用技能状态持续时间
 - `skillMoveInputScale`：技能期间移动输入倍率
 - `dodgeDuration`：闪避状态持续时间
@@ -201,6 +205,48 @@
 - `dodgeInvincibleDuration`：闪避开始后的临时免伤窗口
 - `hitDuration`：受击硬直持续时间
 - `hitMoveInputScale`：受击期间移动输入倍率
+
+</details>
+
+<a id="feature-player-act-combat"></a>
+
+### Feature：玩家 ActCombat 基础
+
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- `PlayerComboController` 管理普攻段数、每段 Action 和下一段输入窗口；默认三个空槽会重复使用现有基础普攻，方便先验证三段节奏。
+- 每一段可单独配置 `CombatActionDefinition`，后续可以逐步替换成不同伤害、Hitbox、前摇和后摇。
+- `PlayerAttackMotion` 在每段普攻开始时执行短距离前快后慢踏步；有软锁目标时按 Collider 表面距离停止，目标过远时只沿角色正前方移动。
+- 攻击状态继续使用已有软锁平滑转向，并在每一段开始时重新取得当前有效目标。
+- `PlayerGuardController` 只处理正面命中：进入防御后的短窗口判定为弹反，窗口结束后按配置倍率承受格挡伤害。
+- 普通格挡不会触发玩家 Hit 状态，也不接收本次击退；成功弹反完全化解伤害，并让支持弹反反馈的敌人进入现有 Hit 状态。
+- 第一版不包含体力、架势条、攻击派生、格挡动画和独立敌人失衡状态。
+
+对应脚本：
+- `Assets/_EndLink/Player/ActCombat/PlayerComboController.cs`
+- `Assets/_EndLink/Player/ActCombat/PlayerAttackMotion.cs`
+- `Assets/_EndLink/Player/ActCombat/PlayerGuardController.cs`
+- `Assets/_EndLink/Combat/Hitbox/IHitInterceptor.cs`
+- `Assets/_EndLink/Combat/Hitbox/ICombatParryReceiver.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerAttackState.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerGuardState.cs`
+
+相关物体：
+- 玩家根物体
+  - `PlayerComboController`
+  - `PlayerAttackMotion`
+  - `PlayerGuardController`
+
+关键配置：
+- `comboActions`：按顺序执行的普攻 Action 列表
+- `inputWindowStart` / `inputWindowEnd`：下一段输入窗口
+- `stepDistance` / `stepDuration`：每段攻击踏步距离与持续时间
+- `targetStopDistance` / `maxTargetAssistDistance`：目标表面停止距离与最大辅助距离
+- `parryWindowDuration`：进入防御后的弹反窗口
+- `guardAngle`：正面可防御总角度
+- `blockedDamageMultiplier`：普通格挡保留伤害倍率
 
 </details>
 
@@ -325,7 +371,7 @@
 - Hitbox 会在指定生命周期后自动销毁。
 - 成功执行攻击后会通过 `CombatEventsBus` 广播 `ActionStarted`。
 对应脚本：
-- `Assets/_EndLink/Player/PlayerCombatDriver.cs`
+- `Assets/_EndLink/Player/ActCombat/PlayerCombatDriver.cs`
 - `Assets/_EndLink/Combat/ICombatActionExecutor.cs`
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
 - `Assets/_EndLink/Combat/Hitbox/HitboxBase.cs`

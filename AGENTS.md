@@ -37,6 +37,7 @@ Assets/_EndLink/
 │  └─ StateMachine/      敌人大状态机
 ├─ Party/                固定三人小队、小队上下文和战斗路由
 ├─ Player/               玩家战斗、生命、索敌和状态机
+│  ├─ ActCombat/         玩家连段、攻击位移、格挡弹反和战斗执行
 │  └─ StateMachine/      玩家状态机
 ├─ Tests/                临时或必要测试脚本
 ├─ World/                灰盒地图中的门、电梯、机关等世界交互底座

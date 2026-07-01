@@ -14,7 +14,7 @@ namespace EndLink.Enemies
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyActor))]
     [RequireComponent(typeof(EnemyHealth))]
-    public sealed class EnemyStateMachine : MonoBehaviour
+    public sealed class EnemyStateMachine : MonoBehaviour, ICombatParryReceiver
     {
         private const string PlayerLayerName = "Player";
         private const float StateIndicatorHeadOffset = 0.25f;
@@ -474,6 +474,15 @@ namespace EndLink.Enemies
 
             ChangeState(EnemyStateId.Hit);
             return CurrentStateId == EnemyStateId.Hit;
+        }
+
+        /// <summary>
+        /// 接收玩家成功弹反结果。
+        /// 第一版直接复用敌人 Hit 大状态，后续可替换为独立失衡、处决窗口或韧性结算。
+        /// </summary>
+        public void ReceiveParry(GameObject parrySource)
+        {
+            RequestHit();
         }
 
         /// <summary>

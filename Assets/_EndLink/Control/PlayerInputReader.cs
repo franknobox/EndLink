@@ -21,12 +21,18 @@ namespace EndLink.Core
         /// </summary>
         public bool SprintHeld { get; private set; }
 
+        /// <summary>
+        /// 当前是否按住防御输入。默认绑定为鼠标右键，手柄为左扳机。
+        /// </summary>
+        public bool GuardHeld { get; private set; }
+
         private InputSystem_Actions _inputActions;
         private InputActionMap _playerActionMap;
         private InputAction _moveAction;
         private InputAction _attackAction;
         private InputAction _sprintAction;
         private InputAction _dodgeAction;
+        private InputAction _guardAction;
         private InputAction _jumpAction;
         private InputAction _interactAction;
         private InputAction _playerSkillAction;
@@ -85,6 +91,9 @@ namespace EndLink.Core
             _sprintAction.performed -= OnSprintStartedOrPerformed;
             _sprintAction.canceled -= OnSprintCanceled;
             _dodgeAction.performed -= OnDodgePerformed;
+            _guardAction.started -= OnGuardStartedOrPerformed;
+            _guardAction.performed -= OnGuardStartedOrPerformed;
+            _guardAction.canceled -= OnGuardCanceled;
             _jumpAction.performed -= OnJumpPerformed;
             _interactAction.performed -= OnInteractPerformed;
             _playerSkillAction.performed -= OnPlayerSkillPerformed;
@@ -250,6 +259,16 @@ namespace EndLink.Core
             SetPressedIfButton(context, ref _dodgePressed);
         }
 
+        private void OnGuardStartedOrPerformed(InputAction.CallbackContext context)
+        {
+            GuardHeld = context.ReadValueAsButton();
+        }
+
+        private void OnGuardCanceled(InputAction.CallbackContext context)
+        {
+            GuardHeld = false;
+        }
+
         private void OnJumpPerformed(InputAction.CallbackContext context)
         {
             SetPressedIfButton(context, ref _jumpPressed);
@@ -317,6 +336,7 @@ namespace EndLink.Core
         private void ResetPressedInputs()
         {
             SprintHeld = false;
+            GuardHeld = false;
             _attackPressed = false;
             _dodgePressed = false;
             _jumpPressed = false;
@@ -343,6 +363,7 @@ namespace EndLink.Core
             _attackAction = _inputActions.asset.FindAction("Player/Attack", true);
             _sprintAction = _inputActions.asset.FindAction("Player/Sprint", true);
             _dodgeAction = _inputActions.asset.FindAction("Player/Dodge", true);
+            _guardAction = _inputActions.asset.FindAction("Player/Guard", true);
             _jumpAction = _inputActions.asset.FindAction("Player/Jump", true);
             _interactAction = _inputActions.asset.FindAction("Player/Interact", true);
             _playerSkillAction = _inputActions.asset.FindAction("Player/PlayerSkill", true);
@@ -359,6 +380,9 @@ namespace EndLink.Core
             _sprintAction.performed += OnSprintStartedOrPerformed;
             _sprintAction.canceled += OnSprintCanceled;
             _dodgeAction.performed += OnDodgePerformed;
+            _guardAction.started += OnGuardStartedOrPerformed;
+            _guardAction.performed += OnGuardStartedOrPerformed;
+            _guardAction.canceled += OnGuardCanceled;
             _jumpAction.performed += OnJumpPerformed;
             _interactAction.performed += OnInteractPerformed;
             _playerSkillAction.performed += OnPlayerSkillPerformed;

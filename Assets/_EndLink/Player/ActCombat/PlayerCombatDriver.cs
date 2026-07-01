@@ -67,6 +67,12 @@ namespace EndLink.Combat
         /// <summary>当前是否处于动作冷却中。</summary>
         public bool IsActionCoolingDown => ActionCooldownRemaining > 0f;
 
+        /// <summary>当前是否仍有动作时序正在推进。</summary>
+        public bool IsExecutingAction => _currentActionTimeline != null;
+
+        /// <summary>当前正在执行的动作资产。</summary>
+        public CombatActionDefinition CurrentActionDefinition => _currentActionDefinition;
+
         /// <summary>
         /// 查询指定动作当前的冷却归一化进度。
         /// 玩家按动作资产独立记录冷却，普攻、技能和连携技不会互相覆盖冷却。
@@ -163,6 +169,15 @@ namespace EndLink.Combat
             return _nextReadyTimes.TryGetValue(actionDefinition, out float nextReadyTime)
                 ? Mathf.Max(0f, nextReadyTime - Time.time)
                 : 0f;
+        }
+
+        /// <summary>
+        /// 取消尚未完成的玩家动作时序。
+        /// 受击、死亡或主动退出攻击状态时调用，避免前摇中的 Hitbox 在状态结束后继续生成。
+        /// </summary>
+        public void CancelCurrentAction()
+        {
+            ClearCurrentActionExecution();
         }
 
         private void FaceAttackDirection(Vector3 attackForward)

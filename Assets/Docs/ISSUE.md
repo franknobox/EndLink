@@ -57,6 +57,11 @@
 
 ## 仍有效技术债
 
+### 格挡与 Hitbox 后续效果拦截
+
+- 第一版格挡弹反已在 `CharacterHealth` 扣血前处理伤害倍率和击退，并避免普通格挡进入玩家 Hit 状态。
+- `HitLanded` 广播和 Hitbox 附带标签目前仍按既有命中流程执行；后续正式设计防御、异常状态和完美弹反时，需要统一定义哪些命中后效果应被格挡或弹反阻断。
+
 ### Hitbox 池化与统一创建入口
 
 - 玩家、队友和敌人的动作执行仍会直接 `Instantiate` Hitbox。
@@ -104,4 +109,3 @@
 
 - `InputSystem_Actions.cs` 等 Unity 生成文件不手工维护。
 - 输入动作和绑定以 `.inputactions` 为源头，修改后在 Unity 中重新 Generate C# Class。
-

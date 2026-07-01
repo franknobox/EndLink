@@ -139,7 +139,9 @@ namespace EndLink.Combat
         {
             onDamaged.Invoke(damageInfo.Damage, damageInfo.Tag);
 
-            if (requestHitStateOnDamage && damageInfo.Health.CurrentHealth > 0)
+            if (requestHitStateOnDamage
+                && !damageInfo.DamageResult.WasBlocked
+                && damageInfo.Health.CurrentHealth > 0)
             {
                 _stateMachine.RequestHit();
             }

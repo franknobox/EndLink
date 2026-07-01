@@ -37,6 +37,11 @@ namespace EndLink.Core
         [SerializeField, Min(0f)]
         private float attackInputBufferDuration = 0.15f;
 
+        [Header("防御状态")]
+        [Tooltip("防御期间保留的移动输入倍率。第一版默认站定防御，后续可改为带朝向锁定的防御移动。")]
+        [SerializeField, Range(0f, 1f)]
+        private float guardMoveInputScale;
+
         [Header("技能状态")]
         [Tooltip("通用技能状态的基础持续时间。胶囊白模阶段先用时间控制，接动画和技能配置后可改为数据或动画事件驱动。")]
         [SerializeField, Min(0.01f)]
@@ -81,6 +86,9 @@ namespace EndLink.Core
         private IPlayerState _currentState;
         private PlayerInputReader _inputReader;
         private PlayerCombatDriver _combatDriver;
+        private PlayerComboController _comboController;
+        private PlayerAttackMotion _attackMotion;
+        private PlayerGuardController _guardController;
         private CombatActionDefinition _currentAction;
         private Transform _currentActionTarget;
         private bool _actionRequested;
@@ -113,6 +121,9 @@ namespace EndLink.Core
 
         /// <summary>攻击动作期间向软锁目标平滑转向的速度。</summary>
         public float AttackTrackingRotationSharpness => attackTrackingRotationSharpness;
+
+        /// <summary>防御期间保留的移动输入倍率。</summary>
+        public float GuardMoveInputScale => guardMoveInputScale;
 
         /// <summary>
         /// 技能状态持续时间。
@@ -167,6 +178,9 @@ namespace EndLink.Core
             PlayerController controller = GetComponent<PlayerController>();
             _combatDriver = GetComponent<PlayerCombatDriver>();
             TryGetComponent(out PlayerTargeting targeting);
+            TryGetComponent(out _comboController);
+            TryGetComponent(out _attackMotion);
+            TryGetComponent(out _guardController);
 
             PlayerStateContext context = new PlayerStateContext(
                 this,
@@ -174,13 +188,17 @@ namespace EndLink.Core
                 _inputReader,
                 controller,
                 _combatDriver,
-                targeting);
+                targeting,
+                _comboController,
+                _attackMotion,
+                _guardController);
 
             RegisterState(new PlayerIdleState(context));
             RegisterState(new PlayerMoveState(context));
             RegisterState(new PlayerAttackState(context));
             RegisterState(new PlayerSkillState(context));
             RegisterState(new PlayerDodgeState(context));
+            RegisterState(new PlayerGuardState(context));
             RegisterState(new PlayerHitState(context));
             RegisterState(new PlayerDeadState(context));
         }

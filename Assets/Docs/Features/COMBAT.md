@@ -220,6 +220,8 @@
 <summary>展开详情</summary>
 功能说明：
 - Hitbox 实际造成伤害后，通过 `CombatKnockback` 统一计算并分发总击退位移；免伤、无伤害和击退距离为 `0` 时不会产生位移。
+- `CharacterHealth` 在伤害结算前查询同根物体上的 `IHitInterceptor`，供玩家格挡、弹反和后续特殊护盾修改伤害倍率与击退结果。
+- 普通格挡产生的伤害结果会标记 `WasBlocked`，玩家生命桥接层不会因此进入 Hit 状态。
 - 第一版最终击退距离为 `基础击退距离 × CharacterStats.KnockbackTakenMultiplier`，未挂载 `CharacterStats` 的目标默认按 `1` 倍处理。
 - `CombatKnockback` 会先通过 `CombatTarget` 归一到目标 `RootTransform`，再向父级查找 `CharacterStats` 和 `ICombatKnockbackReceiver`，避免命中子 Collider 时击退丢失。
 - `ICombatKnockbackReceiver` 只负责攻击命中的战斗击退，与敌人移动碰撞使用的外部推挤接口保持分离。
@@ -232,6 +234,8 @@
 
 对应脚本：
 - `Assets/_EndLink/Combat/Hitbox/CombatKnockback.cs`
+- `Assets/_EndLink/Combat/Hitbox/IHitInterceptor.cs`
+- `Assets/_EndLink/Combat/Hitbox/ICombatParryReceiver.cs`
 - `Assets/_EndLink/Combat/Stats/CharacterStats.cs`
 - `Assets/_EndLink/Combat/CharacterHealth.cs`
 - `Assets/_EndLink/Enemies/EnemyHealth.cs`

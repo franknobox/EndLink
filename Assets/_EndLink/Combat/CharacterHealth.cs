@@ -73,6 +73,7 @@ namespace EndLink.Combat
         private UnityEvent onDead = new();
 
         private Collider[] _ownedColliders = Array.Empty<Collider>();
+        private IHitInterceptor[] _hitInterceptors = Array.Empty<IHitInterceptor>();
         private MaterialPropertyBlock _propertyBlock;
         private Color _originalColor = Color.white;
         private Coroutine _flashCoroutine;
@@ -153,8 +154,21 @@ namespace EndLink.Combat
         public void ReceiveHit(HitboxHitInfo hitInfo)
         {
             DamageContext context = DamageContext.FromHit(hitInfo, gameObject);
-            int appliedDamage = ApplyDamage(DamageCalculator.Calculate(context));
-            if (appliedDamage > 0)
+            DamageResult damageResult = DamageCalculator.Calculate(context);
+            HitInterception interception = ResolveHitInterception(hitInfo);
+            if (interception.Intercepted)
+            {
+                int interceptedDamage = Mathf.RoundToInt(damageResult.FinalDamage * interception.DamageMultiplier);
+                damageResult = new DamageResult(
+                    damageResult.Context,
+                    interceptedDamage,
+                    damageResult.IsCritical,
+                    true,
+                    damageResult.WasDodged);
+            }
+
+            int appliedDamage = ApplyDamage(damageResult);
+            if (appliedDamage > 0 && (!interception.Intercepted || interception.AllowKnockback))
             {
                 CombatKnockback.TryApply(gameObject, hitInfo.HitDirection, hitInfo.KnockbackForce);
             }
@@ -364,8 +378,29 @@ namespace EndLink.Combat
             _originalColor = GetOriginalBaseColor();
             _originalName = gameObject.name;
             _ownedColliders = GetComponentsInChildren<Collider>(false);
+            _hitInterceptors = GetComponents<IHitInterceptor>();
             _ownedColliderCount = _ownedColliders.Length;
             _componentsCached = true;
+        }
+
+        private HitInterception ResolveHitInterception(HitboxHitInfo hitInfo)
+        {
+            for (int i = 0; i < _hitInterceptors.Length; i++)
+            {
+                IHitInterceptor interceptor = _hitInterceptors[i];
+                if (interceptor == null)
+                {
+                    continue;
+                }
+
+                HitInterception result = interceptor.InterceptHit(hitInfo);
+                if (result.Intercepted)
+                {
+                    return result;
+                }
+            }
+
+            return HitInterception.Continue;
         }
 
         private IEnumerator FlashHitColor()

@@ -17,7 +17,10 @@ namespace EndLink.Core
             PlayerInputReader inputReader,
             PlayerController controller,
             PlayerCombatDriver combatDriver,
-            PlayerTargeting targeting)
+            PlayerTargeting targeting,
+            PlayerComboController comboController,
+            PlayerAttackMotion attackMotion,
+            PlayerGuardController guardController)
         {
             StateMachine = stateMachine;
             Transform = transform;
@@ -25,6 +28,9 @@ namespace EndLink.Core
             Controller = controller;
             CombatDriver = combatDriver;
             Targeting = targeting;
+            ComboController = comboController;
+            AttackMotion = attackMotion;
+            GuardController = guardController;
         }
 
         /// <summary>
@@ -55,6 +61,15 @@ namespace EndLink.Core
         /// <summary>玩家自动软锁定组件。为空时攻击仍可按角色当前朝向正常执行。</summary>
         public PlayerTargeting Targeting { get; }
 
+        /// <summary>玩家普攻连段控制器。未挂载时 Attack 保持单段普攻兼容行为。</summary>
+        public PlayerComboController ComboController { get; }
+
+        /// <summary>玩家攻击踏步与目标追踪位移组件。未挂载时不会产生攻击附加位移。</summary>
+        public PlayerAttackMotion AttackMotion { get; }
+
+        /// <summary>玩家格挡弹反规则组件。未挂载时不会进入 Guard 状态。</summary>
+        public PlayerGuardController GuardController { get; }
+
         /// <summary>玩家战斗动作的统一执行接口。</summary>
         public ICombatActionExecutor ActionExecutor => CombatDriver;
 
@@ -75,24 +90,12 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 攻击状态的基础持续时间。
-        /// 胶囊白模阶段先用时间驱动，后续可改为动画事件驱动。
-        /// </summary>
-        public float AttackDuration
-        {
-            get
-            {
-                CombatActionDefinition basicAttack = CombatDriver != null ? CombatDriver.BasicAttackAction : null;
-                return basicAttack != null
-                    ? Mathf.Max(StateMachine.AttackDuration, basicAttack.TotalDuration)
-                    : StateMachine.AttackDuration;
-            }
-        }
-
-        /// <summary>
         /// 攻击期间移动输入倍率。0 表示站桩攻击，1 表示完全保留移动。
         /// </summary>
         public float AttackMoveInputScale => StateMachine.AttackMoveInputScale;
+
+        /// <summary>防御期间保留的移动输入倍率。</summary>
+        public float GuardMoveInputScale => StateMachine.GuardMoveInputScale;
 
         /// <summary>攻击期间朝软锁目标平滑转向的速度。</summary>
         public float AttackTrackingRotationSharpness => StateMachine.AttackTrackingRotationSharpness;
@@ -143,8 +146,17 @@ namespace EndLink.Core
         /// 当前是否允许开始一次攻击。
         /// 这里检查普攻动作自身的基础执行条件；硬直、受击和禁用输入由状态机外层状态约束处理。
         /// </summary>
-        public bool CanStartAttack => ActionExecutor != null
-            && ActionExecutor.CanExecute(CombatDriver.BasicAttackAction);
+        public bool CanStartAttack
+        {
+            get
+            {
+                CombatActionDefinition fallbackAction = CombatDriver != null ? CombatDriver.BasicAttackAction : null;
+                CombatActionDefinition firstAction = ComboController != null
+                    ? ComboController.GetFirstAction(fallbackAction)
+                    : fallbackAction;
+                return ActionExecutor != null && ActionExecutor.CanExecute(firstAction);
+            }
+        }
 
         /// <summary>
         /// 当前是否允许开始一次技能或连携动作。
@@ -168,6 +180,9 @@ namespace EndLink.Core
         /// 当前是否允许开始闪避。
         /// </summary>
         public bool CanStartDodge => StateMachine.CanStartDodge;
+
+        /// <summary>当前是否允许进入防御状态。</summary>
+        public bool CanStartGuard => GuardController != null && InputReader.GuardHeld;
 
         /// <summary>
         /// 当前是否允许开始基础跳跃。
@@ -215,6 +230,20 @@ namespace EndLink.Core
         public bool ConsumeDodgePressed()
         {
             return InputReader.ConsumeDodgePressed();
+        }
+
+        /// <summary>返回当前有效软锁目标的唯一根节点。</summary>
+        public Transform GetCurrentAttackTarget()
+        {
+            return Targeting != null && Targeting.HasTarget ? Targeting.CurrentTarget : null;
+        }
+
+        /// <summary>获取指定普攻动作的状态持续时间。</summary>
+        public float GetAttackDuration(CombatActionDefinition action)
+        {
+            return action != null
+                ? Mathf.Max(StateMachine.AttackDuration, action.TotalDuration)
+                : StateMachine.AttackDuration;
         }
 
         /// <summary>

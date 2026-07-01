@@ -12,6 +12,7 @@ namespace EndLink.Core
         Skill = 4,
         Dodge = 5,
         Hit = 6,
-        Dead = 7
+        Dead = 7,
+        Guard = 8
     }
 }
