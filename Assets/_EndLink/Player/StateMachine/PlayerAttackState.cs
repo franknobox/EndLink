@@ -46,7 +46,7 @@ namespace EndLink.Core
             Vector2 attackMoveInput = Context.InputReader.MoveInput * Context.AttackMoveInputScale;
             Context.Controller.TickMovement(attackMoveInput, deltaTime);
             Context.TickAttackTargetFacing(deltaTime);
-            Context.AttackMotion?.TickMotion(deltaTime);
+            Context.ComboController?.TickMotion(deltaTime);
 
             TryQueueNextStep();
 
@@ -72,7 +72,6 @@ namespace EndLink.Core
         public override void Exit()
         {
             Context.ComboController?.ResetCombo();
-            Context.AttackMotion?.CancelMotion();
             Context.CombatDriver?.CancelCurrentAction();
             _currentAction = null;
             _actionStarted = false;
@@ -130,7 +129,7 @@ namespace EndLink.Core
 
             _elapsedTime = 0f;
             _currentDuration = Context.GetAttackDuration(_currentAction);
-            Context.AttackMotion?.BeginMotion(target, Context.Transform.forward);
+            Context.ComboController?.BeginStepMotion(target, Context.Transform.forward);
         }
 
         private void ExitToLocomotion()

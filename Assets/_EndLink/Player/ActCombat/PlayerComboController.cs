@@ -1,13 +1,15 @@
 using System.Collections.Generic;
+using EndLink.Core;
 using UnityEngine;
 
 namespace EndLink.Combat
 {
     /// <summary>
     /// 玩家普攻连段配置与运行时入口。
-    /// 只决定当前是第几段、何时允许缓存下一段，以及每一段使用哪个动作资产；不读取输入，也不生成 Hitbox。
+    /// 管理普攻段数、下一段输入窗口，以及每段开始时的短距离攻击踏步；不读取输入，也不生成 Hitbox。
     /// </summary>
     [DisallowMultipleComponent]
+    [RequireComponent(typeof(PlayerController))]
     public sealed class PlayerComboController : MonoBehaviour
     {
         [Header("普攻连段")]
@@ -23,8 +25,32 @@ namespace EndLink.Combat
         [SerializeField, Range(0f, 1f)]
         private float inputWindowEnd = 1f;
 
+        [Header("攻击踏步")]
+        [Tooltip("每段普攻最多向前推进的距离。设为 0 可关闭攻击踏步。")]
+        [SerializeField, Min(0f)]
+        private float stepDistance = 0.8f;
+
+        [Tooltip("每段踏步完成所需时间。位移前快后慢，不会贯穿整个攻击动作。")]
+        [SerializeField, Min(0.01f)]
+        private float stepDuration = 0.16f;
+
+        [Tooltip("靠近目标时在目标 Collider 表面前保留的距离，避免踏步穿进敌人体内。")]
+        [SerializeField, Min(0f)]
+        private float targetStopDistance = 0.35f;
+
+        [Tooltip("目标表面距离超过该值时不再吸附目标，只按角色当前正前方踏步。")]
+        [SerializeField, Min(0f)]
+        private float maxTargetAssistDistance = 3f;
+
         private readonly PlayerComboSequence _sequence = new();
         private CombatActionDefinition _fallbackAction;
+        private PlayerController _controller;
+        private Transform _motionTarget;
+        private Vector3 _fallbackDirection;
+        private float _motionElapsedTime;
+        private float _travelDistance;
+        private float _appliedDistance;
+        private bool _isMotionActive;
 
         /// <summary>当前连段的段数索引，从 0 开始。</summary>
         public int CurrentStepIndex => _sequence.CurrentStepIndex;
@@ -43,10 +69,27 @@ namespace EndLink.Combat
         /// <summary>是否仍有下一段可执行。</summary>
         public bool HasNext => _sequence.HasNext;
 
+        /// <summary>当前是否仍在执行本段攻击踏步。</summary>
+        public bool IsMotionActive => _isMotionActive;
+
+        private void Awake()
+        {
+            _controller = GetComponent<PlayerController>();
+        }
+
+        private void OnDisable()
+        {
+            ResetCombo();
+        }
+
         private void OnValidate()
         {
             inputWindowStart = Mathf.Clamp01(inputWindowStart);
             inputWindowEnd = Mathf.Clamp(inputWindowEnd, inputWindowStart, 1f);
+            stepDistance = Mathf.Max(0f, stepDistance);
+            stepDuration = Mathf.Max(0.01f, stepDuration);
+            targetStopDistance = Mathf.Max(0f, targetStopDistance);
+            maxTargetAssistDistance = Mathf.Max(0f, maxTargetAssistDistance);
         }
 
         /// <summary>从第一段开始一次新的普攻连段。</summary>
@@ -92,6 +135,82 @@ namespace EndLink.Combat
         {
             _fallbackAction = null;
             _sequence.Reset();
+            CancelMotion();
+        }
+
+        /// <summary>开始当前普攻段的攻击踏步。</summary>
+        public void BeginStepMotion(Transform target, Vector3 fallbackForward)
+        {
+            _motionTarget = ResolveUsableTarget(target);
+            _fallbackDirection = NormalizePlanar(fallbackForward, transform.forward);
+            _motionElapsedTime = 0f;
+            _appliedDistance = 0f;
+            _travelDistance = stepDistance;
+
+            if (_motionTarget != null)
+            {
+                float surfaceDistance = CombatTargetUtility.GetSurfaceDistance(_motionTarget, transform.position);
+                if (surfaceDistance <= maxTargetAssistDistance)
+                {
+                    _travelDistance = CalculateTravelDistance(stepDistance, surfaceDistance, targetStopDistance);
+                }
+                else
+                {
+                    _motionTarget = null;
+                }
+            }
+
+            _isMotionActive = _travelDistance > 0f;
+        }
+
+        /// <summary>推进一帧攻击踏步，并在目标移动时有限修正位移方向。</summary>
+        public void TickMotion(float deltaTime)
+        {
+            if (!_isMotionActive || deltaTime <= 0f)
+            {
+                return;
+            }
+
+            _motionElapsedTime += deltaTime;
+            float normalizedTime = Mathf.Clamp01(_motionElapsedTime / stepDuration);
+            float easedTime = 1f - (1f - normalizedTime) * (1f - normalizedTime);
+            float desiredAppliedDistance = _travelDistance * easedTime;
+            float frameDistance = Mathf.Max(0f, desiredAppliedDistance - _appliedDistance);
+
+            Vector3 direction = ResolveCurrentMotionDirection();
+            if (_motionTarget != null)
+            {
+                float surfaceDistance = CombatTargetUtility.GetSurfaceDistance(_motionTarget, transform.position);
+                frameDistance = Mathf.Min(frameDistance, Mathf.Max(0f, surfaceDistance - targetStopDistance));
+            }
+
+            if (frameDistance > 0f)
+            {
+                _controller.AddExternalDisplacement(direction * frameDistance);
+                _appliedDistance += frameDistance;
+            }
+
+            if (normalizedTime >= 1f || _appliedDistance >= _travelDistance - 0.0001f)
+            {
+                _isMotionActive = false;
+            }
+        }
+
+        /// <summary>立即终止尚未完成的攻击踏步。</summary>
+        public void CancelMotion()
+        {
+            _motionTarget = null;
+            _motionElapsedTime = 0f;
+            _travelDistance = 0f;
+            _appliedDistance = 0f;
+            _isMotionActive = false;
+        }
+
+        /// <summary>根据目标表面距离计算不会穿入目标的实际踏步距离。</summary>
+        public static float CalculateTravelDistance(float configuredDistance, float surfaceDistance, float stopDistance)
+        {
+            float availableDistance = Mathf.Max(0f, surfaceDistance - Mathf.Max(0f, stopDistance));
+            return Mathf.Min(Mathf.Max(0f, configuredDistance), availableDistance);
         }
 
         private CombatActionDefinition ResolveAction(int stepIndex)
@@ -105,6 +224,44 @@ namespace EndLink.Combat
             }
 
             return _fallbackAction;
+        }
+
+        private Transform ResolveUsableTarget(Transform target)
+        {
+            if (target == null || !CombatTargetUtility.TryResolve(target, out ICombatTarget combatTarget))
+            {
+                return null;
+            }
+
+            return combatTarget.IsTargetable ? combatTarget.RootTransform : null;
+        }
+
+        private Vector3 ResolveCurrentMotionDirection()
+        {
+            if (_motionTarget != null)
+            {
+                Vector3 closestPoint = CombatTargetUtility.GetClosestPoint(_motionTarget, transform.position);
+                Vector3 toTarget = closestPoint - transform.position;
+                toTarget.y = 0f;
+                if (toTarget.sqrMagnitude > 0.0001f)
+                {
+                    return toTarget.normalized;
+                }
+            }
+
+            return _fallbackDirection;
+        }
+
+        private static Vector3 NormalizePlanar(Vector3 direction, Vector3 fallback)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude > 0.0001f)
+            {
+                return direction.normalized;
+            }
+
+            fallback.y = 0f;
+            return fallback.sqrMagnitude > 0.0001f ? fallback.normalized : Vector3.forward;
         }
     }
 

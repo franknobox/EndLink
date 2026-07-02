@@ -19,7 +19,6 @@ namespace EndLink.Core
             PlayerCombatDriver combatDriver,
             PlayerTargeting targeting,
             PlayerComboController comboController,
-            PlayerAttackMotion attackMotion,
             PlayerGuardController guardController)
         {
             StateMachine = stateMachine;
@@ -29,7 +28,6 @@ namespace EndLink.Core
             CombatDriver = combatDriver;
             Targeting = targeting;
             ComboController = comboController;
-            AttackMotion = attackMotion;
             GuardController = guardController;
         }
 
@@ -63,9 +61,6 @@ namespace EndLink.Core
 
         /// <summary>玩家普攻连段控制器。未挂载时 Attack 保持单段普攻兼容行为。</summary>
         public PlayerComboController ComboController { get; }
-
-        /// <summary>玩家攻击踏步与目标追踪位移组件。未挂载时不会产生攻击附加位移。</summary>
-        public PlayerAttackMotion AttackMotion { get; }
 
         /// <summary>玩家格挡弹反规则组件。未挂载时不会进入 Guard 状态。</summary>
         public PlayerGuardController GuardController { get; }

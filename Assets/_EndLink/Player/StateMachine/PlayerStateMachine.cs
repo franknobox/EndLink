@@ -87,7 +87,6 @@ namespace EndLink.Core
         private PlayerInputReader _inputReader;
         private PlayerCombatDriver _combatDriver;
         private PlayerComboController _comboController;
-        private PlayerAttackMotion _attackMotion;
         private PlayerGuardController _guardController;
         private CombatActionDefinition _currentAction;
         private Transform _currentActionTarget;
@@ -179,7 +178,6 @@ namespace EndLink.Core
             _combatDriver = GetComponent<PlayerCombatDriver>();
             TryGetComponent(out PlayerTargeting targeting);
             TryGetComponent(out _comboController);
-            TryGetComponent(out _attackMotion);
             TryGetComponent(out _guardController);
 
             PlayerStateContext context = new PlayerStateContext(
@@ -190,7 +188,6 @@ namespace EndLink.Core
                 _combatDriver,
                 targeting,
                 _comboController,
-                _attackMotion,
                 _guardController);
 
             RegisterState(new PlayerIdleState(context));

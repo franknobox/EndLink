@@ -216,9 +216,9 @@
 <summary>展开详情</summary>
 
 功能说明：
-- `PlayerComboController` 管理普攻段数、每段 Action 和下一段输入窗口；默认三个空槽会重复使用现有基础普攻，方便先验证三段节奏。
+- `PlayerComboController` 统一管理普攻段数、每段 Action、下一段输入窗口和每段攻击踏步；默认三个空槽会重复使用现有基础普攻，方便先验证三段节奏。
 - 每一段可单独配置 `CombatActionDefinition`，后续可以逐步替换成不同伤害、Hitbox、前摇和后摇。
-- `PlayerAttackMotion` 在每段普攻开始时执行短距离前快后慢踏步；有软锁目标时按 Collider 表面距离停止，目标过远时只沿角色正前方移动。
+- 每段普攻开始时由 `PlayerComboController` 执行短距离前快后慢踏步；有软锁目标时按 Collider 表面距离停止，目标过远时只沿角色正前方移动。
 - 攻击状态继续使用已有软锁平滑转向，并在每一段开始时重新取得当前有效目标。
 - `PlayerGuardController` 只处理正面命中：进入防御后的短窗口判定为弹反，窗口结束后按配置倍率承受格挡伤害。
 - 普通格挡不会触发玩家 Hit 状态，也不接收本次击退；成功弹反完全化解伤害，并让支持弹反反馈的敌人进入现有 Hit 状态。
@@ -226,7 +226,6 @@
 
 对应脚本：
 - `Assets/_EndLink/Player/ActCombat/PlayerComboController.cs`
-- `Assets/_EndLink/Player/ActCombat/PlayerAttackMotion.cs`
 - `Assets/_EndLink/Player/ActCombat/PlayerGuardController.cs`
 - `Assets/_EndLink/Combat/Hitbox/IHitInterceptor.cs`
 - `Assets/_EndLink/Combat/Hitbox/ICombatParryReceiver.cs`
@@ -236,7 +235,6 @@
 相关物体：
 - 玩家根物体
   - `PlayerComboController`
-  - `PlayerAttackMotion`
   - `PlayerGuardController`
 
 关键配置：
