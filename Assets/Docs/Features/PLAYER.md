@@ -217,6 +217,7 @@
 
 功能说明：
 - `PlayerComboController` 统一管理普攻段数、每段 Action、下一段输入窗口和每段攻击踏步；默认三个空槽会重复使用现有基础普攻，方便先验证三段节奏。
+- 下一段已经排队但因配置、冷却或执行条件无法启动时，只会短暂重试；超过等待上限后结束连段并返回移动状态，避免永久停留在 Attack。
 - 每一段可单独配置 `CombatActionDefinition`，后续可以逐步替换成不同伤害、Hitbox、前摇和后摇。
 - 每段普攻开始时由 `PlayerComboController` 执行短距离前快后慢踏步；有软锁目标时按 Collider 表面距离停止，目标过远时只沿角色正前方移动。
 - 攻击状态继续使用已有软锁平滑转向，并在每一段开始时重新取得当前有效目标。
@@ -240,6 +241,7 @@
 关键配置：
 - `comboActions`：按顺序执行的普攻 Action 列表
 - `inputWindowStart` / `inputWindowEnd`：下一段输入窗口
+- `queuedStepTimeout`：下一段已排队但无法执行时的最长等待时间，默认 `0.15` 秒
 - `stepDistance` / `stepDuration`：每段攻击踏步距离与持续时间
 - `targetStopDistance` / `maxTargetAssistDistance`：目标表面停止距离与最大辅助距离
 - `parryWindowDuration`：进入防御后的弹反窗口

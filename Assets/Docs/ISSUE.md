@@ -6,27 +6,8 @@
 
 ## 已收束问题
 
-### 队友跟随、敌人移动碰撞与索敌配置边界
+这部分的内容定期需要清空
 
-- 早期队友跟随死区、动态站位、避让、敌人碰撞推挤和敌人索敌配置曾连续互相影响。
-- 当前边界已基本收束：
-  - `PartyManager` 负责小队关系、槽位和统一跟随参数。
-  - `AllyFollowMotor` 负责队友跟随移动、死区、局部避让和队友 NavMesh 接线。
-  - `EnemyMotorBase` 负责敌人自身移动，以及敌人移动时挤开挡路角色。
-  - `EnemyStateMachine` 负责敌人大状态和敌人集中配置。
-  - `EnemyTargetSensor` 只执行索敌检测，不再持有主要 Inspector 配置。
-- 后续修改移动/碰撞相关逻辑时，仍需要回归验证：
-  - 队友死区是否稳定。
-  - 队友是否会因主角轻微移动而大幅调整站位。
-  - 队友和玩家是否仍不能反向顶动敌人。
-  - 敌人正常移动是否能挤开挡路玩家或队友。
-  - 敌人和队友是否还会异常浮空、穿坡或停在空中。
-
-### 动作时序第一版接入
-
-- `startup / active / recovery` 的第一版动作时序已经接入玩家、队友和敌人的 CombatDriver。
-- 动作开始后会先进入 `startup`，前摇结束时再生成 Hitbox；`active` 可以覆盖本次非弹体 Hitbox 的运行时生命周期。
-- 这部分不再作为“未完成动作时序”问题记录；剩余问题转入 Hitbox 池化、动画事件校正和动作执行入口统一。
 
 ## 冻结债务
 
@@ -74,12 +55,6 @@
 - `PlayerCombatDriver`、`AllyCombatDriver`、`EnemyCombatDriver` 都包含动作冷却、Hitbox 生成、事件上报和动作时序推进等相似逻辑。
 - 当前玩家、队友、敌人的动作表现和后续动画事件接线仍未完全稳定，暂不抽基类。
 - 后续做 Hitbox 池化、动画事件和敌人攻击表现统一时，再抽 `CombatExecutionUtility` 或 `CombatDriverBase`。
-
-### 自动化验证缺位
-
-- 项目已保留 `com.unity.test-framework`，但当前还没有稳定的 Runtime/EditMode 测试程序集和基础回归测试。
-- 后续优先补 `DamageCalculator`、`CombatTagContainer`、`PartyLinkContext`、`ActionCooldownTracker` 等纯逻辑或低场景依赖测试。
-- 正式补测试前，先建立清晰的 `.asmdef` / `.asmref` 边界，避免测试目录继续依赖默认 `Assembly-CSharp`。
 
 ### Camera.main 与全局查找收敛
 

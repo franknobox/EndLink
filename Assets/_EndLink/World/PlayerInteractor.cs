@@ -31,7 +31,7 @@ namespace EndLink.World
         private bool requireLocomotionState = true;
 
         /// <summary>当前可交互目标。</summary>
-        public WorldInteractable CurrentInteractable => worldInteractor != null ? worldInteractor.CurrentInteractable : null;
+        public IWorldInteractable CurrentInteractable => worldInteractor != null ? worldInteractor.CurrentInteractable : null;
 
         /// <summary>当前交互提示文本。</summary>
         public string CurrentPrompt => worldInteractor != null ? worldInteractor.CurrentPrompt : string.Empty;

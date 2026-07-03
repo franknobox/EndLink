@@ -34,7 +34,7 @@
 | [玩家 CharacterController 移动](Features/PLAYER.md#feature-player-movement) | 已完成受击后退版 | 负责玩家平滑移动、基础跳跃、重力贴地、转向，以及战斗击退的短时衰减后退。 |
 | [第三人称自由相机](Features/PLAYER.md#feature-third-person-camera) | 已完成自动景别版 | 负责越肩第三人称视角、自由旋转和上下角度限制，并在脱战待机时缓慢拉近、移动或战斗时较快拉远。 |
 | [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成基础防御版 | 负责 Idle、Move、Attack、Skill、Dodge、Guard、Hit、Dead 的状态切换，并承接普攻连段、攻击缓冲和防御输入。 |
-| [玩家 ActCombat 基础](Features/PLAYER.md#feature-player-act-combat) | 已完成第一版 | 提供三段普攻连段、攻击踏步与软锁追踪、正面格挡和短窗口弹反。 |
+| [玩家 ActCombat 基础](Features/PLAYER.md#feature-player-act-combat) | 已完成连段超时保护版 | 提供三段普攻连段、无效下一段超时退出、攻击踏步与软锁追踪、正面格挡和短窗口弹反。 |
 | [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成协议骨架版 | 负责把玩家状态、移动速度和状态进入触发器同步到 Animator 参数，并预留通用 Animator 参数协议、动画事件、Root Motion 和动作锁定/退出接口。 |
 | [玩家自动软锁定](Features/PLAYER.md#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按固定间隔自动选择当前战斗目标，默认优先最近敌人，并显示轻量目标点。 |
 | [玩家战斗驱动](Features/PLAYER.md#feature-player-combat-driver) | 已完成连段接线版 | 由状态机调用，负责逐段执行攻击表现和判定，按角色实时正前方生成 Hitbox 并管理独立动作冷却。 |
@@ -84,7 +84,7 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [世界交互底座](Features/WORLD.md#feature-world-interaction) | 已完成第一版 | 提供可复用的可交互对象接口、基类、范围扫描器和玩家输入桥接，用于后续门、电梯、开关等灰盒机关扩展。 |
+| [世界交互底座](Features/WORLD.md#feature-world-interaction) | 已完成接口一致性版 | 提供统一接口扫描、交互点距离判断、执行前范围复检和玩家输入桥接，用于门、电梯、开关等灰盒机关扩展。 |
 | [两层移动电梯](Features/WORLD.md#feature-elevator-platform) | 已完成第一版 | 提供可交互的上下层往返平台，通过运动学 Rigidbody 驱动物理实体，并为 CharacterController 乘客补偿平台三维位移。 |
 
 #### UI

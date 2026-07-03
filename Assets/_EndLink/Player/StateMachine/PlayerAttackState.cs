@@ -12,6 +12,7 @@ namespace EndLink.Core
         private CombatActionDefinition _currentAction;
         private float _currentDuration;
         private float _elapsedTime;
+        private float _queuedStepWaitTime;
         private bool _actionStarted;
 
         public PlayerAttackState(PlayerStateContext context) : base(context)
@@ -62,8 +63,14 @@ namespace EndLink.Core
 
             if (Context.ComboController != null && Context.ComboController.HasQueuedNext)
             {
-                // Driver 可能比状态机晚一帧结束当前时序，保留已缓存输入并在下一帧重试。
-                return;
+                _queuedStepWaitTime += deltaTime;
+                if (PlayerComboController.ShouldWaitForQueuedStep(
+                        _queuedStepWaitTime,
+                        Context.ComboController.QueuedStepTimeout))
+                {
+                    // Driver 可能比状态机晚一帧结束当前时序，短时间保留已缓存输入并重试。
+                    return;
+                }
             }
 
             ExitToLocomotion();
@@ -128,6 +135,7 @@ namespace EndLink.Core
             }
 
             _elapsedTime = 0f;
+            _queuedStepWaitTime = 0f;
             _currentDuration = Context.GetAttackDuration(_currentAction);
             Context.ComboController?.BeginStepMotion(target, Context.Transform.forward);
         }

@@ -7,14 +7,17 @@
 ## Feature: 世界交互底座
 
 ### 当前状态
-已完成第一版。
+已完成接口一致性版。
 
 ### 功能说明
 建立一个通用的小型世界交互底座，用于后续门、电梯、开关、测试机关、拾取物等对象接入。
 
 第一版只解决基础链路：
 - 可交互对象统一暴露“是否可交互、交互提示、交互点、执行交互”。
+- 扫描、当前目标、变化事件和玩家桥接统一使用 `IWorldInteractable`，支持直接实现接口或继承 `WorldInteractable`。
 - 交互者在半径内低频扫描候选对象，自动选中最近的可用对象。
+- 候选距离统一通过 `GetInteractionPoint()` 计算，不再直接依赖 Collider 最近点。
+- 执行缓存目标前会重新验证目标存活、`CanInteract`、交互半径和可选遮挡，防止刷新间隔内对已经离开的对象交互。
 - 玩家通过已有新版 Input System 的 `Player/Interact` 动作触发当前交互。
 - 玩家默认只在 Idle / Move 状态允许交互，避免攻击、闪避、受击过程中误触机关。
 - 普通机关可直接挂 `WorldInteractable` 用事件测试；专用机关通过继承基类扩展具体行为。
@@ -28,7 +31,7 @@
 
 ### 相关物体 / 配置
 - 玩家根物体可挂 `WorldInteractor` 和 `PlayerInteractor`。
-- 可交互机关根物体可直接挂 `WorldInteractable`，或挂继承自它的专用机关脚本，并需要有可被扫描到的 Collider。
+- 可交互机关根物体可直接挂 `WorldInteractable`、继承它的专用机关脚本，或挂直接实现 `IWorldInteractable` 的组件，并需要有可被扫描到的 Collider。
 - `WorldInteractor` 的 `Interactable Layers` 后续建议指向专用 Interactable Layer，避免扫描无关碰撞体。
 - `Player/Interact` 已存在于 Input Actions 中，当前默认绑定键盘 `F` 单击和手柄 `buttonNorth`；系统只消费输入，不手工维护生成文件。
 

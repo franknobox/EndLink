@@ -48,13 +48,13 @@ namespace EndLink.World
         private bool logInteractionAttempts;
 
         private Collider[] _candidateBuffer;
-        private WorldInteractable _currentInteractable;
+        private IWorldInteractable _currentInteractable;
         private float _nextRefreshTime;
 
         /// <summary>
         /// 当前交互目标变化事件。参数为新的目标，目标为空表示当前没有可交互对象。
         /// </summary>
-        public event Action<WorldInteractable> CurrentInteractableChanged;
+        public event Action<IWorldInteractable> CurrentInteractableChanged;
 
         /// <summary>当前交互半径。</summary>
         public float InteractionRadius
@@ -71,13 +71,15 @@ namespace EndLink.World
         }
 
         /// <summary>当前选中的可交互对象。</summary>
-        public WorldInteractable CurrentInteractable => _currentInteractable;
+        public IWorldInteractable CurrentInteractable => IsInteractableAlive(_currentInteractable)
+            ? _currentInteractable
+            : null;
 
         /// <summary>当前是否有可交互对象。</summary>
-        public bool HasInteractable => _currentInteractable != null;
+        public bool HasInteractable => IsInteractableAlive(_currentInteractable);
 
         /// <summary>当前交互提示文本。</summary>
-        public string CurrentPrompt => _currentInteractable != null ? _currentInteractable.InteractionPrompt : string.Empty;
+        public string CurrentPrompt => HasInteractable ? _currentInteractable.InteractionPrompt : string.Empty;
 
         private Transform Origin => origin != null ? origin : transform;
 
@@ -108,7 +110,7 @@ namespace EndLink.World
         /// 立即刷新当前交互目标。
         /// 返回刷新后的当前目标；如果没有有效对象则返回 null。
         /// </summary>
-        public WorldInteractable RefreshCurrentInteractable()
+        public IWorldInteractable RefreshCurrentInteractable()
         {
             EnsureCandidateBuffer();
 
@@ -121,7 +123,7 @@ namespace EndLink.World
                 interactableLayers,
                 QueryTriggerInteraction.Collide);
 
-            WorldInteractable best = null;
+            IWorldInteractable best = null;
             float bestDistanceSqr = float.PositiveInfinity;
 
             for (int i = 0; i < hitCount; i++)
@@ -132,23 +134,27 @@ namespace EndLink.World
                     continue;
                 }
 
-                WorldInteractable interactable = candidateCollider.GetComponentInParent<WorldInteractable>();
-                if (interactable == null || !interactable.CanInteract(gameObject))
+                IWorldInteractable interactable = candidateCollider.GetComponentInParent<IWorldInteractable>();
+                if (!IsInteractableAlive(interactable) || !interactable.CanInteract(gameObject))
                 {
                     continue;
                 }
 
-                Vector3 closestPoint = candidateCollider.ClosestPoint(originPosition);
-                float distanceSqr = (closestPoint - originPosition).sqrMagnitude;
-                if (distanceSqr > interactionRadius * interactionRadius)
+                if (!IsWithinInteractionRange(
+                        interactable,
+                        originPosition,
+                        interactionRadius,
+                        out Vector3 interactionPoint))
                 {
                     continue;
                 }
 
-                if (requireLineOfSight && IsObstructed(interactable, originPosition, closestPoint))
+                if (requireLineOfSight && IsObstructed(interactable, originPosition, interactionPoint))
                 {
                     continue;
                 }
+
+                float distanceSqr = (interactionPoint - originPosition).sqrMagnitude;
 
                 if (distanceSqr < bestDistanceSqr)
                 {
@@ -170,12 +176,12 @@ namespace EndLink.World
         {
             GameObject actualInteractor = interactor != null ? interactor : gameObject;
 
-            if (_currentInteractable == null || !_currentInteractable.CanInteract(actualInteractor))
+            if (!IsInteractableValid(_currentInteractable, actualInteractor))
             {
                 RefreshCurrentInteractable();
             }
 
-            if (_currentInteractable == null)
+            if (!IsInteractableValid(_currentInteractable, actualInteractor))
             {
                 if (logInteractionAttempts)
                 {
@@ -189,7 +195,7 @@ namespace EndLink.World
             if (logInteractionAttempts)
             {
                 Debug.Log(
-                    $"WorldInteractor: interact target={_currentInteractable.name}, success={success}",
+                    $"WorldInteractor: interact target={GetInteractableName(_currentInteractable)}, success={success}",
                     this);
             }
 
@@ -201,7 +207,48 @@ namespace EndLink.World
             return success;
         }
 
-        private bool IsObstructed(WorldInteractable interactable, Vector3 from, Vector3 to)
+        /// <summary>
+        /// 使用接口提供的交互点判断目标是否位于半径内。
+        /// 该方法不依赖场景扫描，供执行前复检和纯逻辑测试共用。
+        /// </summary>
+        public static bool IsWithinInteractionRange(
+            IWorldInteractable interactable,
+            Vector3 originPosition,
+            float radius,
+            out Vector3 interactionPoint)
+        {
+            interactionPoint = originPosition;
+            if (interactable == null)
+            {
+                return false;
+            }
+
+            interactionPoint = interactable.GetInteractionPoint(originPosition);
+            float safeRadius = Mathf.Max(0f, radius);
+            return (interactionPoint - originPosition).sqrMagnitude <= safeRadius * safeRadius;
+        }
+
+        private bool IsInteractableValid(IWorldInteractable interactable, GameObject interactor)
+        {
+            if (!IsInteractableAlive(interactable) || !interactable.CanInteract(interactor))
+            {
+                return false;
+            }
+
+            Vector3 originPosition = Origin.position;
+            if (!IsWithinInteractionRange(
+                    interactable,
+                    originPosition,
+                    interactionRadius,
+                    out Vector3 interactionPoint))
+            {
+                return false;
+            }
+
+            return !requireLineOfSight || !IsObstructed(interactable, originPosition, interactionPoint);
+        }
+
+        private bool IsObstructed(IWorldInteractable interactable, Vector3 from, Vector3 to)
         {
             Vector3 direction = to - from;
             float distance = direction.magnitude;
@@ -215,18 +262,44 @@ namespace EndLink.World
                 return false;
             }
 
-            return !hit.transform.IsChildOf(interactable.transform);
+            Transform interactableRoot = interactable is Component component
+                ? component.transform
+                : interactable.InteractionTransform;
+            return interactableRoot == null
+                || (hit.transform != interactableRoot && !hit.transform.IsChildOf(interactableRoot));
         }
 
-        private void SetCurrentInteractable(WorldInteractable next)
+        private void SetCurrentInteractable(IWorldInteractable next)
         {
-            if (_currentInteractable == next)
+            if (ReferenceEquals(_currentInteractable, next))
             {
                 return;
             }
 
             _currentInteractable = next;
             CurrentInteractableChanged?.Invoke(_currentInteractable);
+        }
+
+        private static bool IsInteractableAlive(IWorldInteractable interactable)
+        {
+            if (interactable == null)
+            {
+                return false;
+            }
+
+            return interactable is not UnityEngine.Object unityObject || unityObject != null;
+        }
+
+        private static string GetInteractableName(IWorldInteractable interactable)
+        {
+            if (interactable is Component component && component != null)
+            {
+                return component.name;
+            }
+
+            return interactable?.InteractionTransform != null
+                ? interactable.InteractionTransform.name
+                : interactable?.GetType().Name ?? "None";
         }
 
         private void EnsureCandidateBuffer()

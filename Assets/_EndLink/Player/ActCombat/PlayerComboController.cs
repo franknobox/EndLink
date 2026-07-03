@@ -25,6 +25,10 @@ namespace EndLink.Combat
         [SerializeField, Range(0f, 1f)]
         private float inputWindowEnd = 1f;
 
+        [Tooltip("下一段已经排队但暂时无法执行时，最多继续等待的时间。超时后结束连段，避免永久停留在 Attack。")]
+        [SerializeField, Min(0f)]
+        private float queuedStepTimeout = 0.15f;
+
         [Header("攻击踏步")]
         [Tooltip("每段普攻最多向前推进的距离。设为 0 可关闭攻击踏步。")]
         [SerializeField, Min(0f)]
@@ -72,6 +76,9 @@ namespace EndLink.Combat
         /// <summary>当前是否仍在执行本段攻击踏步。</summary>
         public bool IsMotionActive => _isMotionActive;
 
+        /// <summary>下一段排队后允许等待执行条件恢复的最长时间。</summary>
+        public float QueuedStepTimeout => Mathf.Max(0f, queuedStepTimeout);
+
         private void Awake()
         {
             _controller = GetComponent<PlayerController>();
@@ -86,6 +93,7 @@ namespace EndLink.Combat
         {
             inputWindowStart = Mathf.Clamp01(inputWindowStart);
             inputWindowEnd = Mathf.Clamp(inputWindowEnd, inputWindowStart, 1f);
+            queuedStepTimeout = Mathf.Max(0f, queuedStepTimeout);
             stepDistance = Mathf.Max(0f, stepDistance);
             stepDuration = Mathf.Max(0.01f, stepDuration);
             targetStopDistance = Mathf.Max(0f, targetStopDistance);
@@ -211,6 +219,12 @@ namespace EndLink.Combat
         {
             float availableDistance = Mathf.Max(0f, surfaceDistance - Mathf.Max(0f, stopDistance));
             return Mathf.Min(Mathf.Max(0f, configuredDistance), availableDistance);
+        }
+
+        /// <summary>判断已排队的下一段是否仍处于允许等待的时间内。</summary>
+        public static bool ShouldWaitForQueuedStep(float waitedTime, float timeout)
+        {
+            return Mathf.Max(0f, waitedTime) < Mathf.Max(0f, timeout);
         }
 
         private CombatActionDefinition ResolveAction(int stepIndex)

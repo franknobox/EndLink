@@ -19,6 +19,7 @@ E:\Unity_repo\Engine\6000.3.15f1\Editor\Data\Documentation
 
 ```text
 Assets/_EndLink/
+├─ EndLink.Runtime.asmdef  EndLink 运行时代码程序集
 ├─ Ally/                 队友状态机、助战、跟随和队友战斗执行
 ├─ Combat/               战斗通用系统
 │  ├─ Damage/            伤害上下文、伤害结果和伤害计算
@@ -31,7 +32,7 @@ Assets/_EndLink/
 ├─ Data/                 游戏数据资产目录
 │  ├─ CombatData/        战斗动作、标签定义和标签反应规则数据
 │  └─ ScenesData/        场景关联数据，例如 NavMesh 烘焙资产
-├─ Editor/               Unity Editor 工具窗口和自定义 Inspector
+├─ Editor/               Unity Editor 工具窗口、自定义 Inspector 和 EndLink.Editor.asmdef
 ├─ Enemies/              正式敌人基底、感知、状态机和能力组件
 │  ├─ Abilities/         敌人感知、移动和战斗执行能力
 │  └─ StateMachine/      敌人大状态机
@@ -39,10 +40,15 @@ Assets/_EndLink/
 ├─ Player/               玩家战斗、生命、索敌和状态机
 │  ├─ ActCombat/         玩家连段、攻击位移、格挡弹反和战斗执行
 │  └─ StateMachine/      玩家状态机
-├─ Tests/                临时或必要测试脚本
+├─ Tests/                测试脚本和可复用的 EndLink.Tests.asmdef
 ├─ World/                灰盒地图中的门、电梯、机关等世界交互底座
 └─ UI/                   运行时 HUD、动作槽位和血条组件
 ```
+
+程序集边界：
+- `EndLink.Runtime`：编译 `Assets/_EndLink` 下除嵌套 Editor / Tests 程序集外的运行时代码。
+- `EndLink.Editor`：只在 Unity Editor 中编译，并引用 `EndLink.Runtime`。
+- `EndLink.Tests`：只在 Unity Editor 测试环境中编译，并引用 `EndLink.Runtime`；后续测试脚本直接放入 `Assets/_EndLink/Tests`，不需要重复创建 asmdef。
 
 美术资源集中在：
 
