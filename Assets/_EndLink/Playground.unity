@@ -143,7 +143,7 @@ GameObject:
   m_Icon: {fileID: -964228994112308473, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &45882476
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4621,6 +4621,7 @@ MonoBehaviour:
   - {fileID: 0}
   inputWindowStart: 0.55
   inputWindowEnd: 1
+  queuedStepTimeout: 0.15
   stepDistance: 0.8
   stepDuration: 0.16
   targetStopDistance: 0.35
@@ -4869,7 +4870,7 @@ MonoBehaviour:
   attackGrantInterval: 1
   attackScoreDistanceWeight: 1
   attackScoreWaitWeight: 0.45
-  attackReservationDuration: 3
+  attackReservationDuration: 4
   softPositioningEnabled: 1
   softPositionMinDistance: 2.2
   softPositionMaxDistance: 3.4
@@ -4877,6 +4878,14 @@ MonoBehaviour:
   softRepositionInterval: {x: 3, y: 5}
   softPositionTargetRefreshDistance: 0.8
   softPositionArriveDistance: 0.25
+  observationPauseInterval: {x: 0.6, y: 1.4}
+  observationMoveDistance: 0.65
+  observationMoveSpeedMultiplier: 0.4
+  attackPrepareDelay: 0.5
+  attackPrepareMoveDistance: 0.8
+  attackPrepareMoveDuration: 0.55
+  attackPrepareSpeedMultiplier: 0.65
+  maneuverRetreatChance: 0.3
   drawGizmo: 1
   drawSoftPositionGizmos: 1
 --- !u!4 &199523617
@@ -7718,7 +7727,7 @@ GameObject:
   m_Icon: {fileID: -964228994112308473, guid: 0000000000000000d000000000000000, type: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &698380644
 MonoBehaviour:
   m_ObjectHideFlags: 0

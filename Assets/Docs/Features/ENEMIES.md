@@ -79,8 +79,8 @@
 - `EnemyTargetSensor` 负责第一版敌人索敌：玩家进入发现范围后请求进入 `Alert`，持续停留达到警觉时间后请求进入 `Combat`。
 - `EnemyTargetSensor` 在 `Idle` / `Alert` 阶段建立目标；进入 `Combat` / `Hit` 后由状态机持有当前战斗目标，Sensor 仅在该目标失效时重新扫描接管。
 - 自动索敌可以在 `EnemyStateMachine` 中关闭，关闭后不会主动触发 `Alert` / `Combat`。
-- `Combat` 通过轻量 `EnemyCombatBehavior` 推进基础战斗行为，当前包含 `Approach`、`Position`、`Engage`、`Attack`、`Recover`、`Reposition` 六个内部阶段。
-- `Approach` 负责进入战斗位置，`Position` 负责停位观察，`Engage` 在获得攻击许可后接近动作距离，`Attack` 提交普通攻击，`Recover` 等待动作恢复结束，`Reposition` 负责攻击后或站位失效时重新归位。
+- `Combat` 通过轻量 `EnemyCombatBehavior` 推进基础战斗行为，当前包含 `Approach`、`Position`、`Prepare`、`Engage`、`Attack`、`Recover`、`Reposition` 七个内部阶段。
+- `Approach` 负责进入战斗位置，`Position` 负责观察和等待许可，`Prepare` 在获得许可后完成攻击预备机动，`Engage` 接近动作距离，`Attack` 提交普通攻击，`Recover` 等待动作恢复结束，`Reposition` 负责攻击后或站位失效时重新归位。
 - 定位阶段使用距离滞回：进入距离由 Basic Attack 的 `EffectiveAttackRange - combatAttackInnerOffset` 决定，退出距离由 `EffectiveAttackRange + combatAttackRangeTolerance` 决定，避免敌人在攻击边界反复切换移动和停位。
 - `Combat` 的最大追击距离以出生区域 `Home` 为圆心计算，不再使用敌人与当前目标的距离；越界后进入 `Return`。
 - 战斗目标失效后会等待 `lostTargetDelay`，期间允许 Sensor 重新获取目标；延迟结束仍无目标时进入 `Return`。
@@ -152,7 +152,9 @@
 - 同一目标周围的敌人会按距离和等待时间计算攻击评分，竞争有限的攻击许可；同时攻击数量和两次许可授予间隔由区域统一控制。
 - 攻击许可包含短时预留。敌人获准后进入 `Engage` 并接近攻击距离，预留到期仍未开始攻击时会自动释放，避免多个敌人在接近途中突破同时攻击上限。
 - 未获准攻击的敌人不再全部贴近目标，而是由协调器在目标周围动态分配软站位；软站位不是固定环形槽位。
-- 软站位会综合敌人间距和移动成本选择。敌人大部分时间在 `Position` 停位观察，只在目标明显移动、等待间隔到期、位置拥挤或攻击结束后进入 `Reposition`。
+- 软站位会综合敌人间距和移动成本选择。等待许可的敌人会在软站位距离带内间歇执行缓慢侧移或后撤，不再长期站死；目标明显移动、等待间隔到期、位置拥挤或攻击结束后仍会进入 `Reposition`。
+- 敌人获得攻击许可后先进入 `Prepare`：默认观察停顿 `0.5` 秒，再按 `70%` 侧移、`30%` 后撤执行一次短机动，随后进入 `Engage` 接近并攻击。
+- `Prepare` 全程占用攻击许可；许可过期或目标失效时会取消当前尝试并重新定位。默认许可预留时间由 `3` 秒提高到 `4` 秒，为准备机动和接近留出余量。
 - 攻击恢复结束后，敌人会先释放攻击许可并返回新的软站位，不继续贴在目标旁排队。
 - 敌人目标失效、离开 Combat、受击打断、死亡或切换协调器时，会清理攻击许可、候选记录和软站位。
 - 没有区域协调器或关闭软站位时，敌人保持原有直接接近并攻击的单敌人行为。
@@ -183,6 +185,11 @@
 - `softRepositionInterval`：到位后主动重新定位的随机时间范围
 - `softPositionTargetRefreshDistance`：目标移动多远后刷新软站位
 - `softPositionArriveDistance`：抵达软站位的允许距离
+- `observationPauseInterval`：等待许可时两次观察移动之间的随机停顿范围
+- `observationMoveDistance` / `observationMoveSpeedMultiplier`：观察侧移或后撤的距离与速度倍率
+- `attackPrepareDelay`：获得许可后开始预备机动前的观察时间，默认 `0.5` 秒
+- `attackPrepareMoveDistance` / `attackPrepareMoveDuration` / `attackPrepareSpeedMultiplier`：预备机动的距离、最长时间和速度倍率
+- `maneuverRetreatChance`：随机机动选择后撤的概率，默认 `0.3`；其余概率平均分给左右侧移
 - `drawSoftPositionGizmos`：是否显示目标等待范围和已分配站位
 
 </details>

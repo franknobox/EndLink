@@ -3,6 +3,14 @@ using UnityEngine;
 
 namespace EndLink.Enemies
 {
+    /// <summary>敌人在观察或攻击准备阶段执行的一次短距离机动。</summary>
+    public enum EnemyCombatManeuver
+    {
+        SideLeft = 0,
+        SideRight = 1,
+        Retreat = 2
+    }
+
     /// <summary>
     /// 敌人 Combat 大状态内部的基础战斗阶段。
     /// 当前只描述单个敌人面对单个目标时的接近、定位、攻击和恢复流程。
@@ -11,10 +19,11 @@ namespace EndLink.Enemies
     {
         Approach = 0,
         Position = 1,
-        Engage = 2,
-        Attack = 3,
-        Recover = 4,
-        Reposition = 5
+        Prepare = 2,
+        Engage = 3,
+        Attack = 4,
+        Recover = 5,
+        Reposition = 6
     }
 
     /// <summary>
@@ -36,6 +45,13 @@ namespace EndLink.Enemies
         private Vector3 _softPosition;
         private Vector3 _softPositionTargetAnchor;
         private float _nextSoftPositionRefreshTime;
+        private Vector3 _observationDestination;
+        private float _nextObservationMoveTime;
+        private bool _isObservationMoving;
+        private Vector3 _prepareDestination;
+        private float _prepareStartTime;
+        private float _prepareMoveEndTime;
+        private bool _isPrepareManeuverStarted;
         private bool _hasSoftPosition;
         private bool _loggedMissingHitbox;
 
@@ -59,6 +75,13 @@ namespace EndLink.Enemies
             _softPosition = default;
             _softPositionTargetAnchor = default;
             _nextSoftPositionRefreshTime = 0f;
+            _observationDestination = default;
+            _nextObservationMoveTime = 0f;
+            _isObservationMoving = false;
+            _prepareDestination = default;
+            _prepareStartTime = 0f;
+            _prepareMoveEndTime = 0f;
+            _isPrepareManeuverStarted = false;
             _hasSoftPosition = false;
             _loggedMissingHitbox = false;
             CurrentPhase = EnemyCombatPhase.Approach;
@@ -78,6 +101,8 @@ namespace EndLink.Enemies
             _context?.CombatDriver?.CancelCurrentAction();
             _attackWaitElapsed = 0f;
             _hasSoftPosition = false;
+            _isObservationMoving = false;
+            _isPrepareManeuverStarted = false;
             CurrentPhase = EnemyCombatPhase.Approach;
         }
 
@@ -106,6 +131,10 @@ namespace EndLink.Enemies
 
                 case EnemyCombatPhase.Attack:
                     TickAttack(target, action, deltaTime);
+                    break;
+
+                case EnemyCombatPhase.Prepare:
+                    TickPrepare(target, action, deltaTime);
                     break;
 
                 case EnemyCombatPhase.Engage:
@@ -197,10 +226,64 @@ namespace EndLink.Enemies
                 return;
             }
 
-            _context.Motor?.Stop();
-            _context.Motor?.FaceTarget(target, deltaTime);
             _attackWaitElapsed += Mathf.Max(0f, deltaTime);
-            TryBeginEngage(target, action);
+            if (TryBeginPrepare(target, action))
+            {
+                return;
+            }
+
+            TickObservationMovement(target, deltaTime);
+        }
+
+        private void TickPrepare(Transform target, CombatActionDefinition action, float deltaTime)
+        {
+            EnemyCombatCoordinator coordinator = _grantedAttackCoordinator;
+            if (coordinator == null || !coordinator.HasAttackPermission(_context.Transform, target))
+            {
+                ReleaseAttackSlot();
+                _hasSoftPosition = false;
+                CurrentPhase = EnemyCombatPhase.Reposition;
+                TickReposition(target, action, deltaTime);
+                return;
+            }
+
+            _context.Motor?.FaceTarget(target, deltaTime);
+            if (Time.time < _prepareStartTime + coordinator.AttackPrepareDelay)
+            {
+                _context.Motor?.Stop();
+                return;
+            }
+
+            if (!_isPrepareManeuverStarted)
+            {
+                EnemyCombatManeuver maneuver = SelectManeuver(
+                    Random.value,
+                    coordinator.ManeuverRetreatChance);
+                _prepareDestination = ResolveManeuverDestination(
+                    target,
+                    coordinator,
+                    maneuver,
+                    coordinator.AttackPrepareMoveDistance);
+                _prepareMoveEndTime = Time.time + coordinator.AttackPrepareMoveDuration;
+                _isPrepareManeuverStarted = true;
+            }
+
+            float arriveDistance = coordinator.SoftPositionArriveDistance;
+            bool arrived = GetPlanarDistanceSqr(_context.Transform.position, _prepareDestination)
+                <= arriveDistance * arriveDistance;
+            if (!arrived && Time.time < _prepareMoveEndTime)
+            {
+                _context.Motor?.MoveTo(
+                    _prepareDestination,
+                    arriveDistance,
+                    deltaTime,
+                    coordinator.AttackPrepareSpeedMultiplier);
+                _context.Motor?.FaceTarget(target, deltaTime);
+                return;
+            }
+
+            CurrentPhase = EnemyCombatPhase.Engage;
+            TickEngage(target, action, deltaTime);
         }
 
         private void TickEngage(Transform target, CombatActionDefinition action, float deltaTime)
@@ -325,6 +408,12 @@ namespace EndLink.Enemies
                 return;
             }
 
+            if (_grantedAttackCoordinator != null)
+            {
+                BeginAttackPreparation();
+                return;
+            }
+
             if (actionExecutor.TryExecute(action, target))
             {
                 NotifyAttackStarted(target);
@@ -333,18 +422,18 @@ namespace EndLink.Enemies
             }
         }
 
-        private void TryBeginEngage(Transform target, CombatActionDefinition action)
+        private bool TryBeginPrepare(Transform target, CombatActionDefinition action)
         {
             ICombatActionExecutor actionExecutor = _context.ActionExecutor;
             if (actionExecutor == null || action == null)
             {
-                return;
+                return false;
             }
 
             float currentTime = Time.time;
             if (currentTime < _nextAttackAttemptTime)
             {
-                return;
+                return false;
             }
 
             if (action.HitboxPrefab == null)
@@ -356,15 +445,25 @@ namespace EndLink.Enemies
                 }
 
                 _nextAttackAttemptTime = currentTime + MissingHitboxRetryInterval;
-                return;
+                return false;
             }
 
             if (!actionExecutor.CanExecute(action) || !TryAcquireAttackPermission(target, action))
             {
-                return;
+                return false;
             }
 
-            CurrentPhase = EnemyCombatPhase.Engage;
+            BeginAttackPreparation();
+            return true;
+        }
+
+        private void BeginAttackPreparation()
+        {
+            _context.Motor?.Stop();
+            _isObservationMoving = false;
+            _isPrepareManeuverStarted = false;
+            _prepareStartTime = Time.time;
+            CurrentPhase = EnemyCombatPhase.Prepare;
         }
 
         private bool TryAcquireAttackPermission(Transform target, CombatActionDefinition action)
@@ -461,6 +560,7 @@ namespace EndLink.Enemies
                 _context.Motor?.Stop();
                 _context.Motor?.FaceTarget(target, deltaTime);
                 ScheduleNextSoftPositionRefresh(coordinator);
+                ScheduleNextObservationMove(coordinator);
                 CurrentPhase = EnemyCombatPhase.Position;
                 return true;
             }
@@ -475,6 +575,108 @@ namespace EndLink.Enemies
             float minimum = coordinator != null ? coordinator.SoftRepositionIntervalMin : 3f;
             float maximum = coordinator != null ? coordinator.SoftRepositionIntervalMax : 5f;
             _nextSoftPositionRefreshTime = Time.time + Random.Range(minimum, maximum);
+        }
+
+        private void TickObservationMovement(Transform target, float deltaTime)
+        {
+            EnemyCombatCoordinator coordinator = _context.CombatCoordinator;
+            if (coordinator == null)
+            {
+                _context.Motor?.Stop();
+                _context.Motor?.FaceTarget(target, deltaTime);
+                return;
+            }
+
+            float arriveDistance = coordinator.SoftPositionArriveDistance;
+            if (_isObservationMoving)
+            {
+                bool arrived = GetPlanarDistanceSqr(_context.Transform.position, _observationDestination)
+                    <= arriveDistance * arriveDistance;
+                if (!arrived)
+                {
+                    _context.Motor?.MoveTo(
+                        _observationDestination,
+                        arriveDistance,
+                        deltaTime,
+                        coordinator.ObservationMoveSpeedMultiplier);
+                    _context.Motor?.FaceTarget(target, deltaTime);
+                    return;
+                }
+
+                _isObservationMoving = false;
+                ScheduleNextObservationMove(coordinator);
+            }
+
+            _context.Motor?.Stop();
+            _context.Motor?.FaceTarget(target, deltaTime);
+            if (Time.time < _nextObservationMoveTime)
+            {
+                return;
+            }
+
+            EnemyCombatManeuver maneuver = SelectManeuver(
+                Random.value,
+                coordinator.ManeuverRetreatChance);
+            _observationDestination = ResolveManeuverDestination(
+                target,
+                coordinator,
+                maneuver,
+                coordinator.ObservationMoveDistance);
+            coordinator.UpdateSoftPosition(
+                _context.Transform,
+                target,
+                _observationDestination);
+            _isObservationMoving = true;
+        }
+
+        private void ScheduleNextObservationMove(EnemyCombatCoordinator coordinator)
+        {
+            float minimum = coordinator != null ? coordinator.ObservationPauseIntervalMin : 0.6f;
+            float maximum = coordinator != null ? coordinator.ObservationPauseIntervalMax : 1.4f;
+            _nextObservationMoveTime = Time.time + Random.Range(minimum, maximum);
+        }
+
+        private Vector3 ResolveManeuverDestination(
+            Transform target,
+            EnemyCombatCoordinator coordinator,
+            EnemyCombatManeuver maneuver,
+            float distance)
+        {
+            float currentRadius = Mathf.Sqrt(GetPlanarDistanceSqr(
+                _context.Transform.position,
+                target.position));
+            float minimumRadius = coordinator.SoftPositioningEnabled
+                ? coordinator.SoftPositionMinDistance
+                : Mathf.Max(0f, currentRadius - distance);
+            float maximumRadius = coordinator.SoftPositioningEnabled
+                ? coordinator.SoftPositionMaxDistance
+                : currentRadius + distance;
+            Vector3 destination = CalculateManeuverDestination(
+                _context.Transform.position,
+                target.position,
+                maneuver,
+                distance,
+                distance,
+                minimumRadius,
+                maximumRadius);
+
+            if (maneuver == EnemyCombatManeuver.Retreat
+                && GetPlanarDistanceSqr(_context.Transform.position, destination) <= 0.01f)
+            {
+                EnemyCombatManeuver side = Random.value < 0.5f
+                    ? EnemyCombatManeuver.SideLeft
+                    : EnemyCombatManeuver.SideRight;
+                destination = CalculateManeuverDestination(
+                    _context.Transform.position,
+                    target.position,
+                    side,
+                    distance,
+                    distance,
+                    minimumRadius,
+                    maximumRadius);
+            }
+
+            return destination;
         }
 
         private bool UsesSoftPositioning()
@@ -498,6 +700,69 @@ namespace EndLink.Enemies
             }
 
             return crowded && currentTime >= nextRefreshTime - 1f;
+        }
+
+        /// <summary>按后撤概率选择一次机动，其余概率平均分配给左右侧移。</summary>
+        public static EnemyCombatManeuver SelectManeuver(float randomValue, float retreatChance)
+        {
+            float value = Mathf.Clamp01(randomValue);
+            float retreatThreshold = Mathf.Clamp01(retreatChance);
+            if (value < retreatThreshold)
+            {
+                return EnemyCombatManeuver.Retreat;
+            }
+
+            float sideMidpoint = retreatThreshold + (1f - retreatThreshold) * 0.5f;
+            return value < sideMidpoint
+                ? EnemyCombatManeuver.SideLeft
+                : EnemyCombatManeuver.SideRight;
+        }
+
+        /// <summary>
+        /// 计算目标相对的侧移或后撤终点，并把结果约束在围攻软站位的内外距离之间。
+        /// </summary>
+        public static Vector3 CalculateManeuverDestination(
+            Vector3 enemyPosition,
+            Vector3 targetPosition,
+            EnemyCombatManeuver maneuver,
+            float sideDistance,
+            float retreatDistance,
+            float minimumRadius,
+            float maximumRadius)
+        {
+            Vector3 radial = enemyPosition - targetPosition;
+            radial.y = 0f;
+            if (radial.sqrMagnitude <= 0.0001f)
+            {
+                radial = Vector3.forward;
+            }
+
+            radial.Normalize();
+            Vector3 direction = maneuver switch
+            {
+                EnemyCombatManeuver.SideLeft => new Vector3(-radial.z, 0f, radial.x),
+                EnemyCombatManeuver.SideRight => new Vector3(radial.z, 0f, -radial.x),
+                _ => radial
+            };
+            float distance = maneuver == EnemyCombatManeuver.Retreat
+                ? Mathf.Max(0f, retreatDistance)
+                : Mathf.Max(0f, sideDistance);
+            Vector3 destination = enemyPosition + direction * distance;
+
+            Vector3 targetOffset = destination - targetPosition;
+            targetOffset.y = 0f;
+            float safeMinimum = Mathf.Max(0f, minimumRadius);
+            float safeMaximum = Mathf.Max(safeMinimum, maximumRadius);
+            float radius = Mathf.Clamp(targetOffset.magnitude, safeMinimum, safeMaximum);
+            if (targetOffset.sqrMagnitude <= 0.0001f)
+            {
+                targetOffset = radial;
+            }
+
+            targetOffset.Normalize();
+            destination = targetPosition + targetOffset * radius;
+            destination.y = enemyPosition.y;
+            return destination;
         }
 
         private static float GetPlanarDistanceSqr(Vector3 first, Vector3 second)

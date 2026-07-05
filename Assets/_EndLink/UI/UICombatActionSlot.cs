@@ -317,8 +317,12 @@ namespace EndLink.UI
 
             AllyStateMachine stateMachine = slot switch
             {
-                PartyCombatActorSlot.AllySlotA => partyManager != null ? partyManager.AllySlotA?.AllyStateMachine : null,
-                PartyCombatActorSlot.AllySlotB => partyManager != null ? partyManager.AllySlotB?.AllyStateMachine : null,
+                PartyCombatActorSlot.AllySlotA => partyManager != null && partyManager.AllySlotA?.IsActive == true
+                    ? partyManager.AllySlotA.AllyStateMachine
+                    : null,
+                PartyCombatActorSlot.AllySlotB => partyManager != null && partyManager.AllySlotB?.IsActive == true
+                    ? partyManager.AllySlotB.AllyStateMachine
+                    : null,
                 _ => null
             };
 

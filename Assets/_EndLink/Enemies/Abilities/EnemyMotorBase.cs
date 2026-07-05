@@ -135,6 +135,19 @@ namespace EndLink.Enemies
         /// </summary>
         public virtual void MoveTo(Vector3 destination, float stopDistance, float deltaTime)
         {
+            MoveTo(destination, stopDistance, deltaTime, 1f);
+        }
+
+        /// <summary>
+        /// 朝目标位置移动，并为本次行为附加局部速度倍率。
+        /// 该倍率不会覆盖减速、加速等系统写入的长期 Move Speed Multiplier。
+        /// </summary>
+        public virtual void MoveTo(
+            Vector3 destination,
+            float stopDistance,
+            float deltaTime,
+            float behaviorSpeedMultiplier)
+        {
             EnsureCharacterController();
 
             if (_characterController == null || !_characterController.enabled)
@@ -142,7 +155,8 @@ namespace EndLink.Enemies
                 return;
             }
 
-            if (TryMoveToWithNavMesh(destination, stopDistance, deltaTime))
+            float localSpeedMultiplier = Mathf.Max(0f, behaviorSpeedMultiplier);
+            if (TryMoveToWithNavMesh(destination, stopDistance, deltaTime, localSpeedMultiplier))
             {
                 return;
             }
@@ -157,7 +171,10 @@ namespace EndLink.Enemies
             }
 
             Vector3 moveDirection = toDestination.normalized;
-            Vector3 targetVelocity = moveDirection * moveSpeed * MoveSpeedMultiplier;
+            Vector3 targetVelocity = moveDirection
+                * moveSpeed
+                * MoveSpeedMultiplier
+                * localSpeedMultiplier;
             _horizontalVelocity = Vector3.SmoothDamp(
                 _horizontalVelocity,
                 targetVelocity,
@@ -303,7 +320,11 @@ namespace EndLink.Enemies
             transform.position = position;
         }
 
-        private bool TryMoveToWithNavMesh(Vector3 destination, float stopDistance, float deltaTime)
+        private bool TryMoveToWithNavMesh(
+            Vector3 destination,
+            float stopDistance,
+            float deltaTime,
+            float behaviorSpeedMultiplier)
         {
             if (!CanUseNavMesh())
             {
@@ -365,7 +386,10 @@ namespace EndLink.Enemies
                 return true;
             }
 
-            Vector3 targetVelocity = planarDirection.normalized * moveSpeed * MoveSpeedMultiplier;
+            Vector3 targetVelocity = planarDirection.normalized
+                * moveSpeed
+                * MoveSpeedMultiplier
+                * behaviorSpeedMultiplier;
             _horizontalVelocity = Vector3.SmoothDamp(
                 _horizontalVelocity,
                 targetVelocity,

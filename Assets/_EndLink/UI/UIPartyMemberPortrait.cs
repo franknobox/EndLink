@@ -202,8 +202,8 @@ namespace EndLink.UI
             return memberSlot switch
             {
                 UIPartyMemberSlot.MainCharacter => partyManager.MainCharacter != null,
-                UIPartyMemberSlot.AllySlotA => partyManager.AllySlotA != null && partyManager.AllySlotA.HasAlly,
-                UIPartyMemberSlot.AllySlotB => partyManager.AllySlotB != null && partyManager.AllySlotB.HasAlly,
+                UIPartyMemberSlot.AllySlotA => partyManager.AllySlotA != null && partyManager.AllySlotA.IsActive,
+                UIPartyMemberSlot.AllySlotB => partyManager.AllySlotB != null && partyManager.AllySlotB.IsActive,
                 _ => false
             };
         }

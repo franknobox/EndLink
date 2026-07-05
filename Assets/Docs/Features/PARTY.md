@@ -95,6 +95,7 @@
 - `PartyManager` 是固定三人小队的场景级管理入口。
 - 第一版只支持固定主控 + 2 个固定队友，不做主控切换、入队离队或复杂编队。
 - `PartyFormationSlot` 保存单个队友槽位，包含槽位名、队友状态机和队形偏移。
+- 队友根物体或 `AllyStateMachine` 被禁用时，槽位会保留配置但暂时视为非运行成员；跟随初始化、动态站位、战斗路由和队友 UI 会自动跳过该队友。
 - 初始化时，`PartyManager` 会把 `mainCharacter` 设置为两个队友的跟随目标。
 - 初始化时，`PartyManager` 会把两个槽位的 `formationOffset` 写入各自队友的 `AllyFollowMotor`。
 - 初始化时，`PartyManager` 会把统一的 `PartyFollowSettings` 写入两个队友的 `AllyFollowMotor`。

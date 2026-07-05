@@ -311,7 +311,7 @@ namespace EndLink.Party
 
         private void ApplySlot(PartyFormationSlot slot)
         {
-            if (slot == null || !slot.HasAlly)
+            if (slot == null || !slot.IsActive)
             {
                 return;
             }
@@ -387,7 +387,7 @@ namespace EndLink.Party
 
         private void ApplyFollowSettings(PartyFormationSlot slot)
         {
-            if (slot == null || !slot.HasAlly)
+            if (slot == null || !slot.IsActive)
             {
                 return;
             }
@@ -415,7 +415,7 @@ namespace EndLink.Party
 
         private static void ApplyFormationOffset(PartyFormationSlot slot, Vector3 offset)
         {
-            if (slot == null || !slot.HasAlly)
+            if (slot == null || !slot.IsActive)
             {
                 return;
             }
@@ -429,7 +429,7 @@ namespace EndLink.Party
 
         private static void AddAllyIfValid(List<AllyStateMachine> results, PartyFormationSlot slot)
         {
-            if (slot != null && slot.HasAlly)
+            if (slot != null && slot.IsActive)
             {
                 results.Add(slot.AllyStateMachine);
             }
@@ -506,7 +506,7 @@ namespace EndLink.Party
 
         private static bool IsFollowTargetInsideDeadZone(PartyFormationSlot slot)
         {
-            if (slot == null || !slot.HasAlly)
+            if (slot == null || !slot.IsActive)
             {
                 return false;
             }

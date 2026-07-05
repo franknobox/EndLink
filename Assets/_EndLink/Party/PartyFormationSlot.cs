@@ -35,6 +35,12 @@ namespace EndLink.Party
         /// <summary>该槽位是否已经绑定了队友。</summary>
         public bool HasAlly => allyStateMachine != null;
 
+        /// <summary>
+        /// 该槽位绑定的队友当前是否处于运行状态。
+        /// 关闭队友根物体或 AllyStateMachine 时，保留槽位配置但不参与初始化、战斗和 UI。
+        /// </summary>
+        public bool IsActive => HasAlly && allyStateMachine.isActiveAndEnabled;
+
         /// <summary>该槽位绑定的队友根物体。</summary>
         public GameObject AllyGameObject => allyStateMachine != null ? allyStateMachine.gameObject : null;
 
@@ -45,7 +51,7 @@ namespace EndLink.Party
         /// 该槽位的队友当前是否可视为存活。
         /// 没有挂 AllyHealth 时，先按“可参与”处理，避免早期白模配置缺组件时被错误排除。
         /// </summary>
-        public bool IsAlive => HasAlly && (!TryGetAllyHealth(out AllyHealth health) || !health.IsDead);
+        public bool IsAlive => IsActive && (!TryGetAllyHealth(out AllyHealth health) || !health.IsDead);
 
         /// <summary>
         /// 尝试获取该队友的生命桥接组件。
@@ -69,7 +75,7 @@ namespace EndLink.Party
         /// </summary>
         public void Apply(Transform mainCharacter)
         {
-            if (allyStateMachine == null)
+            if (!IsActive)
             {
                 return;
             }

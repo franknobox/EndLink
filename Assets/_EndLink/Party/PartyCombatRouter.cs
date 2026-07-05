@@ -569,11 +569,11 @@ namespace EndLink.Party
                     ? partyManager.MainCharacter.gameObject
                     : null,
                 PartyCombatActorSlot.AllySlotA => partyManager.AllySlotA != null
-                    && partyManager.AllySlotA.AllyStateMachine != null
+                    && partyManager.AllySlotA.IsActive
                         ? partyManager.AllySlotA.AllyStateMachine.gameObject
                         : null,
                 PartyCombatActorSlot.AllySlotB => partyManager.AllySlotB != null
-                    && partyManager.AllySlotB.AllyStateMachine != null
+                    && partyManager.AllySlotB.IsActive
                         ? partyManager.AllySlotB.AllyStateMachine.gameObject
                         : null,
                 PartyCombatActorSlot.Party => partyManager.gameObject,

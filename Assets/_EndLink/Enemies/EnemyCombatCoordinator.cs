@@ -80,7 +80,7 @@ namespace EndLink.Enemies
 
         [Tooltip("攻击许可被授予后最多保留多久。敌人需要在这段时间内接近并开始攻击，否则许可自动释放。")]
         [SerializeField, Min(0.1f)]
-        private float attackReservationDuration = 3f;
+        private float attackReservationDuration = 4f;
 
         [Header("围攻软站位")]
         [Tooltip("是否为等待攻击许可的敌人分配克制型软站位。关闭后保持原有贴近目标等待的行为。")]
@@ -110,6 +110,39 @@ namespace EndLink.Enemies
         [Tooltip("敌人距离软站位小于该值时视为到位。")]
         [SerializeField, Min(0.01f)]
         private float softPositionArriveDistance = 0.25f;
+
+        [Header("观察与攻击准备")]
+        [Tooltip("等待攻击许可时，两次观察移动之间的随机停顿时间范围。")]
+        [SerializeField]
+        private Vector2 observationPauseInterval = new(0.6f, 1.4f);
+
+        [Tooltip("一次观察侧移或后撤的水平距离。")]
+        [SerializeField, Min(0.1f)]
+        private float observationMoveDistance = 0.65f;
+
+        [Tooltip("观察移动相对敌人基础移动速度的倍率。")]
+        [SerializeField, Range(0.05f, 1f)]
+        private float observationMoveSpeedMultiplier = 0.4f;
+
+        [Tooltip("获得攻击许可后，开始攻击准备机动前的固定观察时间。")]
+        [SerializeField, Min(0f)]
+        private float attackPrepareDelay = 0.5f;
+
+        [Tooltip("攻击准备阶段执行一次侧移或后撤的水平距离。")]
+        [SerializeField, Min(0.1f)]
+        private float attackPrepareMoveDistance = 0.8f;
+
+        [Tooltip("攻击准备机动允许持续的最长时间，结束后进入 Engage。")]
+        [SerializeField, Min(0.05f)]
+        private float attackPrepareMoveDuration = 0.55f;
+
+        [Tooltip("攻击准备机动相对敌人基础移动速度的倍率。")]
+        [SerializeField, Range(0.05f, 1f)]
+        private float attackPrepareSpeedMultiplier = 0.65f;
+
+        [Tooltip("随机机动选择后撤的概率。剩余概率平均分给向左和向右侧移。")]
+        [SerializeField, Range(0f, 1f)]
+        private float maneuverRetreatChance = 0.3f;
 
         [Header("调试")]
         [Tooltip("是否始终绘制协调器半径 Gizmo。")]
@@ -154,6 +187,39 @@ namespace EndLink.Enemies
 
         /// <summary>克制型敌人两次主动换位之间的最长时间。</summary>
         public float SoftRepositionIntervalMax => softRepositionInterval.y;
+
+        /// <summary>两次观察移动之间的最短停顿时间。</summary>
+        public float ObservationPauseIntervalMin => observationPauseInterval.x;
+
+        /// <summary>两次观察移动之间的最长停顿时间。</summary>
+        public float ObservationPauseIntervalMax => observationPauseInterval.y;
+
+        /// <summary>一次观察移动的距离。</summary>
+        public float ObservationMoveDistance => observationMoveDistance;
+
+        /// <summary>观察移动的局部速度倍率。</summary>
+        public float ObservationMoveSpeedMultiplier => observationMoveSpeedMultiplier;
+
+        /// <summary>获得攻击许可后的固定准备停顿时间。</summary>
+        public float AttackPrepareDelay => attackPrepareDelay;
+
+        /// <summary>攻击准备阶段单次机动距离。</summary>
+        public float AttackPrepareMoveDistance => attackPrepareMoveDistance;
+
+        /// <summary>攻击准备阶段单次机动的最长持续时间。</summary>
+        public float AttackPrepareMoveDuration => attackPrepareMoveDuration;
+
+        /// <summary>攻击准备阶段的局部移动速度倍率。</summary>
+        public float AttackPrepareSpeedMultiplier => attackPrepareSpeedMultiplier;
+
+        /// <summary>观察和攻击准备动作选择后撤的概率。</summary>
+        public float ManeuverRetreatChance => maneuverRetreatChance;
+
+        /// <summary>等待软站位允许的最小目标距离。</summary>
+        public float SoftPositionMinDistance => softPositionMinDistance;
+
+        /// <summary>等待软站位允许的最大目标距离。</summary>
+        public float SoftPositionMaxDistance => softPositionMaxDistance;
 
         /// <summary>协调器接管优先级。</summary>
         public int Priority => priority;
@@ -206,6 +272,15 @@ namespace EndLink.Enemies
             softRepositionInterval.y = Mathf.Max(softRepositionInterval.x, softRepositionInterval.y);
             softPositionTargetRefreshDistance = Mathf.Max(0.1f, softPositionTargetRefreshDistance);
             softPositionArriveDistance = Mathf.Max(0.01f, softPositionArriveDistance);
+            observationPauseInterval.x = Mathf.Max(0.05f, observationPauseInterval.x);
+            observationPauseInterval.y = Mathf.Max(observationPauseInterval.x, observationPauseInterval.y);
+            observationMoveDistance = Mathf.Max(0.1f, observationMoveDistance);
+            observationMoveSpeedMultiplier = Mathf.Clamp(observationMoveSpeedMultiplier, 0.05f, 1f);
+            attackPrepareDelay = Mathf.Max(0f, attackPrepareDelay);
+            attackPrepareMoveDistance = Mathf.Max(0.1f, attackPrepareMoveDistance);
+            attackPrepareMoveDuration = Mathf.Max(0.05f, attackPrepareMoveDuration);
+            attackPrepareSpeedMultiplier = Mathf.Clamp(attackPrepareSpeedMultiplier, 0.05f, 1f);
+            maneuverRetreatChance = Mathf.Clamp01(maneuverRetreatChance);
             EnsureDefaults();
         }
 
@@ -417,6 +492,24 @@ namespace EndLink.Enemies
             }
 
             targetState.SoftPositions.Remove(attacker.GetInstanceID());
+        }
+
+        /// <summary>
+        /// 更新等待敌人当前占用的软站位。
+        /// 观察侧移开始时调用，让其他敌人的后续选点仍能避开这段小范围移动。
+        /// </summary>
+        public void UpdateSoftPosition(Transform attacker, Transform target, Vector3 position)
+        {
+            if (attacker == null || target == null || !softPositioningEnabled)
+            {
+                return;
+            }
+
+            TargetAttackState targetState = GetOrCreateTargetState(target);
+            targetState.SoftPositions[attacker.GetInstanceID()] = new SoftPositionRecord
+            {
+                Position = position
+            };
         }
 
         /// <summary>

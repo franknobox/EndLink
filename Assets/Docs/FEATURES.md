@@ -61,7 +61,7 @@
 | --- | --- | --- |
 | [连携触发与窗口](Features/PARTY.md#feature-party-link-context) | 已完成奥义充能接线版 | 协议反应触发后为三人小队开启 4 秒共享连携窗口，允许玩家释放一个连携技，并按连携动作配置提升全队协同率。 |
 | [小队战斗状态上下文](Features/PARTY.md#feature-party-combat-context) | 已完成基础版 | 监听战斗事件，记录小队是否处于战斗、当前主目标和已知敌人，供队友目标选择、战斗 UI 和后续连携系统读取。 |
-| [固定三人小队管理](Features/PARTY.md#feature-party-manager) | 已完成动态槽位版 | 负责保存固定主控和 2 个队友槽位，统一分配队友跟随目标、动态队形槽位、小队状态查询和第一版小队战斗命令路由。 |
+| [固定三人小队管理](Features/PARTY.md#feature-party-manager) | 已完成动态槽位版 | 负责保存固定主控和 2 个队友槽位，统一分配跟随目标、动态队形、小队查询和战斗命令，并支持暂时禁用单个队友。 |
 
 #### ALLY
 
@@ -76,8 +76,8 @@
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [敌人身份与生命目标](Features/ENEMIES.md#feature-enemy-identity-health) | 已完成分类基础版 | 提供正式敌人根身份、根类别、战斗定位、生命受击、死亡事件、目标有效性、死亡退场、战斗标签容器和基础调试显示。 |
-| [敌人感知与大状态机](Features/ENEMIES.md#feature-enemy-state-sensor) | 已完成基础战斗循环版 | 提供 Idle、Alert、Combat、Hit、Return、Dead 大状态，以及 Combat 内部的接近、定位、攻击、恢复和重新定位流程。 |
-| [敌人围攻协调](Features/ENEMIES.md#feature-enemy-combat-coordination) | 已完成软站位第一版 | 通过区域协调器统一管理敌人归属、攻击评分、同时攻击数量、许可预留和克制型动态软站位。 |
+| [敌人感知与大状态机](Features/ENEMIES.md#feature-enemy-state-sensor) | 已完成基础战斗循环版 | 提供 Idle、Alert、Combat、Hit、Return、Dead 大状态，以及 Combat 内部的接近、观察、攻击准备、攻击、恢复和重新定位流程。 |
+| [敌人围攻协调](Features/ENEMIES.md#feature-enemy-combat-coordination) | 已完成观察移动版 | 通过区域协调器统一管理敌人归属、攻击评分、同时攻击数量、许可预留、动态软站位和等待/攻击准备机动。 |
 | [敌人移动与战斗能力](Features/ENEMIES.md#feature-enemy-motor-combat) | 已完成受击后退版 | 提供地面移动、NavMesh 追击、转向、重力、碰撞推挤、衰减击退和敌人战斗执行器基底。 |
 
 #### WORLD
