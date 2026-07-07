@@ -11,6 +11,7 @@ namespace EndLink.Core
         public const string MoveSpeed = nameof(MoveSpeed);
         public const string IsMoving = nameof(IsMoving);
         public const string IsGrounded = nameof(IsGrounded);
+        public const string IsDead = nameof(IsDead);
         public const string StateId = nameof(StateId);
         public const string ActionId = nameof(ActionId);
         public const string ActionType = nameof(ActionType);
@@ -22,6 +23,7 @@ namespace EndLink.Core
         public static readonly int MoveSpeedHash = Animator.StringToHash(MoveSpeed);
         public static readonly int IsMovingHash = Animator.StringToHash(IsMoving);
         public static readonly int IsGroundedHash = Animator.StringToHash(IsGrounded);
+        public static readonly int IsDeadHash = Animator.StringToHash(IsDead);
         public static readonly int StateIdHash = Animator.StringToHash(StateId);
         public static readonly int ActionIdHash = Animator.StringToHash(ActionId);
         public static readonly int ActionTypeHash = Animator.StringToHash(ActionType);

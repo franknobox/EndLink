@@ -20,7 +20,7 @@
 
 ### 当前情况概览
 
-项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party`、`Assets/_EndLink/Enemies`、`Assets/_EndLink/World` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，世界交互代码使用 `EndLink.World`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、统一 Combat Target、统一 Action 执行接口、玩家 Animator 桥接、动画协议接口骨架、基础攻击驱动、基础 Hitbox 配置、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动与动态站位第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架、世界交互底座和战斗 UI 基础。
+项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party`、`Assets/_EndLink/Enemies`、`Assets/_EndLink/World` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，世界交互代码使用 `EndLink.World`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、统一 Combat Target、统一 Action 执行接口、玩家与敌人 Animator 桥接、动画协议接口骨架、基础攻击驱动、基础 Hitbox 配置、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动与动态站位第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架、世界交互底座和战斗 UI 基础。
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
@@ -76,6 +76,7 @@
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [敌人身份与生命目标](Features/ENEMIES.md#feature-enemy-identity-health) | 已完成分类基础版 | 提供正式敌人根身份、根类别、战斗定位、生命受击、死亡事件、目标有效性、死亡退场、战斗标签容器和基础调试显示。 |
+| [敌人 Animator 桥接](Features/ENEMIES.md#feature-enemy-animator) | 已完成视觉同步第一版 | 把敌人移动、大状态和动作开始信息同步给 Animator，当前不改变 AI 和数据驱动的攻击判定时序。 |
 | [敌人感知与大状态机](Features/ENEMIES.md#feature-enemy-state-sensor) | 已完成基础战斗循环版 | 提供 Idle、Alert、Combat、Hit、Return、Dead 大状态，以及 Combat 内部的接近、观察、攻击准备、攻击、恢复和重新定位流程。 |
 | [敌人围攻协调](Features/ENEMIES.md#feature-enemy-combat-coordination) | 已完成观察移动版 | 通过区域协调器统一管理敌人归属、攻击评分、同时攻击数量、许可预留、动态软站位和等待/攻击准备机动。 |
 | [敌人移动与战斗能力](Features/ENEMIES.md#feature-enemy-motor-combat) | 已完成受击后退版 | 提供地面移动、NavMesh 追击、转向、重力、碰撞推挤、衰减击退和敌人战斗执行器基底。 |

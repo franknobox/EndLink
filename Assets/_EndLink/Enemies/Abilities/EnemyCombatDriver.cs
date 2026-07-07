@@ -43,6 +43,12 @@ namespace EndLink.Enemies
         private Vector3 _currentActionForward = Vector3.forward;
         private CombatActionTimeline _currentActionTimeline;
 
+        /// <summary>
+        /// 动作时间线成功开始时触发。
+        /// 供 Animator 桥接和表现层监听；AI 决策不应依赖该事件。
+        /// </summary>
+        public event System.Action<CombatActionDefinition> ActionStarted;
+
         /// <summary>敌人普通攻击动作。</summary>
         public CombatActionDefinition BasicAttackAction => basicAttackAction;
 
@@ -198,6 +204,7 @@ namespace EndLink.Enemies
             _lastExecutedAction = actionDefinition;
             _nextReadyTimes[actionDefinition] = Time.time + Mathf.Max(0f, actionDefinition.Cooldown);
             StartActionExecution(actionDefinition, target, attackForward);
+            ActionStarted?.Invoke(actionDefinition);
 
             CombatEventsBus.RaiseActionStarted(
                 gameObject,

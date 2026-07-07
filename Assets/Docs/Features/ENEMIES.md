@@ -1,6 +1,6 @@
 # Enemies Features
 
-正式敌人身份、生命、感知、状态机、围攻协调和基础移动详情。
+正式敌人身份、生命、感知、状态机、围攻协调、基础移动和动画桥接详情。
 
 主索引见 [FEATURES.md](../FEATURES.md)。
 
@@ -63,6 +63,44 @@
 - `deathDeactivateDelay`：死亡事件触发后等待多久隐藏敌人
 - `feedbackRenderer`：受击和死亡变色使用的 MeshRenderer
 - `showHealthInName`：是否在 GameObject 名字上显示血量
+
+</details>
+
+<a id="feature-enemy-animator"></a>
+
+### Feature：敌人 Animator 桥接
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- `EnemyAnimatorDriver` 负责把敌人移动速度、移动状态、敌人大状态和战斗动作开始信息同步到 Animator，不决定 AI、状态切换或攻击判定。
+- 连续同步 `MoveSpeed`、`IsMoving`、`StateId`、`IsDead`；进入 `Hit` / `Dead` 时分别触发 `HitTrigger` / `DeadTrigger`。
+- `EnemyCombatDriver` 成功开始动作时通过本地事件通知桥接层，写入 `ActionId`、`ActionType` 并触发 `ActionTrigger`，短动作也不会依赖逐帧轮询捕获。
+- Animator、移动能力和战斗执行器均支持自动查找；特殊敌人没有移动或攻击能力时，对应引用可以留空。
+- Animator Controller 缺少某个协议参数时会跳过写入，可选开启一次性警告排查配置。
+- 当前动画只做视觉同步，Hitbox 仍由 `CombatActionDefinition` 的数据时序驱动；动画事件驱动与 Root Motion 继续保留为后续接线。
+
+对应脚本：
+- `Assets/_EndLink/Enemies/Anime/EnemyAnimatorDriver.cs`
+- `Assets/_EndLink/Enemies/Abilities/EnemyCombatDriver.cs`
+- `Assets/_EndLink/Control/Animation/CombatAnimatorParams.cs`
+
+相关物体：
+- 正式敌人根物体
+  - `EnemyAnimatorDriver`
+- 敌人视觉子物体
+  - `Animator`
+
+Animator 参数：
+- `MoveSpeed`：Float，当前水平移动速度
+- `IsMoving`：Bool，当前是否正在移动
+- `StateId`：Int，对应 `EnemyStateId`
+- `IsDead`：Bool，当前是否处于 Dead
+- `ActionId`：Int，当前动作 ActionId 字符串的 Animator Hash
+- `ActionType`：Int，对应 `CombatActionType`
+- `ActionTrigger`：Trigger，动作成功开始
+- `HitTrigger`：Trigger，进入 Hit
+- `DeadTrigger`：Trigger，进入 Dead
 
 </details>
 

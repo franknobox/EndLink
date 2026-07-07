@@ -35,6 +35,7 @@ Assets/_EndLink/
 ├─ Editor/               Unity Editor 工具窗口、自定义 Inspector 和 EndLink.Editor.asmdef
 ├─ Enemies/              正式敌人基底、感知、状态机和能力组件
 │  ├─ Abilities/         敌人感知、移动和战斗执行能力
+│  ├─ Anime/             敌人 Animator 桥接与动画接线
 │  └─ StateMachine/      敌人大状态机
 ├─ Party/                固定三人小队、小队上下文和战斗路由
 ├─ Player/               玩家战斗、生命、索敌和状态机
