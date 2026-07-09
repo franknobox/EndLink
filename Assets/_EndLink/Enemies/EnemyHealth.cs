@@ -37,9 +37,9 @@ namespace EndLink.Enemies
         private float deathDeactivateDelay = 0.8f;
 
         [Header("受击反馈")]
-        [Tooltip("受击时闪烁的 MeshRenderer。为空时会自动查找自身或子物体。")]
+        [Tooltip("受击时闪烁的 Renderer。为空时会自动查找自身或子物体，可支持 SkinnedMeshRenderer。")]
         [SerializeField]
-        private MeshRenderer feedbackRenderer;
+        private Renderer feedbackRenderer;
 
         [Tooltip("受击时瞬间切换的颜色。")]
         [SerializeField]
@@ -72,13 +72,15 @@ namespace EndLink.Enemies
         private UnityEvent onDead = new();
 
         private Collider[] _ownedColliders = System.Array.Empty<Collider>();
+        private Renderer[] _feedbackRenderers = System.Array.Empty<Renderer>();
+        private Color[] _originalColors = System.Array.Empty<Color>();
         private MaterialPropertyBlock _propertyBlock;
-        private Color _originalColor = Color.white;
         private Coroutine _flashCoroutine;
         private Coroutine _deathCleanupCoroutine;
         private string _originalName;
         private int _currentHealth;
         private int _ownedColliderCount;
+        private int _feedbackRendererCount;
         private GameObject _lastDamageSource;
         private EnemyActor _actor;
         private bool _isDead;
@@ -127,7 +129,7 @@ namespace EndLink.Enemies
 
         private void Reset()
         {
-            feedbackRenderer = GetComponentInChildren<MeshRenderer>();
+            feedbackRenderer = GetComponentInChildren<Renderer>(false);
         }
 
         private void OnValidate()
@@ -185,7 +187,7 @@ namespace EndLink.Enemies
 
             StopDeathCleanup();
             RestoreColliders();
-            SetBaseColor(_originalColor);
+            RestoreBaseColors();
             UpdateDebugDisplay();
             ResetPerformed?.Invoke();
         }
@@ -197,13 +199,9 @@ namespace EndLink.Enemies
                 return;
             }
 
-            if (feedbackRenderer == null)
-            {
-                feedbackRenderer = GetComponentInChildren<MeshRenderer>();
-            }
+            CacheFeedbackRenderers();
 
             _propertyBlock = new MaterialPropertyBlock();
-            _originalColor = GetOriginalBaseColor();
             _originalName = gameObject.name;
             _ownedColliders = GetComponentsInChildren<Collider>(false);
             _ownedColliderCount = _ownedColliders.Length;
@@ -363,7 +361,7 @@ namespace EndLink.Enemies
 
             if (!_isDead)
             {
-                SetBaseColor(_originalColor);
+                RestoreBaseColors();
             }
 
             _flashCoroutine = null;
@@ -371,7 +369,7 @@ namespace EndLink.Enemies
 
         private void PlayHitFlash()
         {
-            if (feedbackRenderer == null)
+            if (_feedbackRendererCount <= 0)
             {
                 return;
             }
@@ -412,9 +410,39 @@ namespace EndLink.Enemies
             gameObject.name = $"{_originalName} [{stateText}]";
         }
 
-        private Color GetOriginalBaseColor()
+        private void CacheFeedbackRenderers()
         {
-            Material sharedMaterial = feedbackRenderer != null ? feedbackRenderer.sharedMaterial : null;
+            _feedbackRenderers = GetComponentsInChildren<Renderer>(false);
+            _feedbackRendererCount = _feedbackRenderers.Length;
+
+            if (_feedbackRendererCount <= 0 && IsUsableFeedbackRenderer(feedbackRenderer))
+            {
+                _feedbackRenderers = new[] { feedbackRenderer };
+                _feedbackRendererCount = 1;
+            }
+
+            if (_feedbackRendererCount > 0 && !IsUsableFeedbackRenderer(feedbackRenderer))
+            {
+                feedbackRenderer = _feedbackRenderers[0];
+            }
+
+            _originalColors = new Color[_feedbackRendererCount];
+            for (int i = 0; i < _feedbackRendererCount; i++)
+            {
+                _originalColors[i] = GetOriginalBaseColor(_feedbackRenderers[i]);
+            }
+        }
+
+        private static bool IsUsableFeedbackRenderer(Renderer renderer)
+        {
+            return renderer != null
+                && renderer.enabled
+                && renderer.gameObject.activeInHierarchy;
+        }
+
+        private static Color GetOriginalBaseColor(Renderer renderer)
+        {
+            Material sharedMaterial = renderer != null ? renderer.sharedMaterial : null;
 
             if (sharedMaterial != null && sharedMaterial.HasProperty(BaseColorId))
             {
@@ -426,15 +454,31 @@ namespace EndLink.Enemies
 
         private void SetBaseColor(Color color)
         {
-            if (feedbackRenderer == null)
+            for (int i = 0; i < _feedbackRendererCount; i++)
+            {
+                SetBaseColor(_feedbackRenderers[i], color);
+            }
+        }
+
+        private void RestoreBaseColors()
+        {
+            for (int i = 0; i < _feedbackRendererCount; i++)
+            {
+                SetBaseColor(_feedbackRenderers[i], _originalColors[i]);
+            }
+        }
+
+        private void SetBaseColor(Renderer renderer, Color color)
+        {
+            if (renderer == null)
             {
                 return;
             }
 
             _propertyBlock ??= new MaterialPropertyBlock();
-            feedbackRenderer.GetPropertyBlock(_propertyBlock);
+            renderer.GetPropertyBlock(_propertyBlock);
             _propertyBlock.SetColor(BaseColorId, color);
-            feedbackRenderer.SetPropertyBlock(_propertyBlock);
+            renderer.SetPropertyBlock(_propertyBlock);
         }
 
         private static string GetTagLogText(CombatTagDefinition tag)

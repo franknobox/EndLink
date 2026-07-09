@@ -4757,7 +4757,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!23 &187405868
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -9984,7 +9984,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1021594375
 Transform:
   m_ObjectHideFlags: 0
@@ -11334,7 +11334,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Enemies.EnemyActor
   enemyKind: 0
   combatRole: 0
-  bodyRoot: {fileID: 1253701192}
+  bodyRoot: {fileID: 1450887027}
   motor: {fileID: 1253701185}
   combatDriver: {fileID: 1253701186}
 --- !u!4 &1253701192
@@ -13605,7 +13605,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Enemies.EnemyActor
   enemyKind: 0
   combatRole: 0
-  bodyRoot: {fileID: 1284033434}
+  bodyRoot: {fileID: 1849704339}
   motor: {fileID: 1284033437}
   combatDriver: {fileID: 1284033438}
 --- !u!114 &1284033432
@@ -13655,7 +13655,7 @@ MonoBehaviour:
   disableCollidersOnDeath: 0
   deactivateOnDeath: 1
   deathDeactivateDelay: 0.8
-  feedbackRenderer: {fileID: 187405868}
+  feedbackRenderer: {fileID: 0}
   hitColor: {r: 1, g: 0.55, b: 0.55, a: 1}
   hitFlashDuration: 0.1
   deadColor: {r: 0.35, g: 0.35, b: 0.35, a: 1}
@@ -16837,6 +16837,11 @@ Mesh:
       - serializedVersion: 1
         m_IndexStart: 0
         m_IndexCount: 0
+--- !u!4 &1491834739 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2391837867059360137, guid: 0d324eab45fca5f45b53145e02d85935, type: 3}
+  m_PrefabInstance: {fileID: 1290430976400097835}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1510275886
 GameObject:
   m_ObjectHideFlags: 0
@@ -19962,6 +19967,7 @@ Transform:
   m_Children:
   - {fileID: 187405870}
   - {fileID: 1021594375}
+  - {fileID: 1491834739}
   m_Father: {fileID: 1284033434}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1935199147
@@ -26603,7 +26609,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Enemies.EnemyActor
   enemyKind: 0
   combatRole: 0
-  bodyRoot: {fileID: 2012491627}
+  bodyRoot: {fileID: 491123723}
   motor: {fileID: 2012491620}
   combatDriver: {fileID: 2012491621}
 --- !u!114 &2012491625
@@ -27178,6 +27184,63 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ec2d5f331a9149db803f78d7e0a6b35e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.UI.UIPartyCombatAction
+--- !u!1001 &1290430976400097835
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1849704339}
+    m_Modifications:
+    - target: {fileID: 2391837867059360137, guid: 0d324eab45fca5f45b53145e02d85935, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2391837867059360137, guid: 0d324eab45fca5f45b53145e02d85935, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2391837867059360137, guid: 0d324eab45fca5f45b53145e02d85935, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2391837867059360137, guid: 0d324eab45fca5f45b53145e02d85935, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2391837867059360137, guid: 0d324eab45fca5f45b53145e02d85935, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2391837867059360137, guid: 0d324eab45fca5f45b53145e02d85935, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2391837867059360137, guid: 0d324eab45fca5f45b53145e02d85935, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2391837867059360137, guid: 0d324eab45fca5f45b53145e02d85935, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2391837867059360137, guid: 0d324eab45fca5f45b53145e02d85935, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2391837867059360137, guid: 0d324eab45fca5f45b53145e02d85935, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3597882537316035821, guid: 0d324eab45fca5f45b53145e02d85935, type: 3}
+      propertyPath: m_Name
+      value: PF_APS01_Visual
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0d324eab45fca5f45b53145e02d85935, type: 3}
 --- !u!114 &7100000000000000001
 MonoBehaviour:
   m_ObjectHideFlags: 0

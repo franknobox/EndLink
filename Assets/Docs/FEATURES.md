@@ -75,7 +75,7 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [敌人身份与生命目标](Features/ENEMIES.md#feature-enemy-identity-health) | 已完成分类基础版 | 提供正式敌人根身份、根类别、战斗定位、生命受击、死亡事件、目标有效性、死亡退场、战斗标签容器和基础调试显示。 |
+| [敌人身份与生命目标](Features/ENEMIES.md#feature-enemy-identity-health) | 已完成分类基础版 | 提供正式敌人根身份、根类别、战斗定位、生命受击、视觉受击反馈、死亡事件、目标有效性、死亡退场、战斗标签容器和基础调试显示。 |
 | [敌人 Animator 桥接](Features/ENEMIES.md#feature-enemy-animator) | 已完成视觉同步第一版 | 把敌人移动、大状态和动作开始信息同步给 Animator，当前不改变 AI 和数据驱动的攻击判定时序。 |
 | [敌人感知与大状态机](Features/ENEMIES.md#feature-enemy-state-sensor) | 已完成基础战斗循环版 | 提供 Idle、Alert、Combat、Hit、Return、Dead 大状态，以及 Combat 内部的接近、观察、攻击准备、攻击、恢复和重新定位流程。 |
 | [敌人围攻协调](Features/ENEMIES.md#feature-enemy-combat-coordination) | 已完成观察移动版 | 通过区域协调器统一管理敌人归属、攻击评分、同时攻击数量、许可预留、动态软站位和等待/攻击准备机动。 |

@@ -61,7 +61,7 @@
 - `disableCollidersOnDeath`：死亡后是否禁用非 Trigger Collider，让死亡敌人不再阻挡角色
 - `deactivateOnDeath`：死亡后是否自动隐藏敌人根物体
 - `deathDeactivateDelay`：死亡事件触发后等待多久隐藏敌人
-- `feedbackRenderer`：受击和死亡变色使用的 MeshRenderer
+- `feedbackRenderer`：受击和死亡变色使用的 Renderer；为空时会自动查找敌人视觉体上的 Renderer，可支持 SkinnedMeshRenderer
 - `showHealthInName`：是否在 GameObject 名字上显示血量
 
 </details>

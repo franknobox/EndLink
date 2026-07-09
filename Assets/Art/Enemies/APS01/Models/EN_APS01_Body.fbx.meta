@@ -3,7 +3,207 @@ guid: bb9c9bd609918b045a21208481c53da5
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: DefaultMaterial.005
+    second: {fileID: 2100000, guid: 75320ca055e844bcabe56aa8ea901c82, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Material.021
+    second: {fileID: 2100000, guid: 038a671042f54750bcae609cddc98636, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Material.022
+    second: {fileID: 2100000, guid: 6c000c52cd6d4e1492ac610029c35b82, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Material.023
+    second: {fileID: 2100000, guid: 1cccca7f10d44b72b964864a8c43de8e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Material.024
+    second: {fileID: 2100000, guid: 713324f9510a4c9288d52e30f99a1446, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_0_material.005
+    second: {fileID: 2100000, guid: e3771b205f864077b22dad9ddb5e83a9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_10_material.005
+    second: {fileID: 2100000, guid: 262eb77a49164f18b738b2b91991013b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_13_material.005
+    second: {fileID: 2100000, guid: 5a297b1685714714a8ab7e3c6134640b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_14_material.005
+    second: {fileID: 2100000, guid: 816320ebe51f4de6bf42101860c5635e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_15_material.005
+    second: {fileID: 2100000, guid: 45cbde41cff940cfafc385d92ea8f825, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_16_material.004
+    second: {fileID: 2100000, guid: 82219eeae67d49c0bd5ea445ade0375d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_17_material.004
+    second: {fileID: 2100000, guid: 2aeb49267dcd4bd786a83be138a6f638, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_19_material.005
+    second: {fileID: 2100000, guid: b699624f9cb441d182f366d9b3b7e6dd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_1_material.005
+    second: {fileID: 2100000, guid: dd4d6604e7b04cb4aff28efdcc5f09fb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_20_material.004
+    second: {fileID: 2100000, guid: 325ab488abb44a94a94aff11cc358a77, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_21_material.004
+    second: {fileID: 2100000, guid: 882da548079e4fd6956ce96f1a4eda69, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_22_material.005
+    second: {fileID: 2100000, guid: adb252cfd4a64ca7938754ec9f4134fa, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_23_material.005
+    second: {fileID: 2100000, guid: 826d5d540fe244c287f9d10a0a25a257, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_24_material.005
+    second: {fileID: 2100000, guid: e98184f187424278a4032652012ab711, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_27_material.004
+    second: {fileID: 2100000, guid: f0bed0e15a5945b2916d0e53da8a0e60, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_28_material.004
+    second: {fileID: 2100000, guid: b71965a2243a453bbec0171551f88a90, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_29_material.005
+    second: {fileID: 2100000, guid: 7a0000f7edf04e98b15c40b1e39b79ec, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_2_material.005
+    second: {fileID: 2100000, guid: e61aa8abde714fd3ab4c6bdb3728ce8c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_30_material.005
+    second: {fileID: 2100000, guid: e699ea92368348dd88cf5467e5515358, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_31_001_material.004
+    second: {fileID: 2100000, guid: f08319d7a7de460388001456b92a5335, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_31_material.004
+    second: {fileID: 2100000, guid: 2f8c802b2cb848cb98327ecb5f87fadd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_39_001_material.004
+    second: {fileID: 2100000, guid: 48b3fd3ccc244526b926212e6f209a04, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_39_material.004
+    second: {fileID: 2100000, guid: fc77d7c104524b22a55e6c7593aa1e77, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_3_material.005
+    second: {fileID: 2100000, guid: a31d9c1b8a0e473b97ddb90de22039f0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_42_001_material.004
+    second: {fileID: 2100000, guid: 4edfa4c5ae2b43698ddc06d42c7a533e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_42_002_material.004
+    second: {fileID: 2100000, guid: ef532eaa49fc4cd8af26e982aa24c9c8, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_42_003_material.004
+    second: {fileID: 2100000, guid: 0343e4ac3e1e4678ad97204544b63ab9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_42_004_material.004
+    second: {fileID: 2100000, guid: 516a6a23baec4f1e85279e0d24d84564, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_42_material.004
+    second: {fileID: 2100000, guid: 64556ff3666e424a9432a58a774c9308, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_4_material.005
+    second: {fileID: 2100000, guid: 52fe299abf3b48b187e8cecbd8ee65ba, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_5_material.005
+    second: {fileID: 2100000, guid: c820fcec31ef40be89104cdf1d820503, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_6_material.005
+    second: {fileID: 2100000, guid: 92d37b48fb81410b9cccb5114b89def2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_7_material.005
+    second: {fileID: 2100000, guid: ffb3df6a8ce04666b84cfa14b759735f, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_8_material.005
+    second: {fileID: 2100000, guid: a367975da85c4466850b411b6c9e3bef, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: tripo_part_9_material.005
+    second: {fileID: 2100000, guid: e34de6c61f384660a727e32abb499bc1, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
