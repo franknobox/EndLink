@@ -30,16 +30,16 @@
 
 ## 命名建议
 
-文件名建议使用稳定前缀：
+文件名建议使用稳定的资源类型前缀。角色和敌人模型已经由目录及对象 ID 表明类别，不再额外添加 `CH_` / `EN_` 前缀：
 
 | 类型 | 前缀 | 示例 |
 |---|---|---|
-| 角色模型 | `CH_` | `CH_Player_Main_Body.fbx` |
-| 敌人模型 | `EN_` | `EN_Aberrant_Wanderer_Body.fbx` |
+| 角色模型 | 无 | `Player_Main_Body.fbx` |
+| 敌人模型 | 无 | `APS01_Body.fbx` |
 | 场景物件 | `ENV_` | `ENV_DemoArena_Wall_A.fbx` |
 | 材质 | `MAT_` | `MAT_Player_Main_Body.mat` |
 | 贴图 | `T_` | `T_Player_Main_Body_BC.png` |
-| 视觉 Prefab | `PF_` | `PF_Enemy_Aberrant_Visual.prefab` |
+| 视觉 Prefab | `PF_` | `PF_APS01_Visual.prefab` |
 | 特效 | `VFX_` | `VFX_Hit_Overclock.prefab` |
 | UI 图标 | `UI_` | `UI_Action_Overclock.png` |
 
