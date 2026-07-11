@@ -60,3 +60,25 @@
 - `Lower Stop` 和 `Upper Stop` 必须是电梯根物体之外的固定 Transform；电梯只读取它们的世界 Y 高度，平台 X/Z 始终保持进入场景时的初始值。
 - 乘客 Trigger 所在 Layer 需要包含在玩家 `WorldInteractor` 的 `Interactable Layers` 中。
 - 第一版只支持上下两个停靠点，不处理多楼层、外部呼叫队列和电梯门状态机。
+
+<a id="feature-world-door"></a>
+
+## Feature: 通用开关门
+
+### 当前状态
+已完成第一版。
+
+### 功能说明
+- 继承 `WorldInteractable`，通过玩家现有 `F` 交互输入切换开启和关闭。
+- 支持本地坐标平移门和绕门板 Pivot 旋转的门。
+- 使用平滑缓入缓出运动，支持运行中再次交互反向。
+- 可选使用门板上的运动学 Rigidbody 驱动碰撞，也可在灰盒阶段直接移动 Transform。
+- 提供开门开始、完全开启、关门开始和完全关闭事件。
+
+### 对应脚本
+- `Assets/_EndLink/World/WorldDoor.cs`
+
+### 相关物体 / 配置
+- 推荐使用稳定的门根物体挂 `WorldDoor` 和交互 Trigger，独立门板子物体拖入 `Moving Part`。
+- 升降闸门选择 `Slide`，通过 `Open Local Offset` 设置开启偏移；平开门选择 `Rotate`，并把门板 Pivot 放在门轴位置。
+- 门框和活动门板不能是同一个不可分离的 ProBuilder Mesh，否则会整体移动。

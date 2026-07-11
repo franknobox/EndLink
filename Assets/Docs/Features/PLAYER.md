@@ -104,6 +104,7 @@
 - 支持根据玩家状态机和 `PartyCombatContext` 自动切换镜头距离。
 - 移动、攻击、技能、闪避、受击、死亡或处于战斗上下文时使用远景；脱战 Idle 时使用近景。
 - 脱战 Idle 持续 `1` 秒后开始缓慢拉近；移动或战斗持续 `0.5` 秒后开始较快拉远，避免短时状态切换造成镜头反复伸缩。
+- 启用 `CinemachineThirdPersonFollow` 内置避障，检测 `Default`、`Interactable` 和 `Environment` Layer；遇到障碍时快速拉近，离开障碍后平滑恢复距离。
 - 支持鼠标锁定，方便第三人称自由视角操作。
 
 对应脚本：
@@ -139,6 +140,7 @@
 - `verticalArmLength`：镜头高度和开阔感
 - `cameraSide`：左肩、右肩或居中
 - `fieldOfView`：视场角，影响画面开阔程度
+- `Avoid Obstacles`：镜头避障开关；当前半径为 `0.25`，进入碰撞阻尼为 `0.05`，离开碰撞阻尼为 `0.5`
 
 
 </details>
