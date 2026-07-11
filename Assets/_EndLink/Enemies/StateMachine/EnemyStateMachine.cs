@@ -87,6 +87,14 @@ namespace EndLink.Enemies
         [SerializeField, Min(0f)]
         private float combatAttackInnerOffset = 0.1f;
 
+        [Tooltip("释放一次技能前需要完整执行的普攻次数。大于 0 时优先使用固定计数规则；设为 0 时关闭计数并使用技能概率。")]
+        [SerializeField, Min(0)]
+        private int combatBasicAttacksBeforeSkill;
+
+        [Tooltip("未启用固定普攻计数时，每轮攻击同时满足普攻和技能可用时选择技能的概率。技能未配置或仍在冷却时会自动使用普攻。")]
+        [SerializeField, Range(0f, 1f)]
+        private float combatSkillChance = 0.35f;
+
         [Header("脱战与归位")]
         [Tooltip("敌人的归位参考点。为空时记录敌人创建时的世界坐标作为 Home。")]
         [SerializeField]
@@ -140,6 +148,14 @@ namespace EndLink.Enemies
         /// <summary>当前状态标识，方便 Inspector 和调试工具观察。</summary>
         public EnemyStateId CurrentStateId => _currentState?.StateId ?? EnemyStateId.None;
 
+        /// <summary>
+        /// 当前 Combat 内部行为阶段。敌人不在 Combat 大状态时返回 Approach，
+        /// 调用方应同时检查 CurrentStateId，避免把非战斗移动误判为战斗机动。
+        /// </summary>
+        public EnemyCombatPhase CurrentCombatPhase => _currentState is EnemyCombatState combatState
+            ? combatState.CurrentPhase
+            : EnemyCombatPhase.Approach;
+
         /// <summary>当前敌人关注或战斗的目标。</summary>
         public Transform CurrentTarget => _currentTarget;
 
@@ -184,6 +200,12 @@ namespace EndLink.Enemies
 
         /// <summary>Combat 状态接近攻击目标时，相对动作极限距离向内靠近的距离。</summary>
         public float CombatAttackInnerOffset => combatAttackInnerOffset;
+
+        /// <summary>释放一次技能前需要完整执行的普攻次数。0 表示改用概率规则。</summary>
+        public int CombatBasicAttacksBeforeSkill => Mathf.Max(0, combatBasicAttacksBeforeSkill);
+
+        /// <summary>未启用固定计数时，每轮攻击同时可选普攻和技能时使用技能的概率。</summary>
+        public float CombatSkillChance => Mathf.Clamp01(combatSkillChance);
 
         /// <summary>当前归属的敌人战斗协调器。为空时仍可按自身行为攻击，但不参与区域围攻限制。</summary>
         public EnemyCombatCoordinator CombatCoordinator => _combatCoordinator;
@@ -384,6 +406,7 @@ namespace EndLink.Enemies
         /// </summary>
         public void ResetRuntimeState()
         {
+            ResetCombatActionPattern();
             _currentState?.Exit();
             _currentState = null;
             _currentTarget = null;
@@ -536,6 +559,14 @@ namespace EndLink.Enemies
 
             EnemyStateId previousStateId = CurrentStateId;
 
+            if (nextStateId == EnemyStateId.Idle
+                || nextStateId == EnemyStateId.Alert
+                || nextStateId == EnemyStateId.Return
+                || nextStateId == EnemyStateId.Dead)
+            {
+                ResetCombatActionPattern();
+            }
+
             _currentState?.Exit();
             _currentState = nextState;
             _currentState.Enter();
@@ -548,6 +579,15 @@ namespace EndLink.Enemies
             }
 
             UpdateStateIndicator();
+        }
+
+        private void ResetCombatActionPattern()
+        {
+            if (_states.TryGetValue(EnemyStateId.Combat, out IEnemyState combatState)
+                && combatState is EnemyCombatState enemyCombatState)
+            {
+                enemyCombatState.ResetActionPattern();
+            }
         }
 
         private void HandleDamaged(int damage, CombatTagDefinition tag)

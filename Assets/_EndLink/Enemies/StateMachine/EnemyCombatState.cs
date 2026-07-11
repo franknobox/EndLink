@@ -20,6 +20,15 @@ namespace EndLink.Enemies
         /// <inheritdoc />
         public override EnemyStateId StateId => EnemyStateId.Combat;
 
+        /// <summary>当前 Combat 内部行为阶段，供动画桥接和调试读取。</summary>
+        public EnemyCombatPhase CurrentPhase => _combatBehavior.CurrentPhase;
+
+        /// <summary>重置固定普攻/技能循环计数。</summary>
+        public void ResetActionPattern()
+        {
+            _combatBehavior.ResetActionPattern();
+        }
+
         /// <inheritdoc />
         public override void Enter()
         {

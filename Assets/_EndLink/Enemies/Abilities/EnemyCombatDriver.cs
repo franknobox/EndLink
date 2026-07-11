@@ -14,11 +14,11 @@ namespace EndLink.Enemies
     public sealed class EnemyCombatDriver : MonoBehaviour, ICombatActionExecutor
     {
         [Header("动作配置")]
-        [Tooltip("敌人普通攻击动作。近战敌人的 Combat 行为会优先调用它。")]
+        [Tooltip("敌人普通攻击动作。基础 Combat 行为会在每轮攻击前和技能一起参与选择。")]
         [SerializeField]
         private CombatActionDefinition basicAttackAction;
 
-        [Tooltip("敌人技能动作。当前先预留，不会被基础 Combat 状态自动调用。")]
+        [Tooltip("敌人技能动作。基础 Combat 行为会按状态机配置的技能概率选择；未配置时只使用普通攻击。")]
         [SerializeField]
         private CombatActionDefinition skillAction;
 
@@ -149,6 +149,53 @@ namespace EndLink.Enemies
         public bool ExecuteBasicAttack(Transform target)
         {
             return TryExecute(basicAttackAction, target);
+        }
+
+        /// <summary>
+        /// 为下一轮基础战斗行为选择普攻或技能。
+        /// 两者都可用时按技能概率选择；只有一个可用时直接使用该动作；
+        /// 都在冷却时返回更早就绪的动作，供 AI 提前按该动作的距离进行定位。
+        /// </summary>
+        public CombatActionDefinition SelectCombatAction(float skillChance, bool preferSkill = false)
+        {
+            if (preferSkill && skillAction != null)
+            {
+                return skillAction;
+            }
+
+            bool basicReady = CanExecute(basicAttackAction);
+            bool skillReady = CanExecute(skillAction);
+
+            if (basicReady && skillReady)
+            {
+                return Random.value < Mathf.Clamp01(skillChance)
+                    ? skillAction
+                    : basicAttackAction;
+            }
+
+            if (skillReady)
+            {
+                return skillAction;
+            }
+
+            if (basicReady)
+            {
+                return basicAttackAction;
+            }
+
+            if (basicAttackAction == null)
+            {
+                return skillAction;
+            }
+
+            if (skillAction == null)
+            {
+                return basicAttackAction;
+            }
+
+            return GetCooldownRemaining(skillAction) < GetCooldownRemaining(basicAttackAction)
+                ? skillAction
+                : basicAttackAction;
         }
 
         /// <summary>

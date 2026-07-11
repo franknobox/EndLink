@@ -36,12 +36,15 @@
 |---|---|---|
 | 角色模型 | 无 | `Player_Main_Body.fbx` |
 | 敌人模型 | 无 | `APS01_Body.fbx` |
+| 动画 FBX | `ANI_` | `ANI_Attack_PunchRight.fbx` |
 | 场景物件 | `ENV_` | `ENV_DemoArena_Wall_A.fbx` |
 | 材质 | `MAT_` | `MAT_Player_Main_Body.mat` |
 | 贴图 | `T_` | `T_Player_Main_Body_BC.png` |
 | 视觉 Prefab | `PF_` | `PF_APS01_Visual.prefab` |
 | 特效 | `VFX_` | `VFX_Hit_Overclock.prefab` |
 | UI 图标 | `UI_` | `UI_Action_Overclock.png` |
+
+动画 FBX 内导入后的 Clip 直接使用动作语义名称，不重复保留 `ANI_` 前缀，例如 `Attack_PunchRight`。
 
 贴图后缀建议：
 

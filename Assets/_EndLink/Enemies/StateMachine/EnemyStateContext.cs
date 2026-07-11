@@ -66,6 +66,12 @@ namespace EndLink.Enemies
         /// <summary>Combat 状态接近攻击目标时，相对动作极限距离向内靠近的距离。</summary>
         public float CombatAttackInnerOffset => StateMachine.CombatAttackInnerOffset;
 
+        /// <summary>释放一次技能前需要完整执行的普攻次数。0 表示改用概率规则。</summary>
+        public int CombatBasicAttacksBeforeSkill => StateMachine.CombatBasicAttacksBeforeSkill;
+
+        /// <summary>未启用固定计数时，每轮攻击同时可选普攻和技能时使用技能的概率。</summary>
+        public float CombatSkillChance => StateMachine.CombatSkillChance;
+
         /// <summary>当前归属的敌人战斗协调器。为空时不参与区域围攻限制。</summary>
         public EnemyCombatCoordinator CombatCoordinator => StateMachine.CombatCoordinator;
 

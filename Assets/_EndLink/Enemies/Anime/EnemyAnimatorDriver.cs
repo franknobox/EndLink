@@ -36,6 +36,10 @@ namespace EndLink.Enemies
         [SerializeField]
         private string isMovingParameter = CombatAnimatorParams.IsMoving;
 
+        [Tooltip("当前移动是否属于战斗观察或攻击准备机动使用的 Bool 参数名。可用于在追击 Run 和观察横移 Move 之间切换。")]
+        [SerializeField]
+        private string isCombatManeuverParameter = CombatAnimatorParams.IsCombatManeuver;
+
         [Tooltip("当前敌人大状态 ID 使用的 Int 参数名。数值对应 EnemyStateId。为空则不写入。")]
         [SerializeField]
         private string stateIdParameter = CombatAnimatorParams.StateId;
@@ -141,9 +145,13 @@ namespace EndLink.Enemies
             EnemyStateId currentStateId = _stateMachine.CurrentStateId;
             float currentSpeed = motor != null ? motor.CurrentSpeed : 0f;
             bool isMoving = motor != null && motor.IsMoving;
+            bool isCombatManeuver = currentStateId == EnemyStateId.Combat
+                && isMoving
+                && IsCombatManeuverPhase(_stateMachine.CurrentCombatPhase);
 
             SetFloatIfExists(moveSpeedParameter, currentSpeed);
             SetBoolIfExists(isMovingParameter, isMoving);
+            SetBoolIfExists(isCombatManeuverParameter, isCombatManeuver);
             SetIntegerIfExists(stateIdParameter, (int)currentStateId);
             SetBoolIfExists(isDeadParameter, currentStateId == EnemyStateId.Dead);
 
@@ -218,6 +226,12 @@ namespace EndLink.Enemies
             SetIntegerIfExists(actionIdParameter, actionId);
             SetIntegerIfExists(actionTypeParameter, (int)actionDefinition.ActionType);
             SetTriggerIfExists(actionTriggerParameter);
+        }
+
+        private static bool IsCombatManeuverPhase(EnemyCombatPhase phase)
+        {
+            return phase == EnemyCombatPhase.Position
+                || phase == EnemyCombatPhase.Prepare;
         }
 
         private void TriggerStateEnter(EnemyStateId stateId)

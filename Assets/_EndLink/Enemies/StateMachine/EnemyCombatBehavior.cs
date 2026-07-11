@@ -28,7 +28,7 @@ namespace EndLink.Enemies
 
     /// <summary>
     /// 敌人单人战斗行为状态机。
-    /// 只决定 Combat 内部何时移动、停位和请求普通攻击；
+    /// 只决定 Combat 内部何时移动、停位和请求普攻或技能；
     /// 脱战、受击、死亡和返场仍由外层 EnemyStateMachine 管理。
     /// </summary>
     public sealed class EnemyCombatBehavior
@@ -54,6 +54,8 @@ namespace EndLink.Enemies
         private bool _isPrepareManeuverStarted;
         private bool _hasSoftPosition;
         private bool _loggedMissingHitbox;
+        private CombatActionDefinition _selectedAction;
+        private int _completedBasicAttackCount;
 
         public EnemyCombatBehavior(EnemyStateContext context)
         {
@@ -84,6 +86,7 @@ namespace EndLink.Enemies
             _isPrepareManeuverStarted = false;
             _hasSoftPosition = false;
             _loggedMissingHitbox = false;
+            _selectedAction = null;
             CurrentPhase = EnemyCombatPhase.Approach;
         }
 
@@ -103,7 +106,15 @@ namespace EndLink.Enemies
             _hasSoftPosition = false;
             _isObservationMoving = false;
             _isPrepareManeuverStarted = false;
+            _selectedAction = null;
             CurrentPhase = EnemyCombatPhase.Approach;
+        }
+
+        /// <summary>清空固定普攻/技能循环计数，用于脱战、死亡和完整运行时重置。</summary>
+        public void ResetActionPattern()
+        {
+            _completedBasicAttackCount = 0;
+            _selectedAction = null;
         }
 
         /// <summary>推进一次 Combat 内部战斗决策。</summary>
@@ -116,7 +127,7 @@ namespace EndLink.Enemies
             }
 
             Transform target = _context.CurrentTarget;
-            if (!TryGetBasicAttackAction(out CombatActionDefinition action))
+            if (!TryGetCombatAction(out CombatActionDefinition action))
             {
                 CurrentPhase = EnemyCombatPhase.Approach;
                 TickChaseOnly(target, deltaTime);
@@ -349,6 +360,8 @@ namespace EndLink.Enemies
             }
 
             ReleaseAttackSlot();
+            CompleteActionPattern(action);
+            _selectedAction = null;
             if (UsesSoftPositioning())
             {
                 _hasSoftPosition = false;
@@ -781,10 +794,42 @@ namespace EndLink.Enemies
             _context.Motor?.MoveTo(approachPoint, stopDistance, deltaTime);
         }
 
-        private bool TryGetBasicAttackAction(out CombatActionDefinition action)
+        private bool TryGetCombatAction(out CombatActionDefinition action)
         {
-            action = _context.CombatDriver != null ? _context.CombatDriver.BasicAttackAction : null;
+            if (_selectedAction == null && _context.CombatDriver != null)
+            {
+                int basicAttacksBeforeSkill = _context.CombatBasicAttacksBeforeSkill;
+                bool preferSkill = basicAttacksBeforeSkill > 0
+                    && _completedBasicAttackCount >= basicAttacksBeforeSkill;
+                _selectedAction = _context.CombatDriver.SelectCombatAction(
+                    _context.CombatSkillChance,
+                    preferSkill);
+            }
+
+            action = _selectedAction;
             return action != null;
+        }
+
+        private void CompleteActionPattern(CombatActionDefinition completedAction)
+        {
+            if (completedAction == null)
+            {
+                return;
+            }
+
+            switch (completedAction.ActionType)
+            {
+                case CombatActionType.BasicAttack:
+                    int requiredBasicAttacks = _context.CombatBasicAttacksBeforeSkill;
+                    _completedBasicAttackCount = requiredBasicAttacks > 0
+                        ? Mathf.Min(_completedBasicAttackCount + 1, requiredBasicAttacks)
+                        : 0;
+                    break;
+
+                case CombatActionType.Skill:
+                    _completedBasicAttackCount = 0;
+                    break;
+            }
         }
 
         private float GetSurfaceDistance(Transform target)

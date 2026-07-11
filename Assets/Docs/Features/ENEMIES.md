@@ -74,7 +74,7 @@
 
 功能说明：
 - `EnemyAnimatorDriver` 负责把敌人移动速度、移动状态、敌人大状态和战斗动作开始信息同步到 Animator，不决定 AI、状态切换或攻击判定。
-- 连续同步 `MoveSpeed`、`IsMoving`、`StateId`、`IsDead`；进入 `Hit` / `Dead` 时分别触发 `HitTrigger` / `DeadTrigger`。
+- 连续同步 `MoveSpeed`、`IsMoving`、`IsCombatManeuver`、`StateId`、`IsDead`；其中 `IsCombatManeuver` 用于区分追击 Run 和观察/准备阶段的横移 Move。
 - `EnemyCombatDriver` 成功开始动作时通过本地事件通知桥接层，写入 `ActionId`、`ActionType` 并触发 `ActionTrigger`，短动作也不会依赖逐帧轮询捕获。
 - Animator、移动能力和战斗执行器均支持自动查找；特殊敌人没有移动或攻击能力时，对应引用可以留空。
 - Animator Controller 缺少某个协议参数时会跳过写入，可选开启一次性警告排查配置。
@@ -94,6 +94,7 @@
 Animator 参数：
 - `MoveSpeed`：Float，当前水平移动速度
 - `IsMoving`：Bool，当前是否正在移动
+- `IsCombatManeuver`：Bool，当前是否正在执行 `Position` / `Prepare` 阶段的观察或攻击准备机动
 - `StateId`：Int，对应 `EnemyStateId`
 - `IsDead`：Bool，当前是否处于 Dead
 - `ActionId`：Int，当前动作 ActionId 字符串的 Animator Hash
@@ -118,14 +119,16 @@ Animator 参数：
 - `EnemyTargetSensor` 在 `Idle` / `Alert` 阶段建立目标；进入 `Combat` / `Hit` 后由状态机持有当前战斗目标，Sensor 仅在该目标失效时重新扫描接管。
 - 自动索敌可以在 `EnemyStateMachine` 中关闭，关闭后不会主动触发 `Alert` / `Combat`。
 - `Combat` 通过轻量 `EnemyCombatBehavior` 推进基础战斗行为，当前包含 `Approach`、`Position`、`Prepare`、`Engage`、`Attack`、`Recover`、`Reposition` 七个内部阶段。
-- `Approach` 负责进入战斗位置，`Position` 负责观察和等待许可，`Prepare` 在获得许可后完成攻击预备机动，`Engage` 接近动作距离，`Attack` 提交普通攻击，`Recover` 等待动作恢复结束，`Reposition` 负责攻击后或站位失效时重新归位。
-- 定位阶段使用距离滞回：进入距离由 Basic Attack 的 `EffectiveAttackRange - combatAttackInnerOffset` 决定，退出距离由 `EffectiveAttackRange + combatAttackRangeTolerance` 决定，避免敌人在攻击边界反复切换移动和停位。
+- `Approach` 负责进入战斗位置，`Position` 负责观察和等待许可，`Prepare` 在获得许可后完成攻击预备机动，`Engage` 接近动作距离，`Attack` 提交本轮选中的普攻或技能，`Recover` 等待动作恢复结束，`Reposition` 负责攻击后或站位失效时重新归位。
+- 每轮攻击会从 `EnemyCombatDriver` 配置的普攻和技能中选择一次并保持到恢复结束；`combatBasicAttacksBeforeSkill > 0` 时优先按固定普攻次数触发技能，设为 `0` 时改用 `combatSkillChance` 概率规则。
+- 固定计数只在动作完整结束后更新，被受击打断不计数；短暂进入 `Hit` 会保留计数，脱战、归位、死亡或完整重置时清零。固定轮到技能但技能仍在冷却时，敌人继续观察等待且不会提前占用攻击许可。
+- 定位阶段使用距离滞回：进入距离由本轮动作的 `EffectiveAttackRange - combatAttackInnerOffset` 决定，退出距离由 `EffectiveAttackRange + combatAttackRangeTolerance` 决定，避免敌人在攻击边界反复切换移动和停位。
 - `Combat` 的最大追击距离以出生区域 `Home` 为圆心计算，不再使用敌人与当前目标的距离；越界后进入 `Return`。
 - 战斗目标失效后会等待 `lostTargetDelay`，期间允许 Sensor 重新获取目标；延迟结束仍无目标时进入 `Return`。
 - `Return` 会清除战斗目标、取消当前动作并返回 `Home`，抵达出生区域后恢复 `Idle`。
 - Return 开始时仍处于警戒范围内的玩家不会立刻重新触发；玩家离开后再次进入范围会转入 `Alert`，警戒失败则继续 Return，警戒完成则重新进入 Combat。
-- 没有配置 `EnemyCombatDriver` 或 Basic Attack 动作的敌人仍保持只追击和面向目标，方便制作不会攻击的测试敌人。
-- 当前行为层只处理敌人面对单个目标的基础普通攻击，不包含技能选择和复杂撤退；后续可继续扩展动作选择，或整体替换为行为树。
+- 没有配置 `EnemyCombatDriver`，或普攻与技能都未配置的敌人，仍保持只追击和面向目标，方便制作不会攻击的测试敌人。
+- 当前行为层只处理敌人面对单个目标的基础普攻/技能选择，不包含复杂技能条件或连招；后续可继续扩展决策规则，或整体替换为行为树。
 - `Hit` 作为独立大状态处理受击打断，不放进 Combat 行为树，方便后续加入硬直、霸体、击倒等规则。
 - 敌人受到有效伤害时，会优先把当前战斗目标切换为伤害来源；轻击只让敌人接战，重击才进入 `Hit` 状态并短暂停止移动。
 - `Hit` 状态触发带有短冷却，避免多段 Hitbox 在极短时间内反复刷新受击打断。
@@ -170,6 +173,8 @@ Animator 参数：
 - `combatChaseStopDistance`：Combat 追击时保留的目标表面间隔，实际停止距离会额外加上敌人自身碰撞半径
 - `combatAttackRangeTolerance`：Position 退出攻击范围时向外增加的容差，用于距离滞回
 - `combatAttackInnerOffset`：Approach 进入 Position 前相对动作极限距离向内靠近的距离
+- `combatBasicAttacksBeforeSkill`：大于 0 时，完整执行指定次数普攻后固定释放一次技能；设为 0 时关闭计数
+- `combatSkillChance`：未启用固定计数时，每轮普攻和技能都可用时选择技能的概率
 - `homePoint`：敌人的归位参考点；留空时自动记录创建位置
 - `maxChaseRadius`：相对 Home 的最大水平追击半径；小于等于 0 表示不限制
 - `lostTargetDelay`：战斗目标失效后等待重新获取目标的时间
@@ -248,7 +253,7 @@ Animator 参数：
 - 敌人受到战斗击退时会停止当前移动和 NavMesh 路径，通过 `CombatKnockbackMotion` 逐帧衰减后退，并持续同步 Agent 位置。
 - `EnemyCombatDriver` 是敌人战斗执行器，按 `CombatActionDefinition` 生成 Hitbox、记录冷却并广播动作开始事件。
 - `EnemyCombatDriver` 暴露当前动作、执行阶段和取消入口；完整运行时重置会同时清理当前动作与动作冷却。
-- `EnemyCombatDriver` 当前由 `EnemyCombatBehavior` 的 `Position` 阶段请求执行 Basic Attack，Driver 仍只负责动作时序、Hitbox、冷却和事件。
+- `EnemyCombatDriver` 提供普通攻击和技能两个动作槽；`EnemyCombatBehavior` 每轮按可用性和技能概率选择动作，Driver 仍只负责动作时序、Hitbox、冷却和事件。
 
 对应脚本：
 - `Assets/_EndLink/Enemies/Abilities/EnemyMotorBase.cs`
