@@ -26,9 +26,8 @@ namespace EndLink.Combat
     /// <summary>
     /// 战斗动作配置。
     /// 用 ScriptableObject 描述一次普通攻击、技能、连携技或终链奥义所需的基础数据。
-    /// 当前第一版已接入 startup / active / recovery：
-    /// startup 控制动作效果何时真正生效，active 会作为标准近战/驻留 Hitbox 的运行时有效段生命周期，
-    /// projectile 等特殊类型仍可保留自己的寿命规则；recovery 控制动作结束前的剩余锁定时间。
+    /// DataDriven 模式使用 startup / active / recovery 推进动作；AnimationEventDriven 模式由动画事件
+    /// 控制判定开始、判定结束、取消窗口和动作结束，数据总时长作为事件缺失时的安全超时。
     /// </summary>
     [CreateAssetMenu(
         fileName = "CombatAction_",
@@ -90,7 +89,7 @@ namespace EndLink.Combat
         private float synergyGainOnLink;
 
         [Header("冷却与时序")]
-        [Tooltip("动作时序来源。DataDriven 使用动作数据中的前摇/有效/后摇；AnimationEventDriven 预留给后续动画事件驱动。当前 Driver 尚未接入动画事件模式。")]
+        [Tooltip("动作时序来源。DataDriven 使用动作数据中的前摇/有效/后摇；AnimationEventDriven 等待动画事件控制判定与动作结束，数据总时长作为安全超时。")]
         [SerializeField]
         private CombatActionTimingSource timingSource = CombatActionTimingSource.DataDriven;
 
@@ -98,15 +97,15 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float cooldown = 0.45f;
 
-        [Tooltip("前摇时间。表示输入成立后到命中判定出现前的时间。")]
+        [Tooltip("前摇时间。DataDriven 模式表示判定出现前的时间；动画事件模式下参与安全超时总时长。")]
         [SerializeField, Min(0f)]
         private float startupTime = 0.1f;
 
-        [Tooltip("有效时间。第一版会在运行时覆盖标准近战/驻留 Hitbox 的本次生命周期，用来表达判定持续段；Projectile 等特殊类型可保留自身寿命规则。")]
+        [Tooltip("有效时间。DataDriven 模式会覆盖标准近战/驻留 Hitbox 的生命周期；动画事件模式由 HitboxStart/HitboxEnd 控制，Projectile 始终保留自身寿命规则。")]
         [SerializeField, Min(0.01f)]
         private float activeTime = 0.2f;
 
-        [Tooltip("后摇时间。表示命中判定结束后到动作完全结束的时间。")]
+        [Tooltip("后摇时间。DataDriven 模式表示判定结束后的锁定时间；动画事件模式下参与安全超时总时长。")]
         [SerializeField, Min(0f)]
         private float recoveryTime = 0.15f;
 

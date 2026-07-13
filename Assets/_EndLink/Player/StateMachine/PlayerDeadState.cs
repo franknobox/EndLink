@@ -15,6 +15,11 @@ namespace EndLink.Core
 
         public override PlayerStateId StateId => PlayerStateId.Dead;
 
+        public override void Enter()
+        {
+            Context.CombatDriver?.CancelCurrentAction();
+        }
+
         public override void Tick(float deltaTime)
         {
             Context.ConsumeJumpPressed();

@@ -12,7 +12,7 @@ namespace EndLink.Core
     public sealed class CombatAnimationEventReceiver : MonoBehaviour
     {
         [Header("监听目标")]
-        [Tooltip("监听者搜索根节点。为空时使用当前物体。通常填角色根物体。")]
+        [Tooltip("监听者搜索根节点。为空时先搜索当前物体及子物体，再沿父级查找最近的角色 Driver。")]
         [SerializeField]
         private GameObject listenerRoot;
 
@@ -27,6 +27,11 @@ namespace EndLink.Core
             RefreshListeners();
         }
 
+        private void OnEnable()
+        {
+            RefreshListeners();
+        }
+
         /// <summary>
         /// 刷新监听者列表。
         /// 动态添加 Driver、状态机或桥接组件后，可以手动调用一次。
@@ -35,19 +40,46 @@ namespace EndLink.Core
         {
             _listeners.Clear();
 
-            GameObject root = listenerRoot != null ? listenerRoot : gameObject;
+            if (listenerRoot != null)
+            {
+                CollectListeners(listenerRoot);
+                return;
+            }
+
+            CollectListeners(gameObject);
+            if (_listeners.Count > 0)
+            {
+                return;
+            }
+
+            // Animator 和事件接收器通常位于 Visuals 子物体，而 Driver 位于角色根物体。
+            // 未显式指定监听根时沿父级查找，找到最近的一层监听者后停止，避免扫描其它角色。
+            Transform current = transform.parent;
+            while (current != null && _listeners.Count == 0)
+            {
+                CollectListeners(current.gameObject, false);
+                current = current.parent;
+            }
+        }
+
+        private void CollectListeners(GameObject root, bool allowChildren = true)
+        {
             if (root == null)
             {
                 return;
             }
 
-            if (includeChildren)
+            MonoBehaviour[] behaviours = allowChildren && includeChildren
+                ? root.GetComponentsInChildren<MonoBehaviour>(true)
+                : root.GetComponents<MonoBehaviour>();
+
+            for (int i = 0; i < behaviours.Length; i++)
             {
-                root.GetComponentsInChildren(true, _listeners);
-            }
-            else
-            {
-                root.GetComponents(_listeners);
+                if (behaviours[i] is ICombatAnimationEventListener listener
+                    && !_listeners.Contains(listener))
+                {
+                    _listeners.Add(listener);
+                }
             }
         }
 

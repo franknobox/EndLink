@@ -12,6 +12,11 @@ namespace EndLink.Ally
 
         public override AllyStateId StateId => AllyStateId.LinkDown;
 
+        public override void Enter()
+        {
+            Context.CombatDriver?.CancelCurrentAction();
+        }
+
         public override void Tick(float deltaTime)
         {
         }

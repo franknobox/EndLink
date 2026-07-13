@@ -48,13 +48,13 @@
 - 玩家、队友和敌人的动作执行仍会直接 `Instantiate` Hitbox。
 - Hitbox 生命周期结束后仍直接 `Destroy`，高频动作或多敌人压测时可能带来 GC 和 CPU 抖动。
 - 后续需要建立 Hitbox 池化和统一创建入口，优先覆盖近战波与远程飞行 Hitbox。
-- 接入 Animator 后，允许动画事件覆盖或校正 `CombatActionDefinition` 的数据时序。
+- 动画事件时序已接入；池化时需要保留普通判定可被动作结束/打断立即回收、Projectile 独立存活的区别。
 
 ### CombatDriver 重复
 
 - `PlayerCombatDriver`、`AllyCombatDriver`、`EnemyCombatDriver` 都包含动作冷却、Hitbox 生成、事件上报和动作时序推进等相似逻辑。
-- 当前玩家、队友、敌人的动作表现和后续动画事件接线仍未完全稳定，暂不抽基类。
-- 后续做 Hitbox 池化、动画事件和敌人攻击表现统一时，再抽 `CombatExecutionUtility` 或 `CombatDriverBase`。
+- 第一版动画事件接线已完成，但 Hitbox Socket、局部偏移和动作表现仍未稳定，暂不抽基类。
+- 后续做 Hitbox 池化和空间对齐时，再抽 `CombatExecutionUtility` 或 `CombatDriverBase`。
 
 ### Camera.main 与全局查找收敛
 

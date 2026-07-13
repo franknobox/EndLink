@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using EndLink.Core;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -46,7 +47,7 @@ namespace EndLink.Combat
         private int combatTagStackCount = 1;
 
         [Header("生命周期")]
-        [Tooltip("Hitbox 默认自动销毁时间。标准近战/驻留判定若通过 CombatActionDefinition 生成，运行时会优先使用该动作的 ActiveTime 覆盖本次生命周期。")]
+        [Tooltip("Hitbox 默认自动销毁时间。数据驱动动作的普通判定使用 ActiveTime；动画驱动动作由动画事件关闭，并保留动作总时长作为防泄漏超时。")]
         [InspectorName("Lifetime")]
         [SerializeField, Min(0f)]
         private float lifetime = 0.2f;
@@ -151,7 +152,7 @@ namespace EndLink.Combat
 
         /// <summary>
         /// 运行时配置 Hitbox 参数，使用新的 CombatTagDefinition 标签通道。
-        /// 若携带 CombatActionDefinition，会同步记录该动作；标准近战/驻留判定会把 ActiveTime 作为本次运行时生命周期。
+        /// 若携带 CombatActionDefinition，会同步记录该动作；数据驱动判定使用 ActiveTime，动画驱动判定由外部事件关闭。
         /// </summary>
         public void Configure(
             float damage,
@@ -197,14 +198,23 @@ namespace EndLink.Combat
         }
 
         /// <summary>
-        /// 决定该类型的 Hitbox 是否接受动作 ActiveTime 作为运行时生命周期覆盖。
-        /// 标准近战/驻留判定默认接受，特殊类型可覆盖后回退到 prefab 自身寿命规则。
+        /// 决定该类型的 Hitbox 如何覆盖 prefab 生命周期。
+        /// 数据驱动使用 ActiveTime，动画驱动保留安全超时；特殊类型可覆盖并使用自身寿命规则。
         /// </summary>
         protected virtual float ResolveRuntimeLifetimeOverride(CombatActionDefinition actionDefinition)
         {
-            return actionDefinition != null
-                ? Mathf.Max(0f, actionDefinition.ActiveTime)
-                : -1f;
+            if (actionDefinition == null)
+            {
+                return -1f;
+            }
+
+            if (actionDefinition.TimingSource == CombatActionTimingSource.AnimationEventDriven)
+            {
+                // 动画事件应主动结束普通判定。这里保留较宽松的超时，避免漏配 HitboxEnd 时判定永久存在。
+                return Mathf.Max(0.5f, actionDefinition.TotalDuration + 0.5f);
+            }
+
+            return Mathf.Max(0f, actionDefinition.ActiveTime);
         }
 
         protected virtual void OnTriggerEnter(Collider other)

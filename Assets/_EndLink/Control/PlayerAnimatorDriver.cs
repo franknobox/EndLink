@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using EndLink.Combat;
 using UnityEngine;
 
 namespace EndLink.Core
@@ -34,6 +35,19 @@ namespace EndLink.Core
         [SerializeField]
         private string isDeadParameter = "IsDead";
 
+        [Header("动作参数")]
+        [Tooltip("动作标识 Int 参数名。写入 ActionId 字符串的 Animator Hash；为空则不写入。")]
+        [SerializeField]
+        private string actionIdParameter = CombatAnimatorParams.ActionId;
+
+        [Tooltip("动作类型 Int 参数名。数值对应 CombatActionType；为空则不写入。")]
+        [SerializeField]
+        private string actionTypeParameter = CombatAnimatorParams.ActionType;
+
+        [Tooltip("任意战斗动作成功开始时触发的通用 Trigger。存在该参数时，Attack/Skill 优先使用这套动作协议。")]
+        [SerializeField]
+        private string actionTriggerParameter = CombatAnimatorParams.ActionTrigger;
+
         [Header("状态触发器")]
         [Tooltip("进入 Attack 状态时触发的 Trigger 参数名。为空则不触发。")]
         [SerializeField]
@@ -63,6 +77,7 @@ namespace EndLink.Core
         private readonly HashSet<int> _animatorParameterHashes = new();
         private readonly HashSet<int> _warnedMissingParameterHashes = new();
         private PlayerStateMachine _stateMachine;
+        private PlayerCombatDriver _combatDriver;
         private CharacterController _characterController;
         private PlayerStateId _lastStateId = PlayerStateId.None;
 
@@ -75,6 +90,7 @@ namespace EndLink.Core
         private void Awake()
         {
             _stateMachine = GetComponent<PlayerStateMachine>();
+            _combatDriver = GetComponent<PlayerCombatDriver>();
             _characterController = GetComponent<CharacterController>();
 
             if (animator == null)
@@ -82,7 +98,30 @@ namespace EndLink.Core
                 animator = GetComponentInChildren<Animator>();
             }
 
+            EnsureAnimationEventReceiver();
             RebuildParameterCache();
+        }
+
+        private void OnEnable()
+        {
+            if (_combatDriver == null)
+            {
+                _combatDriver = GetComponent<PlayerCombatDriver>();
+            }
+
+            if (_combatDriver != null)
+            {
+                _combatDriver.ActionStarted -= HandleActionStarted;
+                _combatDriver.ActionStarted += HandleActionStarted;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (_combatDriver != null)
+            {
+                _combatDriver.ActionStarted -= HandleActionStarted;
+            }
         }
 
         private void OnValidate()
@@ -105,6 +144,7 @@ namespace EndLink.Core
         public void SetAnimator(Animator targetAnimator)
         {
             animator = targetAnimator;
+            EnsureAnimationEventReceiver();
             RebuildParameterCache();
         }
 
@@ -166,10 +206,16 @@ namespace EndLink.Core
             switch (stateId)
             {
                 case PlayerStateId.Attack:
-                    SetTriggerIfExists(attackTriggerParameter);
+                    if (!HasParameter(actionTriggerParameter))
+                    {
+                        SetTriggerIfExists(attackTriggerParameter);
+                    }
                     break;
                 case PlayerStateId.Skill:
-                    SetTriggerIfExists(skillTriggerParameter);
+                    if (!HasParameter(actionTriggerParameter))
+                    {
+                        SetTriggerIfExists(skillTriggerParameter);
+                    }
                     break;
                 case PlayerStateId.Dodge:
                     SetTriggerIfExists(dodgeTriggerParameter);
@@ -181,6 +227,43 @@ namespace EndLink.Core
                     SetTriggerIfExists(deadTriggerParameter);
                     break;
             }
+        }
+
+        private void HandleActionStarted(CombatActionDefinition actionDefinition)
+        {
+            if (animator == null || actionDefinition == null)
+            {
+                return;
+            }
+
+            int actionId = string.IsNullOrWhiteSpace(actionDefinition.ActionId)
+                ? 0
+                : Animator.StringToHash(actionDefinition.ActionId);
+
+            SetIntegerIfExists(actionIdParameter, actionId);
+            SetIntegerIfExists(actionTypeParameter, (int)actionDefinition.ActionType);
+            SetTriggerIfExists(actionTriggerParameter);
+        }
+
+        private bool HasParameter(string parameterName)
+        {
+            return !string.IsNullOrWhiteSpace(parameterName)
+                && _animatorParameterHashes.Contains(Animator.StringToHash(parameterName));
+        }
+
+        private void EnsureAnimationEventReceiver()
+        {
+            if (animator == null)
+            {
+                return;
+            }
+
+            if (!animator.TryGetComponent(out CombatAnimationEventReceiver receiver))
+            {
+                receiver = animator.gameObject.AddComponent<CombatAnimationEventReceiver>();
+            }
+
+            receiver.RefreshListeners();
         }
 
         private void SetFloatIfExists(string parameterName, float value)

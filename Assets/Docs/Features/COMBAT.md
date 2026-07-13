@@ -134,7 +134,8 @@
 - 主控、队友和敌人后续可以共用同一套动作类型，释放者来源应由后续战斗事件数据携带。
 - 动作配置包含固定伤害 `FlatDamage`、攻击力倍率 `AtkPowerMultiplier`、伤害类型、击退、`CombatTagDefinition` 命中标签、标签持续时间、标签层数、连携协同率收益、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置和 AI 有效攻击距离。
 - 动作伤害基础公式为 `FlatDamage + AttackPower × AtkPowerMultiplier`，因此可配置纯固定伤害、纯倍率伤害或两者混合。
-- 动作配置包含 `TimingSource`：默认 `DataDriven` 使用 `startup / active / recovery` 数据推进；`AnimationEventDriven` 预留给后续 Animator 事件驱动，当前 Driver 尚未接入该模式。
+- 动作配置包含 `TimingSource`：`DataDriven` 使用 `startup / active / recovery` 推进；`AnimationEventDriven` 由动画事件控制判定开始、结束、取消窗口和动作结束。
+- 动画事件模式仍使用数据总时长作为安全超时；缺少 `ActionEnd` 时会结束动作并警告，缺少 `HitboxStart` 时不会自动补一次命中。
 - `SynergyGainOnLink` 只在动作类型为 `LinkAttack` 且连携技成功释放时由 `PartyUltimateContext` 读取，用于提升全队终链奥义协同率。
 
 对应脚本：
@@ -161,9 +162,10 @@
 <summary>展开详情</summary>
 
 补充更新：
-- `PlayerCombatDriver`、`AllyCombatDriver`、`EnemyCombatDriver` 已接入第一版 `startup / active / recovery` 时序推进。
-- 动作请求成立后不会立刻生成 Hitbox，而是先进入 `startup`，跨过前摇边界时再真正提交一次动作效果。
-- 当前仍由各 Driver 自己持有时序、生成 Hitbox 和记录冷却；后续如果再做池化和动画事件，再考虑继续抽公共层。
+- `PlayerCombatDriver`、`AllyCombatDriver`、`EnemyCombatDriver` 同时支持数据时序和动画事件时序。
+- 数据时序跨过 `startup` 后生成判定；动画时序响应 `HitboxStart`、`HitboxEnd`、`CanCancel` 和 `ActionEnd`。
+- 动作被受击、死亡、状态退出或对象禁用打断时，会清理动作运行时和普通驻留 Hitbox；已经发射的 Projectile 继续独立运行。
+- 当前仍由各 Driver 自己持有时序、生成 Hitbox 和记录冷却；后续结合池化与 Hitbox Socket 稳定后再抽公共层。
 
 功能说明：
 - `ICombatActionExecutor` 统一提供 `CanExecute`、`TryExecute`、`GetCooldownRemaining` 和 `GetCooldownNormalized`。
@@ -175,7 +177,7 @@
 
 对应脚本：
 - `Assets/_EndLink/Combat/ICombatActionExecutor.cs`
-- `Assets/_EndLink/Player/PlayerCombatDriver.cs`
+- `Assets/_EndLink/Player/ActCombat/PlayerCombatDriver.cs`
 - `Assets/_EndLink/Ally/AllyCombatDriver.cs`
 - `Assets/_EndLink/Enemies/Abilities/EnemyCombatDriver.cs`
 - `Assets/_EndLink/UI/UICombatActionSlot.cs`
@@ -346,7 +348,8 @@
 <summary>展开详情</summary>
 
 补充更新：
-- 标准近战/驻留 Hitbox 通过 `CombatActionDefinition` 生成时，会优先读取该动作的 `ActiveTime` 作为本次运行时生命周期。
+- 数据驱动的标准近战/驻留 Hitbox 使用动作 `ActiveTime` 作为本次生命周期。
+- 动画驱动的标准 Hitbox 由 `HitboxEnd` 或 `ActionEnd` 主动关闭，同时保留动作总时长后的防泄漏超时。
 - `HitboxProjectile` 不读取动作 `ActiveTime`，仍使用 prefab 自身的 `lifetime` 与 `maxDistance` 控制飞行寿命。
 - 没有动作上下文时，Hitbox 仍回退使用 prefab 自身的 `lifetime`，方便独立测试和特殊用法。
 

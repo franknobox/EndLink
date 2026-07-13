@@ -7,8 +7,8 @@ namespace EndLink.Enemies
 {
     /// <summary>
     /// 敌人玩法状态到 Animator 的轻量桥接层。
-    /// 只同步移动、敌人大状态和动作触发信息，不负责 AI 决策、状态切换或 Hitbox 时序。
-    /// 当前攻击判定继续由 EnemyCombatDriver 的数据时间线驱动。
+    /// 同步移动、敌人大状态和动作触发信息，并确保 Animator 能把 Clip 事件转发给战斗 Driver。
+    /// 不负责 AI 决策、动作合法性或具体 Hitbox 生成。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyStateMachine))]
@@ -124,6 +124,7 @@ namespace EndLink.Enemies
         public void SetAnimator(Animator targetAnimator)
         {
             animator = targetAnimator;
+            EnsureAnimationEventReceiver();
             RebuildParameterCache();
         }
 
@@ -188,6 +189,23 @@ namespace EndLink.Enemies
                     ? visualRoot.GetComponentInChildren<Animator>(true)
                     : GetComponentInChildren<Animator>(true);
             }
+
+            EnsureAnimationEventReceiver();
+        }
+
+        private void EnsureAnimationEventReceiver()
+        {
+            if (animator == null)
+            {
+                return;
+            }
+
+            if (!animator.TryGetComponent(out CombatAnimationEventReceiver receiver))
+            {
+                receiver = animator.gameObject.AddComponent<CombatAnimationEventReceiver>();
+            }
+
+            receiver.RefreshListeners();
         }
 
         private void SubscribeCombatDriver()

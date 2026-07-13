@@ -14,6 +14,8 @@ namespace EndLink.Core
         private float _elapsedTime;
         private float _queuedStepWaitTime;
         private bool _actionStarted;
+        private bool _waitForAnimationEnd;
+        private bool _animationCanCancel;
 
         public PlayerAttackState(PlayerStateContext context) : base(context)
         {
@@ -51,6 +53,11 @@ namespace EndLink.Core
 
             TryQueueNextStep();
 
+            if (_waitForAnimationEnd)
+            {
+                return;
+            }
+
             if (_elapsedTime < _currentDuration)
             {
                 return;
@@ -82,6 +89,41 @@ namespace EndLink.Core
             Context.CombatDriver?.CancelCurrentAction();
             _currentAction = null;
             _actionStarted = false;
+            _waitForAnimationEnd = false;
+            _animationCanCancel = false;
+        }
+
+        /// <summary>动画事件打开当前攻击的取消或连段输入窗口。</summary>
+        public void NotifyActionCanCancel()
+        {
+            if (!_actionStarted || !_waitForAnimationEnd)
+            {
+                return;
+            }
+
+            _animationCanCancel = true;
+            TryQueueNextStep();
+        }
+
+        /// <summary>Driver 通知当前段已经自然结束。</summary>
+        public void NotifyActionEnded()
+        {
+            if (!_actionStarted)
+            {
+                return;
+            }
+
+            if (!_waitForAnimationEnd && _elapsedTime < _currentDuration)
+            {
+                return;
+            }
+
+            if (TryStartQueuedStep())
+            {
+                return;
+            }
+
+            ExitToLocomotion();
         }
 
         private void TryQueueNextStep()
@@ -92,7 +134,7 @@ namespace EndLink.Core
             }
 
             float normalizedTime = Mathf.Clamp01(_elapsedTime / _currentDuration);
-            bool canQueue = Context.ComboController.CanQueueNext(normalizedTime);
+            bool canQueue = _animationCanCancel || Context.ComboController.CanQueueNext(normalizedTime);
             if (Context.StateMachine.TryConsumeAttackBuffer(canQueue))
             {
                 Context.ComboController.TryQueueNext(normalizedTime);
@@ -137,6 +179,9 @@ namespace EndLink.Core
             _elapsedTime = 0f;
             _queuedStepWaitTime = 0f;
             _currentDuration = Context.GetAttackDuration(_currentAction);
+            _waitForAnimationEnd = _currentAction != null
+                && _currentAction.TimingSource == CombatActionTimingSource.AnimationEventDriven;
+            _animationCanCancel = false;
             Context.ComboController?.BeginStepMotion(target, Context.Transform.forward);
         }
 

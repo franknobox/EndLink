@@ -17,6 +17,7 @@ namespace EndLink.Ally
         public override void Enter()
         {
             _elapsedTime = 0f;
+            Context.CombatDriver?.CancelCurrentAction();
         }
 
         public override void Tick(float deltaTime)

@@ -22,6 +22,7 @@
 - `AllyCombatDriver` 保存队友的自动助战、主动技能、连携技动作槽位，并根据 `CombatActionDefinition` 生成 Hitbox、写入伤害、击退、战斗标签和标签持续时间。
 - 队友进入助战流程只要求配置了 `Assist Action`；动作冷却只影响实际出手时间，冷却未结束时会在 Assist 内等待，而不是放弃助战。
 - `AllyCombatDriver` 按 `CombatActionDefinition` 分别记录冷却，自动助战动作不会占用主动技能冷却，主动技能也不会重置助战动作冷却。
+- `AllyCombatDriver` 支持数据或动画事件时序，并在助战取消、受击、链接中断或组件禁用时关闭当前普通判定；Projectile 继续独立运行。
 - `AllyCombatDriver` 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 或调试窗口读取。
 - `CombatActionDefinition.Effective Attack Range` 决定队友距离目标 Collider 表面多远开始攻击。
 - `AllyCombatDriver` 执行助战时会朝目标方向生成判定，并广播 `ActionStarted` 事件。
@@ -77,6 +78,7 @@
 - `Action` 是队友通用动作状态，用于承接队友主动技能；当前不绑定键盘，进入时执行一次 `CombatActionDefinition`，动作窗口结束后回到 Assist 或 Follow / Idle。
 - 目标死亡、目标丢失或主控距离过远时，助战流程会取消并回到 Follow / Idle。
 - `Hit` 表示队友受击硬直状态，可打断 Follow、Assist 和 Action；结束后优先恢复被打断前的 Assist，目标失效或主控过远时回到 Follow / Idle。
+- 离开 `Assist` / `Action`、进入 `Hit` 或 `LinkDown` 时会取消当前动作，避免状态切换后残留 Hitbox。
 - `LinkDown` 是队友生命归零后的链接中断状态，不再响应跟随、助战、动作和受击请求；队友不按普通死亡消失，后续会接救助交互和半透明漂浮表现。
 - `AllyBrain` 判断事件是否值得响应，`AllyStateMachine` 判断当前能否进入 Assist，`AllyCombatDriver` 只执行动作和 Hitbox。
 对应脚本：

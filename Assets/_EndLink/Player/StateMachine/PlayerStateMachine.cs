@@ -13,14 +13,14 @@ namespace EndLink.Core
     [RequireComponent(typeof(PlayerController))]
     [RequireComponent(typeof(PlayerCombatDriver))]
     [RequireComponent(typeof(CombatTarget))]
-    public sealed class PlayerStateMachine : MonoBehaviour, ICharacterStatsTypeProvider
+    public sealed class PlayerStateMachine : MonoBehaviour, ICharacterStatsTypeProvider, ICombatActionLockReceiver
     {
         [Header("初始状态")]
         [SerializeField]
         private PlayerStateId initialState = PlayerStateId.Idle;
 
         [Header("攻击状态")]
-        [Tooltip("攻击状态的基础持续时间。胶囊白模阶段先用时间控制，接动画后可改为动画事件驱动。")]
+        [Tooltip("数据驱动攻击状态的最短持续时间。动画事件驱动动作改由 ActionEnd 决定退出。")]
         [SerializeField, Min(0.01f)]
         private float attackDuration = 0.45f;
 
@@ -43,7 +43,7 @@ namespace EndLink.Core
         private float guardMoveInputScale;
 
         [Header("技能状态")]
-        [Tooltip("通用技能状态的基础持续时间。胶囊白模阶段先用时间控制，接动画和技能配置后可改为数据或动画事件驱动。")]
+        [Tooltip("数据驱动技能状态的最短持续时间。动画事件驱动动作改由 ActionEnd 决定退出。")]
         [SerializeField, Min(0.01f)]
         private float skillDuration = 0.65f;
 
@@ -91,6 +91,8 @@ namespace EndLink.Core
         private CombatActionDefinition _currentAction;
         private Transform _currentActionTarget;
         private bool _actionRequested;
+        private bool _isActionActive;
+        private bool _actionCanCancel;
         private float _nextDodgeAllowedTime;
         private float _attackBufferExpiresAt = float.NegativeInfinity;
 
@@ -101,6 +103,11 @@ namespace EndLink.Core
 
         /// <summary>供 CharacterStats 自动识别为玩家配置。</summary>
         public CharacterStatsType StatsType => CharacterStatsType.Player;
+
+        /// <summary>
+        /// 当前动作是否仍锁定普通状态切换。受击和死亡始终可以强制打断。
+        /// </summary>
+        public bool IsActionLocked => _isActionActive && !_actionCanCancel;
 
         /// <summary>当前通用技能状态准备执行的动作。</summary>
         public CombatActionDefinition CurrentAction => _currentAction;
@@ -214,6 +221,8 @@ namespace EndLink.Core
         private void OnDisable()
         {
             ClearAttackBuffer();
+            _isActionActive = false;
+            _actionCanCancel = false;
         }
 
         private void OnValidate()
@@ -240,6 +249,11 @@ namespace EndLink.Core
                 return;
             }
 
+            if (IsActionLocked && !CanForceInterruptAction(nextStateId))
+            {
+                return;
+            }
+
             if (!_states.TryGetValue(nextStateId, out IPlayerState nextState))
             {
                 Debug.LogError($"未注册玩家状态：{nextStateId}", this);
@@ -251,6 +265,12 @@ namespace EndLink.Core
             _currentState?.Exit();
             _currentState = nextState;
             _currentState.Enter();
+
+            if (!IsActionState(nextStateId))
+            {
+                _isActionActive = false;
+                _actionCanCancel = false;
+            }
 
             if (logStateChanges)
             {
@@ -363,8 +383,60 @@ namespace EndLink.Core
         /// <summary>结束当前通用动作并回到移动或待机。</summary>
         public void CompleteAction()
         {
+            if (IsActionLocked)
+            {
+                return;
+            }
+
             ClearCurrentAction();
             ChangeState(GetDefaultLocomotionState());
+        }
+
+        /// <inheritdoc />
+        public void NotifyActionStarted()
+        {
+            _isActionActive = true;
+            _actionCanCancel = false;
+        }
+
+        /// <inheritdoc />
+        public void NotifyActionCanCancel()
+        {
+            if (!_isActionActive)
+            {
+                return;
+            }
+
+            _actionCanCancel = true;
+            if (_currentState is PlayerAttackState attackState)
+            {
+                attackState.NotifyActionCanCancel();
+            }
+        }
+
+        /// <inheritdoc />
+        public void NotifyActionEnd()
+        {
+            _isActionActive = false;
+            _actionCanCancel = false;
+
+            if (_currentState is PlayerAttackState attackState)
+            {
+                attackState.NotifyActionEnded();
+                return;
+            }
+
+            if (_currentState is PlayerSkillState skillState)
+            {
+                skillState.NotifyActionEnded();
+            }
+        }
+
+        /// <inheritdoc />
+        public void NotifyActionInterrupted()
+        {
+            _isActionActive = false;
+            _actionCanCancel = false;
         }
 
         private void ClearCurrentAction()
@@ -380,6 +452,16 @@ namespace EndLink.Core
                 && _inputReader.MoveInput.sqrMagnitude > PlayerStateBase.MoveInputDeadZoneSqr
                     ? PlayerStateId.Move
                     : PlayerStateId.Idle;
+        }
+
+        private static bool IsActionState(PlayerStateId stateId)
+        {
+            return stateId == PlayerStateId.Attack || stateId == PlayerStateId.Skill;
+        }
+
+        private static bool CanForceInterruptAction(PlayerStateId nextStateId)
+        {
+            return nextStateId == PlayerStateId.Hit || nextStateId == PlayerStateId.Dead;
         }
 
         private void CaptureAttackInput()

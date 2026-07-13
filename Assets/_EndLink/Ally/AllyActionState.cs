@@ -43,12 +43,33 @@ namespace EndLink.Ally
         {
             _elapsedTime += deltaTime;
 
-            if (_executed && _elapsedTime < Context.ActionDuration)
+            if (!_executed)
+            {
+                Context.StateMachine.CompleteAction();
+                return;
+            }
+
+            CombatActionDefinition action = Context.CurrentAction;
+            if (action != null
+                && action.TimingSource == EndLink.Core.CombatActionTimingSource.AnimationEventDriven
+                && Context.CombatDriver.IsExecutingAction)
+            {
+                return;
+            }
+
+            if (action != null
+                && action.TimingSource != EndLink.Core.CombatActionTimingSource.AnimationEventDriven
+                && _elapsedTime < Context.ActionDuration)
             {
                 return;
             }
 
             Context.StateMachine.CompleteAction();
+        }
+
+        public override void Exit()
+        {
+            Context.CombatDriver?.CancelCurrentAction();
         }
 
         private static string GetTransformName(UnityEngine.Object target)

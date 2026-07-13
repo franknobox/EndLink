@@ -9,6 +9,9 @@ namespace EndLink.Core
         /// <summary>当前动作是否仍锁定角色状态或输入。</summary>
         bool IsActionLocked { get; }
 
+        /// <summary>通知一个战斗动作已经成功开始并进入锁定阶段。</summary>
+        void NotifyActionStarted();
+
         /// <summary>通知当前动作已经允许取消、连段或派生。</summary>
         void NotifyActionCanCancel();
 

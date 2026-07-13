@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using EndLink.Combat;
+using EndLink.Core;
 using UnityEngine;
 
 namespace EndLink.Enemies
@@ -11,8 +12,10 @@ namespace EndLink.Enemies
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyActor))]
-    public sealed class EnemyCombatDriver : MonoBehaviour, ICombatActionExecutor
+    public sealed class EnemyCombatDriver : MonoBehaviour, ICombatActionExecutor, ICombatAnimationEventListener
     {
+        private const float AnimationEventTimeoutPadding = 1f;
+
         [Header("动作配置")]
         [Tooltip("敌人普通攻击动作。基础 Combat 行为会在每轮攻击前和技能一起参与选择。")]
         [SerializeField]
@@ -37,11 +40,18 @@ namespace EndLink.Enemies
         private bool logExecutionFailures = true;
 
         private readonly Dictionary<CombatActionDefinition, float> _nextReadyTimes = new();
+        private ICombatActionLockReceiver _actionLockReceiver;
         private CombatActionDefinition _lastExecutedAction;
         private CombatActionDefinition _currentActionDefinition;
         private Transform _currentActionTarget;
         private Vector3 _currentActionForward = Vector3.forward;
         private CombatActionTimeline _currentActionTimeline;
+        private CombatActionPhase _animationEventPhase = CombatActionPhase.Completed;
+        private GameObject _activeHitboxInstance;
+        private float _animationEventElapsed;
+        private bool _hasTriggeredActionEffect;
+        private bool _hasEndedHitboxWindow;
+        private bool _hasLoggedAnimationTimeout;
 
         /// <summary>
         /// 动作时间线成功开始时触发。
@@ -56,12 +66,14 @@ namespace EndLink.Enemies
         public CombatActionDefinition SkillAction => skillAction;
 
         /// <summary>当前是否仍有动作时间线正在推进。</summary>
-        public bool IsExecutingAction => _currentActionTimeline != null;
+        public bool IsExecutingAction => _currentActionDefinition != null;
 
         /// <summary>当前动作所处阶段。没有动作时返回 Completed。</summary>
-        public CombatActionPhase CurrentActionPhase => _currentActionTimeline != null
-            ? _currentActionTimeline.Phase
-            : CombatActionPhase.Completed;
+        public CombatActionPhase CurrentActionPhase => _currentActionDefinition == null
+            ? CombatActionPhase.Completed
+            : _currentActionDefinition.TimingSource == CombatActionTimingSource.AnimationEventDriven
+                ? _animationEventPhase
+                : _currentActionTimeline?.Phase ?? CombatActionPhase.Completed;
 
         /// <summary>当前正在执行的动作配置。没有动作时为空。</summary>
         public CombatActionDefinition CurrentAction => _currentActionDefinition;
@@ -91,6 +103,11 @@ namespace EndLink.Enemies
 
         /// <summary>最近一次成功执行的动作是否仍在冷却。</summary>
         public bool IsActionCoolingDown => ActionCooldownRemaining > 0f;
+
+        private void Awake()
+        {
+            _actionLockReceiver = GetComponent<ICombatActionLockReceiver>();
+        }
 
         private void Update()
         {
@@ -138,7 +155,7 @@ namespace EndLink.Enemies
         {
             return actionDefinition != null
                 && actionDefinition.HitboxPrefab != null
-                && _currentActionTimeline == null
+                && _currentActionDefinition == null
                 && GetCooldownRemaining(actionDefinition) <= 0f;
         }
 
@@ -200,11 +217,18 @@ namespace EndLink.Enemies
 
         /// <summary>
         /// 取消当前尚未结束的动作时间线。
-        /// 已经记录的动作冷却不会回退；已经生成的 Hitbox 或弹体继续遵循自身生命周期。
+        /// 已经记录的动作冷却不会回退；普通驻留 Hitbox 会立即关闭，已经发射的弹体继续遵循自身生命周期。
         /// </summary>
         public void CancelCurrentAction()
         {
+            if (_currentActionDefinition == null)
+            {
+                return;
+            }
+
+            EndCurrentHitbox();
             ClearCurrentActionExecution();
+            _actionLockReceiver?.NotifyActionInterrupted();
         }
 
         /// <summary>
@@ -213,6 +237,7 @@ namespace EndLink.Enemies
         /// </summary>
         public void ResetRuntimeState()
         {
+            EndCurrentHitbox();
             ClearCurrentActionExecution();
             _nextReadyTimes.Clear();
             _lastExecutedAction = null;
@@ -251,6 +276,7 @@ namespace EndLink.Enemies
             _lastExecutedAction = actionDefinition;
             _nextReadyTimes[actionDefinition] = Time.time + Mathf.Max(0f, actionDefinition.Cooldown);
             StartActionExecution(actionDefinition, target, attackForward);
+            _actionLockReceiver?.NotifyActionStarted();
             ActionStarted?.Invoke(actionDefinition);
 
             CombatEventsBus.RaiseActionStarted(
@@ -287,6 +313,19 @@ namespace EndLink.Enemies
             _currentActionForward = forward.sqrMagnitude > 0.0001f
                 ? forward.normalized
                 : Vector3.forward;
+            _animationEventElapsed = 0f;
+            _animationEventPhase = CombatActionPhase.Startup;
+            _hasTriggeredActionEffect = false;
+            _hasEndedHitboxWindow = false;
+            _hasLoggedAnimationTimeout = false;
+            _activeHitboxInstance = null;
+
+            if (actionDefinition.TimingSource == CombatActionTimingSource.AnimationEventDriven)
+            {
+                _currentActionTimeline = null;
+                return;
+            }
+
             _currentActionTimeline = new CombatActionTimeline(
                 actionDefinition.StartupTime,
                 actionDefinition.ActiveTime,
@@ -301,11 +340,39 @@ namespace EndLink.Enemies
 
         private void TickCurrentAction(float deltaTime)
         {
-            if (_currentActionTimeline == null || _currentActionDefinition == null)
+            if (_currentActionDefinition == null)
             {
                 return;
             }
 
+            if (_currentActionDefinition.TimingSource == CombatActionTimingSource.AnimationEventDriven)
+            {
+                _animationEventElapsed += Mathf.Max(0f, deltaTime);
+                float timeout = Mathf.Max(
+                    AnimationEventTimeoutPadding,
+                    _currentActionDefinition.TotalDuration + AnimationEventTimeoutPadding);
+                if (_animationEventElapsed >= timeout)
+                {
+                    if (!_hasLoggedAnimationTimeout)
+                    {
+                        _hasLoggedAnimationTimeout = true;
+                        LogFailure(
+                            $"EnemyCombatDriver 的动画驱动动作 {_currentActionDefinition.ActionId} 未及时收到 ActionEnd，已按数据总时长安全结束。");
+                    }
+
+                    CompleteCurrentAction();
+                }
+
+                return;
+            }
+
+            if (_currentActionTimeline == null)
+            {
+                CompleteCurrentAction();
+                return;
+            }
+
+            CombatActionPhase previousPhase = _currentActionTimeline.Phase;
             _currentActionTimeline.Tick(deltaTime, out bool triggerEffect, out bool completed);
 
             if (triggerEffect)
@@ -313,18 +380,74 @@ namespace EndLink.Enemies
                 TriggerCurrentActionEffect();
             }
 
+            if (previousPhase != CombatActionPhase.Recovery
+                && _currentActionTimeline.Phase == CombatActionPhase.Recovery)
+            {
+                EndCurrentHitbox();
+            }
+
             if (completed)
             {
-                ClearCurrentActionExecution();
+                CompleteCurrentAction();
             }
+        }
+
+        /// <inheritdoc />
+        public void OnActionHitboxStart()
+        {
+            if (!IsCurrentActionAnimationDriven() || _hasEndedHitboxWindow)
+            {
+                return;
+            }
+
+            _animationEventPhase = CombatActionPhase.Active;
+            TriggerCurrentActionEffect();
+        }
+
+        /// <inheritdoc />
+        public void OnActionHitboxEnd()
+        {
+            if (!IsCurrentActionAnimationDriven())
+            {
+                return;
+            }
+
+            _hasEndedHitboxWindow = true;
+            _animationEventPhase = CombatActionPhase.Recovery;
+            EndCurrentHitbox();
+        }
+
+        /// <inheritdoc />
+        public void OnActionCanCancel()
+        {
+            if (IsCurrentActionAnimationDriven())
+            {
+                _actionLockReceiver?.NotifyActionCanCancel();
+            }
+        }
+
+        /// <inheritdoc />
+        public void OnActionEnd()
+        {
+            if (!IsCurrentActionAnimationDriven())
+            {
+                return;
+            }
+
+            _animationEventPhase = CombatActionPhase.Completed;
+            CompleteCurrentAction();
         }
 
         private void TriggerCurrentActionEffect()
         {
-            if (_currentActionDefinition == null)
+            if (_currentActionDefinition == null
+                || _hasTriggeredActionEffect
+                || _hasEndedHitboxWindow)
             {
                 return;
             }
+
+            _hasTriggeredActionEffect = true;
 
             Vector3 spawnPosition = transform.position
                 + _currentActionForward * _currentActionDefinition.HitboxSpawnDistance
@@ -332,6 +455,41 @@ namespace EndLink.Enemies
             Quaternion spawnRotation = Quaternion.LookRotation(_currentActionForward, Vector3.up);
             GameObject hitboxInstance = Instantiate(_currentActionDefinition.HitboxPrefab, spawnPosition, spawnRotation);
             ConfigureHitbox(hitboxInstance, _currentActionDefinition);
+
+            if (!hitboxInstance.TryGetComponent<HitboxProjectile>(out _))
+            {
+                _activeHitboxInstance = hitboxInstance;
+            }
+        }
+
+        private void EndCurrentHitbox()
+        {
+            if (_activeHitboxInstance == null)
+            {
+                return;
+            }
+
+            _activeHitboxInstance.SetActive(false);
+            Destroy(_activeHitboxInstance);
+            _activeHitboxInstance = null;
+        }
+
+        private void CompleteCurrentAction()
+        {
+            if (_currentActionDefinition == null)
+            {
+                return;
+            }
+
+            EndCurrentHitbox();
+            ClearCurrentActionExecution();
+            _actionLockReceiver?.NotifyActionEnd();
+        }
+
+        private bool IsCurrentActionAnimationDriven()
+        {
+            return _currentActionDefinition != null
+                && _currentActionDefinition.TimingSource == CombatActionTimingSource.AnimationEventDriven;
         }
 
         private void ClearCurrentActionExecution()
@@ -340,6 +498,12 @@ namespace EndLink.Enemies
             _currentActionDefinition = null;
             _currentActionTarget = null;
             _currentActionForward = Vector3.forward;
+            _animationEventPhase = CombatActionPhase.Completed;
+            _activeHitboxInstance = null;
+            _animationEventElapsed = 0f;
+            _hasTriggeredActionEffect = false;
+            _hasEndedHitboxWindow = false;
+            _hasLoggedAnimationTimeout = false;
         }
 
         private Vector3 ResolveAttackForward(Transform target)

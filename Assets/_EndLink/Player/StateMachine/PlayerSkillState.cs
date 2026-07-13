@@ -1,3 +1,4 @@
+using EndLink.Combat;
 using UnityEngine;
 
 namespace EndLink.Core
@@ -11,6 +12,7 @@ namespace EndLink.Core
     {
         private float _elapsedTime;
         private bool _executed;
+        private bool _waitForAnimationEnd;
 
         public PlayerSkillState(PlayerStateContext context) : base(context)
         {
@@ -22,6 +24,9 @@ namespace EndLink.Core
         {
             _elapsedTime = 0f;
             _executed = Context.ExecuteCurrentAction();
+            CombatActionDefinition currentAction = Context.StateMachine.CurrentAction;
+            _waitForAnimationEnd = currentAction != null
+                && currentAction.TimingSource == CombatActionTimingSource.AnimationEventDriven;
         }
 
         public override void Tick(float deltaTime)
@@ -39,12 +44,38 @@ namespace EndLink.Core
             Vector2 skillMoveInput = Context.InputReader.MoveInput * Context.SkillMoveInputScale;
             Context.Controller.TickMovement(skillMoveInput, deltaTime);
 
+            if (_waitForAnimationEnd)
+            {
+                return;
+            }
+
             if (_elapsedTime < Context.SkillDuration)
             {
                 return;
             }
 
             Context.StateMachine.CompleteAction();
+        }
+
+        /// <summary>Driver 通知技能动作已经自然结束。</summary>
+        public void NotifyActionEnded()
+        {
+            if (!_executed)
+            {
+                return;
+            }
+
+            if (_waitForAnimationEnd || _elapsedTime >= Context.SkillDuration)
+            {
+                Context.StateMachine.CompleteAction();
+            }
+        }
+
+        public override void Exit()
+        {
+            Context.CombatDriver?.CancelCurrentAction();
+            _executed = false;
+            _waitForAnimationEnd = false;
         }
     }
 }

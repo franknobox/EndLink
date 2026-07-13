@@ -16,7 +16,7 @@ namespace EndLink.Core
         /// <summary>
         /// 动画事件驱动。
         /// 动作进入后等待动画事件通知判定开始、判定结束、可取消和动作结束。
-        /// 当前只预留接口，Driver 尚未接入。
+        /// CombatActionDefinition 的数据总时长只作为防止动画事件缺失时永久卡住的安全超时。
         /// </summary>
         AnimationEventDriven = 1
     }

@@ -161,6 +161,8 @@
 - `Idle` 和 `Move` 会在缓冲有效且普攻可执行时切换到 `Attack`。
 - `Skill` 是通用技能状态，当前由 `PartyCombatRouter` 发起请求，状态机决定是否进入，进入状态后再调用 `PlayerCombatDriver` 执行技能表现和判定。
 - `Attack` 状态按当前连段 Action 调用 `PlayerCombatDriver`；窗口内再次输入普攻会缓存下一段，当前段结束后继续执行。
+- 动画事件动作开始后会锁定普通状态退出，`CanCancel` 事件打开取消/连段窗口，`ActionEnd` 决定自然收招；`Hit` 和 `Dead` 始终可以强制打断。
+- 数据驱动动作继续使用配置时间；动画事件动作不会再被 `attackDuration` 或 `skillDuration` 提前切回移动状态。
 - 攻击期间移动输入会乘以 `attackMoveInputScale`，当前默认可以做站桩攻击。
 - 攻击期间会按 `attackTrackingRotationSharpness` 平滑跟随当前软锁点；目标失效或参数为 `0` 时保持当前朝向。
 - `Guard` 由按住防御输入进入，松开后回到 `Move` 或 `Idle`；第一版允许从防御直接闪避。
@@ -268,12 +270,14 @@
 - 不读取输入，不决定状态切换，不直接控制移动或战斗。
 - 每帧读取 `PlayerStateMachine.CurrentStateId` 和 `CharacterController.velocity`。
 - 同步 `MoveSpeed`、`IsMoving`、`StateId`、`IsDead` 等 Animator 参数。
-- 进入 `Attack`、`Skill`、`Hit`、`Dead` 状态时，可分别触发对应 Trigger 参数。
+- 每次 Action 成功开始时同步 `ActionId`、`ActionType` 并触发 `ActionTrigger`，同一 Attack 状态内的后续连段也会重新触发动作动画。
+- Animator 没有通用 `ActionTrigger` 参数时，进入 `Attack` / `Skill` 仍会回退使用原有状态 Trigger；`Hit` / `Dead` 保持状态触发。
 - 参数名都可以在 Inspector 修改；Animator Controller 不存在对应参数时会安全跳过。
 - `CombatAnimatorParams` 定义后续玩家、队友和敌人可共用的 Animator 参数名和 Hash，不绑定具体连段或动画状态名。
-- `CombatAnimationEventReceiver` 作为动画事件接收器，负责把 Clip 上的事件转发给同角色上的监听者，避免动画事件直接依赖具体 Driver 或状态机。
+- `PlayerAnimatorDriver` 会在 Animator 同物体上自动确保存在 `CombatAnimationEventReceiver`，无需给每个视觉模型重复手动挂载。
+- `CombatAnimationEventReceiver` 把 Clip 上的 `OnActionHitboxStart`、`OnActionHitboxEnd`、`OnActionCanCancel`、`OnActionEnd` 转发给角色 Driver。
 - `ICombatRootMotionReceiver` 预留 Root Motion 位移接入口，后续可让动画驱动位移再交给角色移动层处理。
-- `ICombatActionLockReceiver` 预留动作锁定、可取消、结束和打断通知，后续用于动画事件驱动动作退出。
+- `PlayerStateMachine` 已实现 `ICombatActionLockReceiver`，处理动作开始锁定、取消窗口、自然结束和外部打断。
 
 对应脚本：
 - `Assets/_EndLink/Control/PlayerAnimatorDriver.cs`
@@ -298,8 +302,15 @@
 - `isMovingParameter`：是否移动参数名
 - `stateIdParameter`：当前状态 ID 参数名
 - `isDeadParameter`：是否死亡参数名
+- `actionIdParameter` / `actionTypeParameter` / `actionTriggerParameter`：动作 ID、类型和通用动作触发参数名
 - `attackTriggerParameter` / `skillTriggerParameter` / `hitTriggerParameter` / `deadTriggerParameter`：状态进入 Trigger 参数名
 - `warnMissingParameters`：缺少 Animator 参数时是否打印警告
+
+动画事件配置：
+- 把 Action 的 `Timing Source` 改为 `AnimationEventDriven`。
+- 在攻击 Clip 的接触开始帧添加 `OnActionHitboxStart`，接触结束帧添加 `OnActionHitboxEnd`。
+- 可派生或取消的帧添加 `OnActionCanCancel`，收招结束帧添加 `OnActionEnd`。
+- `startup + active + recovery` 总时长应大致覆盖动画长度，用作事件漏配时的安全退出基准。
 
 </details>
 
@@ -368,13 +379,14 @@
 - 状态机决定能否攻击，`PlayerCombatDriver` 只负责执行攻击表现和判定。
 - 支持通过 `CombatActionDefinition` 配置普攻、主动技能、连携技的伤害、击退、`CombatTagDefinition` 标签、标签持续时间、冷却、Hitbox 和生成参数。
 - `PlayerCombatDriver` 执行的动作必须来自 `CombatActionDefinition`。
+- 支持 `DataDriven` 和 `AnimationEventDriven` 两种动作时序；后者由动画事件决定普通 Hitbox 的有效窗口和状态退出。
 - 当前执行内容是生成指定 Hitbox prefab；有自动软锁目标时先让玩家正面转向目标，判定生成瞬间读取角色实时正前方，使前摇期间的跟随转向能同步影响 Hitbox 朝向。
 - 普攻、主动技能和连携技按各自 `CombatActionDefinition` 独立记录冷却。
 - 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 区分普攻、技能和连携槽。
 - 实现 `ICombatActionExecutor`，状态机通过统一 `CanExecute` / `TryExecute` 入口检查和执行动作。
 - 支持通过动作资产中的 `Hitbox Spawn Distance` 和 `Hitbox Spawn Height` 调整 Hitbox 生成位置。
 - 生成 Hitbox 后会调用 `HitboxBase.Initialize(gameObject)` 传入攻击者。
-- Hitbox 会在指定生命周期后自动销毁。
+- 普通 Hitbox 会在数据有效段或动画判定结束事件后关闭；Projectile 仍按自身生命周期运行。
 - 成功执行攻击后会通过 `CombatEventsBus` 广播 `ActionStarted`。
 对应脚本：
 - `Assets/_EndLink/Player/ActCombat/PlayerCombatDriver.cs`
@@ -391,7 +403,7 @@
 - `Basic Attack Action`：玩家普攻动作资产，鼠标左键触发的 `Attack` 状态会执行它
 - `Skill Action`：玩家主动技能动作资产，后续由 `PartyCombatRouter` 的主角技能命令触发
 - `Link Action`：玩家连携技动作资产，后续只能由连携机制确认合法窗口后触发，不能作为普通输入动作直接释放
-- Hitbox prefab、生成距离、高度和冷却从对应的 `CombatActionDefinition` 读取；Hitbox 生命周期由 Hitbox prefab 自己配置。
+- Hitbox prefab、生成距离、高度、冷却和时序来源从对应的 `CombatActionDefinition` 读取。
 </details>
 
 <a id="feature-architecture-boundary"></a>
@@ -405,7 +417,7 @@
 - 输入读取器只读并缓存原始输入，不做状态与动作决策；普攻缓冲有效期由 `PlayerStateMachine` 管理。
 - `PlayerStateMachine` 决定当前状态，负责 Idle、Move、Attack 等流程切换。
 - `PlayerController` 负责移动能力和朝向，不负责读取输入或判断是否允许移动。
-- `PlayerAnimatorDriver` 只把状态机和移动速度同步到 Animator 参数，不反向控制状态机。
+- `PlayerAnimatorDriver` 只负责参数和事件桥接；动作合法性仍由状态机与 Driver 决定，动画事件只提交判定窗口和退出时机。
 - `PlayerTargeting` 负责玩家当前自动软锁目标选择，不控制相机、UI 或攻击执行。
 - `PlayerCombatDriver` 不读取输入，只执行攻击表现和判定。
 - `CharacterHealth` 负责通用生命值、受击和死亡，不直接切换任何角色状态机。
@@ -423,7 +435,7 @@
 - `EnemyDummy` 只是早期命中验证对象；正式敌人能力以 `EnemyActor`、`EnemyHealth`、`EnemyStateMachine` 和敌人能力组件为主。
 
 后续需要调整：
-- 当前攻击仍是固定时间驱动，后续接动画后应改为动画事件或攻击窗口驱动。
+- 动画事件时序已接入，后续仍需补 Hitbox Socket、完整局部偏移和动画位移对齐。
 - 战斗事件当前携带基础来源、目标、动作、单个标签和标签层数；后续如果连携规则需要更强表达，可扩展事件上下文或增加规则层数据结构。
 - 当前 Hitbox 使用即时 Instantiate/Destroy，后续攻击频繁后建议切换对象池。
 

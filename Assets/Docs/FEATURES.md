@@ -20,7 +20,7 @@
 
 ### 当前情况概览
 
-项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party`、`Assets/_EndLink/Enemies`、`Assets/_EndLink/World` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，世界交互代码使用 `EndLink.World`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、统一 Combat Target、统一 Action 执行接口、玩家与敌人 Animator 桥接、动画协议接口骨架、基础攻击驱动、基础 Hitbox 配置、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动与动态站位第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架、世界交互底座和战斗 UI 基础。
+项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party`、`Assets/_EndLink/Enemies`、`Assets/_EndLink/World` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，世界交互代码使用 `EndLink.World`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、统一 Combat Target、统一 Action 执行接口、玩家与敌人 Animator 桥接、动画事件动作时序第一版、基础攻击驱动、基础 Hitbox 配置、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动与动态站位第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架、世界交互底座和战斗 UI 基础。
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
@@ -33,11 +33,11 @@
 | [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成防御输入版 | 负责读取玩家移动、攻击、防御、世界交互和相机等输入，并把输入缓存为控制层可使用的数据。 |
 | [玩家 CharacterController 移动](Features/PLAYER.md#feature-player-movement) | 已完成受击后退版 | 负责玩家平滑移动、基础跳跃、重力贴地、转向，以及战斗击退的短时衰减后退。 |
 | [第三人称自由相机](Features/PLAYER.md#feature-third-person-camera) | 已完成基础避障版 | 负责越肩第三人称视角、自由旋转和上下角度限制，在脱战待机时缓慢拉近、移动或战斗时较快拉远，并处理灰盒环境镜头碰撞。 |
-| [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成基础防御版 | 负责 Idle、Move、Attack、Skill、Dodge、Guard、Hit、Dead 的状态切换，并承接普攻连段、攻击缓冲和防御输入。 |
+| [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成动画动作锁版 | 负责 Idle、Move、Attack、Skill、Dodge、Guard、Hit、Dead 的状态切换，并承接普攻连段、攻击缓冲、动画动作锁和强制打断。 |
 | [玩家 ActCombat 基础](Features/PLAYER.md#feature-player-act-combat) | 已完成格挡反馈版 | 提供三段普攻连段、无效下一段超时退出、攻击踏步与软锁追踪，以及带白模反馈的正面格挡和短窗口弹反。 |
-| [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成协议骨架版 | 负责把玩家状态、移动速度和状态进入触发器同步到 Animator 参数，并预留通用 Animator 参数协议、动画事件、Root Motion 和动作锁定/退出接口。 |
+| [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成动画事件接线版 | 同步玩家状态、移动和 Action 参数，并把动画判定、取消窗口与动作结束事件转发给战斗 Driver 和状态机。 |
 | [玩家自动软锁定](Features/PLAYER.md#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按固定间隔自动选择当前战斗目标，默认优先最近敌人，并显示轻量目标点。 |
-| [玩家战斗驱动](Features/PLAYER.md#feature-player-combat-driver) | 已完成连段接线版 | 由状态机调用，负责逐段执行攻击表现和判定，按角色实时正前方生成 Hitbox 并管理独立动作冷却。 |
+| [玩家战斗驱动](Features/PLAYER.md#feature-player-combat-driver) | 已完成动画时序版 | 由状态机调用，支持数据或动画事件驱动逐段执行判定，按角色实时正前方生成 Hitbox 并管理独立动作冷却。 |
 | [当前架构边界](Features/PLAYER.md#feature-architecture-boundary) | 已建立初版约定 | 初步明确输入读取、玩家移动、相机控制、状态机、战斗驱动、命中检测之间的职责边界。 |
 
 #### COMBAT
@@ -47,13 +47,13 @@
 | [通用生命值与角色受击接线](Features/COMBAT.md#feature-character-health) | 已完成桥接版 | 提供可复用的血量、受击、治疗和死亡；玩家、队友通过薄桥接层接入各自状态机。 |
 | [统一 Combat Target](Features/COMBAT.md#feature-combat-target) | 已完成第一版 | 为玩家、队友和敌人统一提供唯一根身份、存活/可选状态、锁定点、Collider 表面点和水平表面距离。 |
 | [角色战斗数值基础](Features/COMBAT.md#feature-character-stats) | 已完成第一版 | 提供玩家、队友和敌人共用的攻击力与承受击退倍率，并支持动作按固定伤害与攻击力倍率组合计算伤害。 |
-| [战斗动作配置](Features/COMBAT.md#feature-combat-action) | 已完成动画时序预留版 | 使用 `CombatActionDefinition` 数据资产描述普通攻击、技能、连携攻击和终链奥义的伤害、冷却、时序来源、Hitbox、命中标签和连携协同率收益，并已接入第一版 startup / active / recovery 执行时序。 |
-| [统一 Action 执行接口](Features/COMBAT.md#feature-combat-action-executor) | 已完成时序接线第一版 | 统一玩家、队友和敌人的动作可执行检查、执行请求、目标传入和冷却查询，并让 Driver 按动作前摇后再真正生成 Hitbox。 |
+| [战斗动作配置](Features/COMBAT.md#feature-combat-action) | 已完成双时序版 | 使用 `CombatActionDefinition` 描述伤害、冷却、Hitbox、标签和协同率，并支持数据时间或动画事件驱动动作。 |
+| [统一 Action 执行接口](Features/COMBAT.md#feature-combat-action-executor) | 已完成动画事件接线版 | 统一玩家、队友和敌人的动作检查、执行、冷却和目标传入，并接通判定事件、动作完成与打断清理。 |
 | [伤害结算管线基础](Features/COMBAT.md#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
 | [受击规则基础](Features/COMBAT.md#feature-hit-response) | 已完成格挡拦截版 | Hitbox 造成伤害后统一计算击退，并允许格挡、弹反等规则在生命结算前修改伤害与击退结果。 |
 | [战斗标签系统](Features/COMBAT.md#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和协议反应规则。 |
 | [战斗事件总栈](Features/COMBAT.md#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
-| [基础 Hitbox 配置](Features/COMBAT.md#feature-hitbox) | 已完成时序接线第一版 | 提供通用 Hitbox 基类和远程直线 Hitbox，用于配置近战判定、远程飞行判定、目标过滤、生命周期、伤害、击退和标签；标准判定支持动作 `active` 覆盖寿命，弹体仍使用自身寿命规则。 |
+| [基础 Hitbox 配置](Features/COMBAT.md#feature-hitbox) | 已完成动画窗口接线版 | 提供通用与远程 Hitbox；普通判定支持数据有效段或动画事件关闭，弹体始终使用自身寿命规则。 |
 
 #### PARTY
 
@@ -68,7 +68,7 @@
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [队友助战基础组件](Features/ALLY.md#feature-ally-assist) | 已完成持续助战第一版 | 提供队友事件响应大脑和队友战斗执行器，用于主控命中敌人后让队友自动接近目标并持续攻击。 |
-| [队友有限状态机](Features/ALLY.md#feature-ally-state-machine) | 已完成 Hit 恢复版 | 提供 Idle、Follow、Assist、Action、Hit、LinkDown 外层状态，Assist 处理自动助战，Action 承载主动技能等指令动作，Hit 结束后按上下文恢复行为。 |
+| [队友有限状态机](Features/ALLY.md#feature-ally-state-machine) | 已完成动作打断版 | 提供 Idle、Follow、Assist、Action、Hit、LinkDown 外层状态，并在受击、离开助战或链接中断时清理当前动作判定。 |
 | [队友跟随移动](Features/ALLY.md#feature-ally-follow-motor) | 已完成 NavMesh 接线版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持 NavMesh 寻路、按路径高度移动、高低差脱离死区、坡道贴地、平滑减速、追赶、远距离归位和简易避让。 |
 
 #### ENEMIES
@@ -76,7 +76,7 @@
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [敌人身份与生命目标](Features/ENEMIES.md#feature-enemy-identity-health) | 已完成分类基础版 | 提供正式敌人根身份、根类别、战斗定位、生命受击、视觉受击反馈、死亡事件、目标有效性、死亡退场、战斗标签容器和基础调试显示。 |
-| [敌人 Animator 桥接](Features/ENEMIES.md#feature-enemy-animator) | 已完成战斗移动接线版 | 把敌人追击/战斗机动、移动、大状态和动作类型同步给 Animator，当前不改变数据驱动的攻击判定时序。 |
+| [敌人 Animator 桥接](Features/ENEMIES.md#feature-enemy-animator) | 已完成动画事件接线版 | 把敌人移动、大状态和动作参数同步给 Animator，并支持动画关键帧驱动判定与动作结束。 |
 | [敌人感知与大状态机](Features/ENEMIES.md#feature-enemy-state-sensor) | 已完成基础战斗循环版 | 提供 Idle、Alert、Combat、Hit、Return、Dead 大状态，以及 Combat 内部的接近、观察、攻击准备、攻击、恢复和重新定位流程。 |
 | [敌人围攻协调](Features/ENEMIES.md#feature-enemy-combat-coordination) | 已完成观察移动版 | 通过区域协调器统一管理敌人归属、攻击评分、同时攻击数量、许可预留、动态软站位和等待/攻击准备机动。 |
 | [敌人移动与战斗能力](Features/ENEMIES.md#feature-enemy-motor-combat) | 已完成普攻/技能选择版 | 提供地面移动、NavMesh 追击、转向、重力、碰撞推挤、衰减击退，以及按固定计数或概率选择普攻/技能的敌人战斗执行基底。 |

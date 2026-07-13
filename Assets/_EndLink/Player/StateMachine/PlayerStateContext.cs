@@ -96,8 +96,7 @@ namespace EndLink.Core
         public float AttackTrackingRotationSharpness => StateMachine.AttackTrackingRotationSharpness;
 
         /// <summary>
-        /// 通用技能状态的基础持续时间。
-        /// 白模阶段先用固定时间表示一次技能施放窗口，后续可由动画事件或技能配置驱动。
+        /// 数据驱动技能状态的基础持续时间；动画事件模式由 ActionEnd 决定退出。
         /// </summary>
         public float SkillDuration => StateMachine.SkillDuration;
 

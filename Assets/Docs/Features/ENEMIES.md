@@ -78,7 +78,8 @@
 - `EnemyCombatDriver` 成功开始动作时通过本地事件通知桥接层，写入 `ActionId`、`ActionType` 并触发 `ActionTrigger`，短动作也不会依赖逐帧轮询捕获。
 - Animator、移动能力和战斗执行器均支持自动查找；特殊敌人没有移动或攻击能力时，对应引用可以留空。
 - Animator Controller 缺少某个协议参数时会跳过写入，可选开启一次性警告排查配置。
-- 当前动画只做视觉同步，Hitbox 仍由 `CombatActionDefinition` 的数据时序驱动；动画事件驱动与 Root Motion 继续保留为后续接线。
+- `EnemyAnimatorDriver` 会在 Animator 同物体上自动确保动画事件接收器；Action 设为 `AnimationEventDriven` 后，可由 Clip 事件控制判定窗口、取消通知和动作结束。
+- Root Motion 仍只保留接口，当前敌人位移继续由 `EnemyMotorBase` 负责。
 
 对应脚本：
 - `Assets/_EndLink/Enemies/Anime/EnemyAnimatorDriver.cs`
@@ -102,6 +103,11 @@ Animator 参数：
 - `ActionTrigger`：Trigger，动作成功开始
 - `HitTrigger`：Trigger，进入 Hit
 - `DeadTrigger`：Trigger，进入 Dead
+
+动画事件配置：
+- 需要由动画关键帧控制判定的敌人 Action 设为 `AnimationEventDriven`。
+- 在攻击 Clip 上依次配置 `OnActionHitboxStart`、`OnActionHitboxEnd`，可选配置 `OnActionCanCancel`，并在收招结束配置 `OnActionEnd`。
+- 事件接收组件由 `EnemyAnimatorDriver` 在运行时自动补到 Animator 同物体；动作数据总时长用于漏配结束事件时安全退出。
 
 </details>
 
@@ -253,6 +259,7 @@ Animator 参数：
 - 敌人受到战斗击退时会停止当前移动和 NavMesh 路径，通过 `CombatKnockbackMotion` 逐帧衰减后退，并持续同步 Agent 位置。
 - `EnemyCombatDriver` 是敌人战斗执行器，按 `CombatActionDefinition` 生成 Hitbox、记录冷却并广播动作开始事件。
 - `EnemyCombatDriver` 暴露当前动作、执行阶段和取消入口；完整运行时重置会同时清理当前动作与动作冷却。
+- 敌人动作支持数据时序或动画事件时序；受击、死亡、脱战和状态退出会中断动作并立即关闭普通驻留 Hitbox，已经发射的 Projectile 不受影响。
 - `EnemyCombatDriver` 提供普通攻击和技能两个动作槽；`EnemyCombatBehavior` 每轮按可用性和技能概率选择动作，Driver 仍只负责动作时序、Hitbox、冷却和事件。
 
 对应脚本：

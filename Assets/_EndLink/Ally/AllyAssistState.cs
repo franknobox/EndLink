@@ -59,6 +59,11 @@ namespace EndLink.Ally
             }
         }
 
+        public override void Exit()
+        {
+            Context.CombatDriver?.CancelCurrentAction();
+        }
+
         private bool TryEnsureAssistTarget(ref Transform target)
         {
             if (AllyTargetSelector.IsTargetSelectable(target))
