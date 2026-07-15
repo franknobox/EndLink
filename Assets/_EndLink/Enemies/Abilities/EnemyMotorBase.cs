@@ -13,7 +13,7 @@ namespace EndLink.Enemies
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(CharacterController))]
-    public class EnemyMotorBase : MonoBehaviour, ICombatKnockbackReceiver
+    public class EnemyMotorBase : MonoBehaviour, ICombatKnockbackReceiver, ICombatRootMotionReceiver
     {
         [Header("移动")]
         [Tooltip("敌人的基础移动速度。实际速度会乘以 Move Speed Multiplier。")]
@@ -86,12 +86,31 @@ namespace EndLink.Enemies
         private NavMeshAgent _navMeshAgent;
         private Vector3 _lastNavDestination;
         private bool _hasLastNavDestination;
+        private EnemyCombatDriver _combatDriver;
 
         /// <summary>当前是否正在执行水平移动。</summary>
         public virtual bool IsMoving => _isMoving;
 
         /// <summary>当前水平速度，主要用于动画桥接和调试显示。</summary>
         public virtual float CurrentSpeed => _horizontalVelocity.magnitude;
+
+        /// <summary>
+        /// 只有当前正在执行的动作明确启用 Root Motion 时，才接收动画位移。
+        /// 动作结束、取消、受击打断或死亡后 Driver 会清空当前动作，本属性随即返回 false。
+        /// </summary>
+        public virtual bool CanReceiveCombatRootMotion
+        {
+            get
+            {
+                CombatActionDefinition action = _combatDriver != null
+                    ? _combatDriver.CurrentAction
+                    : null;
+                return isActiveAndEnabled
+                    && action != null
+                    && action.UseRootMotion
+                    && _combatDriver.IsExecutingAction;
+            }
+        }
 
         /// <summary>移动速度倍率，可被减速、加速、受击硬直等系统临时修改。</summary>
         protected float MoveSpeedMultiplier => _moveSpeedMultiplier;
@@ -100,6 +119,7 @@ namespace EndLink.Enemies
         {
             _characterController = GetComponent<CharacterController>();
             _navMeshAgent = GetComponent<NavMeshAgent>();
+            _combatDriver = GetComponent<EnemyCombatDriver>();
             AlignControllerToFeetIfNeeded();
             ConfigureNavMeshAgent();
         }
@@ -270,6 +290,43 @@ namespace EndLink.Enemies
 
             Stop();
             _combatKnockbackMotion.AddDisplacement(displacement, combatKnockbackDuration);
+        }
+
+        /// <summary>
+        /// 应用战斗动画产生的根位移。
+        /// 第一版仅使用 XZ 水平位移，并通过 CharacterController 移动敌人根物体；
+        /// Y 轴继续交给重力和贴地逻辑，动画旋转继续由动作开始时的目标朝向决定。
+        /// </summary>
+        public virtual void ApplyCombatRootMotion(Vector3 deltaPosition, Quaternion deltaRotation)
+        {
+            if (!CanReceiveCombatRootMotion)
+            {
+                return;
+            }
+
+            EnsureCharacterController();
+            if (_characterController == null || !_characterController.enabled)
+            {
+                return;
+            }
+
+            CombatActionDefinition action = _combatDriver.CurrentAction;
+            deltaPosition.y = 0f;
+            deltaPosition *= action.RootMotionScale;
+            if (deltaPosition.sqrMagnitude <= 0.0000001f)
+            {
+                return;
+            }
+
+            // AI 导航在 Attack 阶段应已停止；这里再次清除残留速度和路径，
+            // 确保同一帧只有动画根位移驱动实体，不与追击移动叠加。
+            _horizontalVelocity = Vector3.zero;
+            _horizontalVelocitySmoothRef = Vector3.zero;
+            _isMoving = false;
+            ClearNavMeshPath();
+
+            MovePlanar(deltaPosition);
+            SyncNavMeshAgentToTransform();
         }
 
         private void TickCombatKnockback(float deltaTime)

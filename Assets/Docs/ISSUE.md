@@ -54,7 +54,7 @@
 
 - `PlayerCombatDriver`、`AllyCombatDriver`、`EnemyCombatDriver` 都包含动作冷却、Hitbox 生成、事件上报和动作时序推进等相似逻辑。
 - 第一版动画事件接线已完成，但 Hitbox Socket、局部偏移和动作表现仍未稳定，暂不抽基类。
-- 后续做 Hitbox 池化和空间对齐时，再抽 `CombatExecutionUtility` 或 `CombatDriverBase`。
+- 后续做 Hitbox 池化和空间对齐时，再抽 `CombatDriverBase`。
 
 ### Camera.main 与全局查找收敛
 

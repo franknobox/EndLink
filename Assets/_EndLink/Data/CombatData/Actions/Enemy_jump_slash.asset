@@ -23,11 +23,13 @@ MonoBehaviour:
   combatTagDuration: 0
   combatTagStackCount: 1
   synergyGainOnLink: 0
-  timingSource: 0
+  timingSource: 1
   cooldown: 4
   startupTime: 0.75
   activeTime: 0.25
   recoveryTime: 0.55
+  useRootMotion: 1
+  rootMotionScale: 1
   hitboxPrefab: {fileID: 5103679077457519376, guid: 57ab56abd24e8954ba74ce7bca776763, type: 3}
   hitboxSpawnDistance: 0.8
   hitboxSpawnHeight: 0.25

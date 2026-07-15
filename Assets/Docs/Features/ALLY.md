@@ -23,6 +23,7 @@
 - 队友进入助战流程只要求配置了 `Assist Action`；动作冷却只影响实际出手时间，冷却未结束时会在 Assist 内等待，而不是放弃助战。
 - `AllyCombatDriver` 按 `CombatActionDefinition` 分别记录冷却，自动助战动作不会占用主动技能冷却，主动技能也不会重置助战动作冷却。
 - `AllyCombatDriver` 支持数据或动画事件时序，并在助战取消、受击、链接中断或组件禁用时关闭当前普通判定；Projectile 继续独立运行。
+- 动画事件动作可以在一次执行中重复开启多组独立 Hitbox 窗口，用于队友的多段攻击；整套动作仍只记录一次动作冷却。
 - `AllyCombatDriver` 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 或调试窗口读取。
 - `CombatActionDefinition.Effective Attack Range` 决定队友距离目标 Collider 表面多远开始攻击。
 - `AllyCombatDriver` 执行助战时会朝目标方向生成判定，并广播 `ActionStarted` 事件。

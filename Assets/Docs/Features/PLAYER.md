@@ -226,6 +226,7 @@
 - 每段普攻开始时由 `PlayerComboController` 执行短距离前快后慢踏步；有软锁目标时按 Collider 表面距离停止，目标过远时只沿角色正前方移动。
 - 攻击状态继续使用已有软锁平滑转向，并在每一段开始时重新取得当前有效目标。
 - `PlayerGuardController` 只处理正面命中：进入防御后的短窗口判定为弹反，窗口结束后按配置倍率承受格挡伤害。
+- `PlayerGuardController` 会随组件启用和禁用向 `CharacterHealth` 注册或退订命中拦截，关闭格挡能力后不会继续参与受击结算。
 - 普通格挡不会触发玩家 Hit 状态，也不接收本次击退；成功弹反完全化解伤害，并让支持弹反反馈的敌人进入现有 Hit 状态。
 - 没有正式动画和 VFX 时，防御期间会在玩家正面生成蓝色白模防御弧；普通格挡闪为青色，成功弹反闪为黄色并短暂放大。
 - 提供防御开始、结束、普通格挡和弹反成功事件，后续可直接替换或叠加正式动画、音效和 VFX。
@@ -380,6 +381,7 @@
 - 支持通过 `CombatActionDefinition` 配置普攻、主动技能、连携技的伤害、击退、`CombatTagDefinition` 标签、标签持续时间、冷却、Hitbox 和生成参数。
 - `PlayerCombatDriver` 执行的动作必须来自 `CombatActionDefinition`。
 - 支持 `DataDriven` 和 `AnimationEventDriven` 两种动作时序；后者由动画事件决定普通 Hitbox 的有效窗口和状态退出。
+- 动画事件动作可以重复配置多组 `HitboxStart / HitboxEnd`，用于一招多段命中；每个窗口生成独立 Hitbox，整套动作仍只进入一次状态并记录一次冷却。
 - 当前执行内容是生成指定 Hitbox prefab；有自动软锁目标时先让玩家正面转向目标，判定生成瞬间读取角色实时正前方，使前摇期间的跟随转向能同步影响 Hitbox 朝向。
 - 普攻、主动技能和连携技按各自 `CombatActionDefinition` 独立记录冷却。
 - 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 区分普攻、技能和连携槽。

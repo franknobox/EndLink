@@ -79,11 +79,15 @@
 - Animator、移动能力和战斗执行器均支持自动查找；特殊敌人没有移动或攻击能力时，对应引用可以留空。
 - Animator Controller 缺少某个协议参数时会跳过写入，可选开启一次性警告排查配置。
 - `EnemyAnimatorDriver` 会在 Animator 同物体上自动确保动画事件接收器；Action 设为 `AnimationEventDriven` 后，可由 Clip 事件控制判定窗口、取消通知和动作结束。
-- Root Motion 仍只保留接口，当前敌人位移继续由 `EnemyMotorBase` 负责。
+- 动画事件接收器通过 `OnAnimatorMove` 读取 Animator 根位移；只有当前 Action 启用 `UseRootMotion` 时，`EnemyMotorBase` 才会用 `CharacterController` 应用水平位移并同步 NavMeshAgent。
+- 动作结束、取消、受击打断或死亡后会立即停止接收根位移；Y 轴继续由敌人重力与贴地逻辑管理，动画旋转暂不驱动敌人根物体。
 
 对应脚本：
 - `Assets/_EndLink/Enemies/Anime/EnemyAnimatorDriver.cs`
+- `Assets/_EndLink/Enemies/Abilities/EnemyMotorBase.cs`
 - `Assets/_EndLink/Enemies/Abilities/EnemyCombatDriver.cs`
+- `Assets/_EndLink/Control/Animation/CombatAnimationEventReceiver.cs`
+- `Assets/_EndLink/Control/Animation/ICombatRootMotionReceiver.cs`
 - `Assets/_EndLink/Control/Animation/CombatAnimatorParams.cs`
 
 相关物体：
@@ -108,6 +112,7 @@ Animator 参数：
 - 需要由动画关键帧控制判定的敌人 Action 设为 `AnimationEventDriven`。
 - 在攻击 Clip 上依次配置 `OnActionHitboxStart`、`OnActionHitboxEnd`，可选配置 `OnActionCanCancel`，并在收招结束配置 `OnActionEnd`。
 - 事件接收组件由 `EnemyAnimatorDriver` 在运行时自动补到 Animator 同物体；动作数据总时长用于漏配结束事件时安全退出。
+- 需要实体跟随动画前进的动作额外启用 `UseRootMotion`，再用 `RootMotionScale` 调整移动距离；不需要位移的动作保持关闭。
 
 </details>
 
@@ -260,6 +265,7 @@ Animator 参数：
 - `EnemyCombatDriver` 是敌人战斗执行器，按 `CombatActionDefinition` 生成 Hitbox、记录冷却并广播动作开始事件。
 - `EnemyCombatDriver` 暴露当前动作、执行阶段和取消入口；完整运行时重置会同时清理当前动作与动作冷却。
 - 敌人动作支持数据时序或动画事件时序；受击、死亡、脱战和状态退出会中断动作并立即关闭普通驻留 Hitbox，已经发射的 Projectile 不受影响。
+- 动画事件动作支持重复配置多组 `HitboxStart / HitboxEnd`，每组生成新的 Hitbox，因此同一 Action 可以完成连续多次命中，同时仍只占用一次攻击许可和一次冷却。
 - `EnemyCombatDriver` 提供普通攻击和技能两个动作槽；`EnemyCombatBehavior` 每轮按可用性和技能概率选择动作，Driver 仍只负责动作时序、Hitbox、冷却和事件。
 
 对应脚本：

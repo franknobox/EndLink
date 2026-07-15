@@ -395,11 +395,16 @@ namespace EndLink.Enemies
         /// <inheritdoc />
         public void OnActionHitboxStart()
         {
-            if (!IsCurrentActionAnimationDriven() || _hasEndedHitboxWindow)
+            if (!IsCurrentActionAnimationDriven())
             {
                 return;
             }
 
+            // 动画事件模式允许同一个 Action 重复开启判定窗口。
+            // 如果上一个窗口漏配了 HitboxEnd，先安全关闭驻留 Hitbox，避免多个近战判定重叠。
+            EndCurrentHitbox();
+            _hasTriggeredActionEffect = false;
+            _hasEndedHitboxWindow = false;
             _animationEventPhase = CombatActionPhase.Active;
             TriggerCurrentActionEffect();
         }

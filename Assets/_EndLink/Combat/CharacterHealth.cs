@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -73,7 +74,7 @@ namespace EndLink.Combat
         private UnityEvent onDead = new();
 
         private Collider[] _ownedColliders = Array.Empty<Collider>();
-        private IHitInterceptor[] _hitInterceptors = Array.Empty<IHitInterceptor>();
+        private readonly List<IHitInterceptor> _hitInterceptors = new();
         private MaterialPropertyBlock _propertyBlock;
         private Color _originalColor = Color.white;
         private Coroutine _flashCoroutine;
@@ -122,6 +123,32 @@ namespace EndLink.Combat
 
         /// <summary>死亡的代码事件。</summary>
         public event Action<CharacterHealthDeathInfo> Died;
+
+        /// <summary>
+        /// 注册一个命中拦截器。
+        /// 格挡、临时护盾和短暂无敌等运行时能力应在启用时注册；重复注册会被忽略。
+        /// </summary>
+        public void RegisterHitInterceptor(IHitInterceptor interceptor)
+        {
+            if (!IsHitInterceptorValid(interceptor) || _hitInterceptors.Contains(interceptor))
+            {
+                return;
+            }
+
+            _hitInterceptors.Add(interceptor);
+        }
+
+        /// <summary>
+        /// 取消注册一个命中拦截器。
+        /// 运行时能力应在禁用或移除时调用，避免继续参与后续命中结算。
+        /// </summary>
+        public void UnregisterHitInterceptor(IHitInterceptor interceptor)
+        {
+            if (interceptor != null)
+            {
+                _hitInterceptors.Remove(interceptor);
+            }
+        }
 
         private void Awake()
         {
@@ -378,18 +405,24 @@ namespace EndLink.Combat
             _originalColor = GetOriginalBaseColor();
             _originalName = gameObject.name;
             _ownedColliders = GetComponentsInChildren<Collider>(false);
-            _hitInterceptors = GetComponents<IHitInterceptor>();
+            IHitInterceptor[] initialInterceptors = GetComponents<IHitInterceptor>();
+            for (int i = 0; i < initialInterceptors.Length; i++)
+            {
+                RegisterHitInterceptor(initialInterceptors[i]);
+            }
+
             _ownedColliderCount = _ownedColliders.Length;
             _componentsCached = true;
         }
 
         private HitInterception ResolveHitInterception(HitboxHitInfo hitInfo)
         {
-            for (int i = 0; i < _hitInterceptors.Length; i++)
+            for (int i = 0; i < _hitInterceptors.Count;)
             {
                 IHitInterceptor interceptor = _hitInterceptors[i];
-                if (interceptor == null)
+                if (!IsHitInterceptorValid(interceptor))
                 {
+                    _hitInterceptors.RemoveAt(i);
                     continue;
                 }
 
@@ -398,9 +431,31 @@ namespace EndLink.Combat
                 {
                     return result;
                 }
+
+                i++;
             }
 
             return HitInterception.Continue;
+        }
+
+        private static bool IsHitInterceptorValid(IHitInterceptor interceptor)
+        {
+            if (interceptor == null)
+            {
+                return false;
+            }
+
+            if (interceptor is UnityEngine.Object unityObject && unityObject == null)
+            {
+                return false;
+            }
+
+            if (interceptor is Behaviour behaviour && !behaviour.isActiveAndEnabled)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private IEnumerator FlashHitColor()

@@ -70,6 +70,11 @@ namespace EndLink.Enemies
         [SerializeField]
         private string deadTriggerParameter = CombatAnimatorParams.DeadTrigger;
 
+        [Header("Root Motion")]
+        [Tooltip("让 Animator 计算根运动，并由动画事件接收器转交给 EnemyMotorBase。只有当前 Combat Action 启用 Root Motion 时才会产生实体位移。")]
+        [SerializeField]
+        private bool enableControlledRootMotion = true;
+
         [Header("调试")]
         [Tooltip("Animator 缺少参数时是否打印一次警告。接入正式 Animator Controller 时可开启检查协议。")]
         [SerializeField]
@@ -203,6 +208,14 @@ namespace EndLink.Enemies
             if (!animator.TryGetComponent(out CombatAnimationEventReceiver receiver))
             {
                 receiver = animator.gameObject.AddComponent<CombatAnimationEventReceiver>();
+            }
+
+            // Animator 上存在 OnAnimatorMove 后，根运动由脚本接管；这里只启用 Delta 计算，
+            // 不会让 Unity 直接移动 Visuals。运行时反复切换 applyRootMotion 会重初始化 Animator，
+            // 因此只在引用建立时同步一次配置。
+            if (animator.applyRootMotion != enableControlledRootMotion)
+            {
+                animator.applyRootMotion = enableControlledRootMotion;
             }
 
             receiver.RefreshListeners();

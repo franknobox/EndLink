@@ -109,6 +109,15 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float recoveryTime = 0.15f;
 
+        [Header("动作位移")]
+        [Tooltip("是否在该动作执行期间接收动画 Root Motion。启用后，角色移动层会应用动画产生的水平位移；垂直位移和旋转暂不接入。")]
+        [SerializeField]
+        private bool useRootMotion;
+
+        [Tooltip("动画水平根位移倍率。1 表示使用动画原始距离，0 表示不产生实体位移；用于校正不同动画资源的位移尺度。")]
+        [SerializeField, Min(0f)]
+        private float rootMotionScale = 1f;
+
         [Header("Hitbox")]
         [Tooltip("动作释放时生成的 Hitbox 预制体。")]
         [SerializeField]
@@ -175,6 +184,12 @@ namespace EndLink.Combat
         /// <summary>后摇时间。</summary>
         public float RecoveryTime => recoveryTime;
 
+        /// <summary>该动作执行期间是否接收动画水平根位移。</summary>
+        public bool UseRootMotion => useRootMotion;
+
+        /// <summary>动画水平根位移倍率。</summary>
+        public float RootMotionScale => Mathf.Max(0f, rootMotionScale);
+
         /// <summary>Hitbox 预制体。</summary>
         public GameObject HitboxPrefab => hitboxPrefab;
 
@@ -232,6 +247,7 @@ namespace EndLink.Combat
             startupTime = Mathf.Max(0f, startupTime);
             activeTime = Mathf.Max(0.01f, activeTime);
             recoveryTime = Mathf.Max(0f, recoveryTime);
+            rootMotionScale = Mathf.Max(0f, rootMotionScale);
             hitboxSpawnDistance = Mathf.Max(0f, hitboxSpawnDistance);
 
             if (effectiveAttackRange <= 0f)

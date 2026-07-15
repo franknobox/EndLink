@@ -72,6 +72,7 @@ namespace EndLink.Combat
         private Material _feedbackMaterial;
         private float _feedbackFlashEndsAt;
         private PlayerGuardResult _feedbackFlashResult;
+        private CharacterHealth _characterHealth;
 
         /// <summary>当前是否处于防御状态。</summary>
         public bool IsGuarding { get; private set; }
@@ -91,6 +92,17 @@ namespace EndLink.Combat
         /// <summary>弹反成功事件。</summary>
         public UnityEvent OnParried => onParried;
 
+        private void Awake()
+        {
+            _characterHealth = GetComponent<CharacterHealth>();
+        }
+
+        private void OnEnable()
+        {
+            _characterHealth ??= GetComponent<CharacterHealth>();
+            _characterHealth?.RegisterHitInterceptor(this);
+        }
+
         private void Update()
         {
             RefreshFallbackVisual();
@@ -98,6 +110,7 @@ namespace EndLink.Combat
 
         private void OnDisable()
         {
+            _characterHealth?.UnregisterHitInterceptor(this);
             EndGuard();
             SetFallbackVisualVisible(false);
         }

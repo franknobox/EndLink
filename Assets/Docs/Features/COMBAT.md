@@ -132,10 +132,11 @@
 - `CombatActionType` 描述动作性质，不描述释放者来源。
 - 当前动作类型包括 `BasicAttack`、`Skill`、`LinkAttack`、`Ultimate`。
 - 主控、队友和敌人后续可以共用同一套动作类型，释放者来源应由后续战斗事件数据携带。
-- 动作配置包含固定伤害 `FlatDamage`、攻击力倍率 `AtkPowerMultiplier`、伤害类型、击退、`CombatTagDefinition` 命中标签、标签持续时间、标签层数、连携协同率收益、冷却、前摇、有效时间、后摇、Hitbox prefab、Hitbox 生成位置和 AI 有效攻击距离。
+- 动作配置包含固定伤害 `FlatDamage`、攻击力倍率 `AtkPowerMultiplier`、伤害类型、击退、`CombatTagDefinition` 命中标签、标签持续时间、标签层数、连携协同率收益、冷却、前摇、有效时间、后摇、动画根位移开关与倍率、Hitbox prefab、Hitbox 生成位置和 AI 有效攻击距离。
 - 动作伤害基础公式为 `FlatDamage + AttackPower × AtkPowerMultiplier`，因此可配置纯固定伤害、纯倍率伤害或两者混合。
 - 动作配置包含 `TimingSource`：`DataDriven` 使用 `startup / active / recovery` 推进；`AnimationEventDriven` 由动画事件控制判定开始、结束、取消窗口和动作结束。
 - 动画事件模式仍使用数据总时长作为安全超时；缺少 `ActionEnd` 时会结束动作并警告，缺少 `HitboxStart` 时不会自动补一次命中。
+- `UseRootMotion` 按动作决定是否让角色实体接收动画水平根位移，`RootMotionScale` 用于校正动画原始位移距离；垂直位移和动画旋转暂不接入。
 - `SynergyGainOnLink` 只在动作类型为 `LinkAttack` 且连携技成功释放时由 `PartyUltimateContext` 读取，用于提升全队终链奥义协同率。
 
 对应脚本：
@@ -164,6 +165,8 @@
 补充更新：
 - `PlayerCombatDriver`、`AllyCombatDriver`、`EnemyCombatDriver` 同时支持数据时序和动画事件时序。
 - 数据时序跨过 `startup` 后生成判定；动画时序响应 `HitboxStart`、`HitboxEnd`、`CanCancel` 和 `ActionEnd`。
+- 动画事件时序允许同一个 Action 重复配置多组 `HitboxStart / HitboxEnd`，每组生成独立 Hitbox 并可以再次命中同一目标；整套动作仍只记录一次冷却和一次动作锁。
+- 多个判定窗口复用同一套 Action 伤害、击退、标签与生成参数，因此动作伤害表示每次命中的伤害，不是整套动作总伤害。
 - 动作被受击、死亡、状态退出或对象禁用打断时，会清理动作运行时和普通驻留 Hitbox；已经发射的 Projectile 继续独立运行。
 - 当前仍由各 Driver 自己持有时序、生成 Hitbox 和记录冷却；后续结合池化与 Hitbox Socket 稳定后再抽公共层。
 
@@ -222,7 +225,8 @@
 <summary>展开详情</summary>
 功能说明：
 - Hitbox 实际造成伤害后，通过 `CombatKnockback` 统一计算并分发总击退位移；免伤、无伤害和击退距离为 `0` 时不会产生位移。
-- `CharacterHealth` 在伤害结算前查询同根物体上的 `IHitInterceptor`，供玩家格挡、弹反和后续特殊护盾修改伤害倍率与击退结果。
+- `CharacterHealth` 初始化时自动登记同根物体上已启用的 `IHitInterceptor`，并提供动态注册与退订接口，供格挡、弹反、临时护盾和短暂无敌在运行时接入伤害结算。
+- 动态拦截器按注册顺序处理；已禁用或已销毁的拦截器会在命中结算时自动移除，避免继续影响后续受击。
 - 普通格挡产生的伤害结果会标记 `WasBlocked`，玩家生命桥接层不会因此进入 Hit 状态。
 - 第一版最终击退距离为 `基础击退距离 × CharacterStats.KnockbackTakenMultiplier`，未挂载 `CharacterStats` 的目标默认按 `1` 倍处理。
 - `CombatKnockback` 会先通过 `CombatTarget` 归一到目标 `RootTransform`，再向父级查找 `CharacterStats` 和 `ICombatKnockbackReceiver`，避免命中子 Collider 时击退丢失。

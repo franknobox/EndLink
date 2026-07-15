@@ -21,14 +21,18 @@ namespace EndLink.Core
         private bool includeChildren = true;
 
         private readonly List<ICombatAnimationEventListener> _listeners = new();
+        private readonly List<ICombatRootMotionReceiver> _rootMotionReceivers = new();
+        private Animator _animator;
 
         private void Awake()
         {
+            _animator = GetComponent<Animator>();
             RefreshListeners();
         }
 
         private void OnEnable()
         {
+            _animator ??= GetComponent<Animator>();
             RefreshListeners();
         }
 
@@ -39,6 +43,7 @@ namespace EndLink.Core
         public void RefreshListeners()
         {
             _listeners.Clear();
+            _rootMotionReceivers.Clear();
 
             if (listenerRoot != null)
             {
@@ -47,7 +52,7 @@ namespace EndLink.Core
             }
 
             CollectListeners(gameObject);
-            if (_listeners.Count > 0)
+            if (_listeners.Count > 0 && _rootMotionReceivers.Count > 0)
             {
                 return;
             }
@@ -55,7 +60,7 @@ namespace EndLink.Core
             // Animator 和事件接收器通常位于 Visuals 子物体，而 Driver 位于角色根物体。
             // 未显式指定监听根时沿父级查找，找到最近的一层监听者后停止，避免扫描其它角色。
             Transform current = transform.parent;
-            while (current != null && _listeners.Count == 0)
+            while (current != null && (_listeners.Count == 0 || _rootMotionReceivers.Count == 0))
             {
                 CollectListeners(current.gameObject, false);
                 current = current.parent;
@@ -80,6 +85,38 @@ namespace EndLink.Core
                 {
                     _listeners.Add(listener);
                 }
+
+                if (behaviours[i] is ICombatRootMotionReceiver rootMotionReceiver
+                    && !_rootMotionReceivers.Contains(rootMotionReceiver))
+                {
+                    _rootMotionReceivers.Add(rootMotionReceiver);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Animator 根运动回调。
+        /// 本组件与 Animator 位于同一物体，因此在这里读取动画 Delta，再交给最近的角色移动层处理。
+        /// 没有接收者或当前动作未启用 Root Motion 时会主动丢弃 Delta，避免只移动 Visuals。
+        /// </summary>
+        private void OnAnimatorMove()
+        {
+            _animator ??= GetComponent<Animator>();
+            if (_animator == null || !_animator.applyRootMotion)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _rootMotionReceivers.Count; i++)
+            {
+                ICombatRootMotionReceiver receiver = _rootMotionReceivers[i];
+                if (receiver == null || !receiver.CanReceiveCombatRootMotion)
+                {
+                    continue;
+                }
+
+                receiver.ApplyCombatRootMotion(_animator.deltaPosition, _animator.deltaRotation);
+                return;
             }
         }
 

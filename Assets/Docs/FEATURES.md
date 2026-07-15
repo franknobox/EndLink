@@ -37,7 +37,7 @@
 | [玩家 ActCombat 基础](Features/PLAYER.md#feature-player-act-combat) | 已完成格挡反馈版 | 提供三段普攻连段、无效下一段超时退出、攻击踏步与软锁追踪，以及带白模反馈的正面格挡和短窗口弹反。 |
 | [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成动画事件接线版 | 同步玩家状态、移动和 Action 参数，并把动画判定、取消窗口与动作结束事件转发给战斗 Driver 和状态机。 |
 | [玩家自动软锁定](Features/PLAYER.md#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按固定间隔自动选择当前战斗目标，默认优先最近敌人，并显示轻量目标点。 |
-| [玩家战斗驱动](Features/PLAYER.md#feature-player-combat-driver) | 已完成动画时序版 | 由状态机调用，支持数据或动画事件驱动逐段执行判定，按角色实时正前方生成 Hitbox 并管理独立动作冷却。 |
+| [玩家战斗驱动](Features/PLAYER.md#feature-player-combat-driver) | 已完成多判定窗口版 | 由状态机调用，支持数据或动画事件驱动判定，并允许单个动画动作重复开启独立 Hitbox 窗口。 |
 | [当前架构边界](Features/PLAYER.md#feature-architecture-boundary) | 已建立初版约定 | 初步明确输入读取、玩家移动、相机控制、状态机、战斗驱动、命中检测之间的职责边界。 |
 
 #### COMBAT
@@ -47,10 +47,10 @@
 | [通用生命值与角色受击接线](Features/COMBAT.md#feature-character-health) | 已完成桥接版 | 提供可复用的血量、受击、治疗和死亡；玩家、队友通过薄桥接层接入各自状态机。 |
 | [统一 Combat Target](Features/COMBAT.md#feature-combat-target) | 已完成第一版 | 为玩家、队友和敌人统一提供唯一根身份、存活/可选状态、锁定点、Collider 表面点和水平表面距离。 |
 | [角色战斗数值基础](Features/COMBAT.md#feature-character-stats) | 已完成第一版 | 提供玩家、队友和敌人共用的攻击力与承受击退倍率，并支持动作按固定伤害与攻击力倍率组合计算伤害。 |
-| [战斗动作配置](Features/COMBAT.md#feature-combat-action) | 已完成双时序版 | 使用 `CombatActionDefinition` 描述伤害、冷却、Hitbox、标签和协同率，并支持数据时间或动画事件驱动动作。 |
-| [统一 Action 执行接口](Features/COMBAT.md#feature-combat-action-executor) | 已完成动画事件接线版 | 统一玩家、队友和敌人的动作检查、执行、冷却和目标传入，并接通判定事件、动作完成与打断清理。 |
+| [战斗动作配置](Features/COMBAT.md#feature-combat-action) | 已完成动作位移配置版 | 使用 `CombatActionDefinition` 描述伤害、冷却、Hitbox、标签、协同率和动画根位移，并支持数据时间或动画事件驱动动作。 |
+| [统一 Action 执行接口](Features/COMBAT.md#feature-combat-action-executor) | 已完成多判定窗口版 | 统一玩家、队友和敌人的动作检查、执行、冷却和目标传入，并支持动画事件动作在一次执行中开启多个判定窗口。 |
 | [伤害结算管线基础](Features/COMBAT.md#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
-| [受击规则基础](Features/COMBAT.md#feature-hit-response) | 已完成格挡拦截版 | Hitbox 造成伤害后统一计算击退，并允许格挡、弹反等规则在生命结算前修改伤害与击退结果。 |
+| [受击规则基础](Features/COMBAT.md#feature-hit-response) | 已完成动态拦截版 | Hitbox 造成伤害后统一计算击退，并允许格挡、弹反、临时护盾等规则动态接入生命结算，修改伤害与击退结果。 |
 | [战斗标签系统](Features/COMBAT.md#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和协议反应规则。 |
 | [战斗事件总栈](Features/COMBAT.md#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
 | [基础 Hitbox 配置](Features/COMBAT.md#feature-hitbox) | 已完成动画窗口接线版 | 提供通用与远程 Hitbox；普通判定支持数据有效段或动画事件关闭，弹体始终使用自身寿命规则。 |
@@ -76,10 +76,10 @@
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [敌人身份与生命目标](Features/ENEMIES.md#feature-enemy-identity-health) | 已完成分类基础版 | 提供正式敌人根身份、根类别、战斗定位、生命受击、视觉受击反馈、死亡事件、目标有效性、死亡退场、战斗标签容器和基础调试显示。 |
-| [敌人 Animator 桥接](Features/ENEMIES.md#feature-enemy-animator) | 已完成动画事件接线版 | 把敌人移动、大状态和动作参数同步给 Animator，并支持动画关键帧驱动判定与动作结束。 |
+| [敌人 Animator 桥接](Features/ENEMIES.md#feature-enemy-animator) | 已完成受控根运动版 | 把敌人移动、大状态和动作参数同步给 Animator，并支持动画关键帧驱动判定、动作结束和按动作应用水平根位移。 |
 | [敌人感知与大状态机](Features/ENEMIES.md#feature-enemy-state-sensor) | 已完成基础战斗循环版 | 提供 Idle、Alert、Combat、Hit、Return、Dead 大状态，以及 Combat 内部的接近、观察、攻击准备、攻击、恢复和重新定位流程。 |
 | [敌人围攻协调](Features/ENEMIES.md#feature-enemy-combat-coordination) | 已完成观察移动版 | 通过区域协调器统一管理敌人归属、攻击评分、同时攻击数量、许可预留、动态软站位和等待/攻击准备机动。 |
-| [敌人移动与战斗能力](Features/ENEMIES.md#feature-enemy-motor-combat) | 已完成普攻/技能选择版 | 提供地面移动、NavMesh 追击、转向、重力、碰撞推挤、衰减击退，以及按固定计数或概率选择普攻/技能的敌人战斗执行基底。 |
+| [敌人移动与战斗能力](Features/ENEMIES.md#feature-enemy-motor-combat) | 已完成多段动作版 | 提供地面移动、NavMesh 追击、转向、重力、碰撞推挤、衰减击退、普攻/技能选择和单 Action 多段判定。 |
 
 #### WORLD
 
