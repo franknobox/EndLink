@@ -20,6 +20,7 @@
 - 世界交互输入读取 `Player/Interact`，当前默认键位为键盘 `F` 单击和手柄 `buttonNorth`。
 - 攻击输入读取 `Player/Attack`，由状态机统一捕获并写入短时攻击缓冲，再决定是否进入攻击状态。
 - 防御输入读取 `Player/Guard`，默认键位为鼠标右键、手柄左扳机，只缓存当前是否按住。
+- 目标锁定输入读取 `Player/TargetLock`，默认键位为鼠标中键、手柄右摇杆按下；输入层只缓存按下事件，是否建立硬锁由视角模式决定。
 - 闪避输入读取 `Player/Dodge`，默认键位为键盘 `Left Ctrl`、手柄 `buttonEast`。
 - 主控主动技能读取 `Player/PlayerSkill`，默认键位 Q。
 - 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`；当前不绑定键盘，路由配置入口和手柄绑定继续保留。
@@ -90,7 +91,7 @@
 
 <a id="feature-third-person-camera"></a>
 
-### Feature：第三人称自由相机
+### Feature：第三人称视角模式
 
 <details>
 <summary>展开详情</summary>
@@ -106,10 +107,17 @@
 - 脱战 Idle 持续 `1` 秒后开始缓慢拉近；移动或战斗持续 `0.5` 秒后开始较快拉远，避免短时状态切换造成镜头反复伸缩。
 - 启用 `CinemachineThirdPersonFollow` 内置避障，检测 `Default`、`Interactable` 和 `Environment` Layer；遇到障碍时快速拉近，离开障碍后平滑恢复距离。
 - 支持鼠标锁定，方便第三人称自由视角操作。
+- `PlayerViewController` 提供 `FastAction` 与 `SoulsLike` 两种局外可选模式，建议挂在 `EndLink_3rd_Camera`。
+- `PlayerViewController` 独立保存 `FastAction` 与 `SoulsLike` 两套完整预设，切换模式时把所选参数交给 `ThirdPersonCameraController` 执行。
+- `FastAction` 使用偏高、偏远、旋转较快的预设；已有组件第一次升级时会自动从当前 `ThirdPersonCameraController` 捕获原调参。
+- `SoulsLike` 使用偏近、偏低、旋转较慢的预设；中键建立硬锁后，相机平滑朝向目标锁定点。
+- Play Mode 中修改当前模式的预设会立即重新应用，便于分别调教两套镜头。
+- 第一版只切换镜头与目标锁定策略，尚未改变玩家移动为锁定横移或定向闪避。
 
 对应脚本：
 - `Assets/_EndLink/Control/ThirdPersonCameraController.cs`
 - `Assets/_EndLink/Control/PlayerCameraInputReader.cs`
+- `Assets/_EndLink/Control/PlayerViewController.cs`
 
 相关包：
 - `com.unity.cinemachine`：当前版本 `3.1.6`
@@ -120,11 +128,12 @@
   - `CinemachineBrain`
 - 玩家子物体 `CameraTarget`
   - 建议位置在胸口到头部之间，例如本地高度约 `1.65`
-- `EndLink ThirdPerson Camera`
+- `EndLink_3rd_Camera`
   - `CinemachineCamera`
   - `CinemachineThirdPersonFollow`
   - `PlayerCameraInputReader`
   - `ThirdPersonCameraController`
+  - `PlayerViewController`
   - 显式绑定场景中的 `PartyCombatContext`；`PlayerStateMachine` 可从 `followTarget` 自动获取
 
 关键配置：
@@ -140,6 +149,10 @@
 - `verticalArmLength`：镜头高度和开阔感
 - `cameraSide`：左肩、右肩或居中
 - `fieldOfView`：视场角，影响画面开阔程度
+- `viewMode`：选择高速自由视角或魂类硬锁视角
+- `fastActionSettings`：高速动作模式独立的距离、高度、构图、FOV 与旋转灵敏度
+- `soulsLikeSettings`：魂类模式独立的距离、高度、构图、FOV 与旋转灵敏度
+- `hardLockRotationSmoothTime`：硬锁镜头跟随目标的平滑时间
 - `Avoid Obstacles`：镜头避障开关；当前半径为 `0.25`，进入碰撞阻尼为 `0.05`，离开碰撞阻尼为 `0.5`
 
 
@@ -317,28 +330,32 @@
 
 <a id="feature-player-targeting"></a>
 
-### Feature：玩家自动软锁定
+### Feature：玩家软锁与硬锁目标
 
 <details>
 <summary>展开详情</summary>
 
 功能说明：
-- `PlayerTargeting` 是玩家自动软锁定组件，放在战斗层。
+- `PlayerTargeting` 是玩家目标选择组件，放在战斗层，同时维护自动软目标和可选的手动硬锁目标。
 - 负责按固定刷新间隔搜索并保存当前软锁目标。
+- 硬锁建立后优先作为战斗系统的有效目标，不再随自动刷新切换；解除硬锁后立即回退到自动软目标。
+- `PlayerViewController` 处于 `SoulsLike` 模式时，鼠标中键或手柄右摇杆按下会切换硬锁。
+- 硬锁目标死亡、被设为不可选、离开搜索范围、Layer 不匹配或被销毁时会自动解除。
 - 默认选择范围内距离玩家最近的敌人，也保留 `CameraForward` 模式用于后续偏动作游戏的视角优先设置。
 - 最近目标按 `CombatTarget` 的 Collider 水平表面距离计算，不再按敌人根节点或模型中心距离计算。
-- 有软锁目标时会在目标朝向玩家一侧的身体表面显示一个最小白点；未配置 prefab 时自动生成简单小球标识。
-- 不控制相机、不生成 Hitbox、不决定攻击是否可以释放。
+- 有有效目标时会在目标朝向玩家一侧的身体表面显示一个最小白点；硬锁与软目标第一版共用该标识。
+- `PlayerTargeting` 本身不控制相机、不生成 Hitbox、不决定攻击是否可以释放；相机响应由 `PlayerViewController` 协调。
 - 默认搜索 `Enemy` Layer。
 - 使用 `Physics.OverlapSphereNonAlloc` 搜索范围内目标，减少运行时 GC。
 - `Nearest` 模式按距离最近自动刷新目标，刷新间隔默认 0.2 秒。
 - `CameraForward` 模式会同时考虑视角/朝向夹角和距离。
 - 当前目标离开搜索范围、Layer 不匹配、死亡、被设为不可选或被销毁时，会自动清除。
-- 对外提供 `TryAcquireTarget()`、`SetCurrentTarget(Transform target)` 和 `ClearTarget()`。
-- `PlayerCombatDriver` 会读取当前软锁目标；有目标时攻击开始先让玩家正面转向目标，Attack 状态期间继续平滑跟随，判定生成时按角色实时正前方生成 Hitbox / 远程技能。
+- 对外提供软目标获取，以及 `TryAcquireHardLock()`、`ToggleHardLock()`、`ClearHardLock()` 等硬锁入口。
+- `PlayerCombatDriver` 会读取当前有效目标；硬锁存在时优先使用硬锁目标，否则使用自动软目标。攻击开始先让玩家正面转向目标，Attack 状态期间继续平滑跟随。
 
 对应脚本：
 - `Assets/_EndLink/Player/PlayerTargeting.cs`
+- `Assets/_EndLink/Control/PlayerViewController.cs`
 - `Assets/_EndLink/Combat/Target/CombatTarget.cs`
 
 相关物体：

@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5020b783917c4cc1bdadfbbd75cfb140, type: 3}
+  m_Name: Enemy_jump_slash
+  m_EditorClassIdentifier: EndLink.Runtime::EndLink.Combat.CombatActionDefinition
+  actionId: enemy_jump_slash
+  displayName: Enemy Jump Slash
+  actionType: 1
+  flatDamage: 14
+  atkPowerMultiplier: 0
+  damageType: 0
+  knockbackForce: 0.8
+  combatTagToApply: {fileID: 0}
+  combatTagDuration: 0
+  combatTagStackCount: 1
+  synergyGainOnLink: 0
+  timingSource: 1
+  cooldown: 4
+  startupTime: 0.75
+  activeTime: 0.25
+  recoveryTime: 0.55
+  useRootMotion: 1
+  rootMotionScale: 1
+  hitboxPrefab: {fileID: 5103679077457519376, guid: 57ab56abd24e8954ba74ce7bca776763, type: 3}
+  hitboxSpawnDistance: 0.8
+  hitboxSpawnHeight: 0.25
+  effectiveAttackRange: 1.2

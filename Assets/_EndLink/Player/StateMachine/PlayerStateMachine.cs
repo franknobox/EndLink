@@ -28,7 +28,7 @@ namespace EndLink.Core
         [SerializeField, Range(0f, 1f)]
         private float attackMoveInputScale = 0f;
 
-        [Tooltip("攻击动作期间朝当前软锁目标平滑转向的速度。0 表示攻击开始后不继续跟随目标。")]
+        [Tooltip("攻击动作期间朝当前有效目标平滑转向的速度。0 表示攻击开始后不继续跟随目标。")]
         [SerializeField, Min(0f)]
         private float attackTrackingRotationSharpness = 8f;
 
@@ -112,7 +112,7 @@ namespace EndLink.Core
         /// <summary>当前通用技能状态准备执行的动作。</summary>
         public CombatActionDefinition CurrentAction => _currentAction;
 
-        /// <summary>当前动作显式指定的目标。为空时由 PlayerTargeting 继续解析软锁目标。</summary>
+        /// <summary>当前动作显式指定的目标。为空时由 PlayerTargeting 继续解析软目标或硬锁目标。</summary>
         public Transform CurrentActionTarget => _currentActionTarget;
 
         /// <summary>
@@ -125,7 +125,7 @@ namespace EndLink.Core
         /// </summary>
         public float AttackMoveInputScale => attackMoveInputScale;
 
-        /// <summary>攻击动作期间向软锁目标平滑转向的速度。</summary>
+        /// <summary>攻击动作期间向当前有效目标平滑转向的速度。</summary>
         public float AttackTrackingRotationSharpness => attackTrackingRotationSharpness;
 
         /// <summary>防御期间保留的移动输入倍率。</summary>

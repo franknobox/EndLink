@@ -30,13 +30,13 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成防御输入版 | 负责读取玩家移动、攻击、防御、世界交互和相机等输入，并把输入缓存为控制层可使用的数据。 |
+| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成目标锁定输入版 | 负责读取玩家移动、攻击、防御、目标锁定、世界交互和相机等输入，并把输入缓存为控制层可使用的数据。 |
 | [玩家 CharacterController 移动](Features/PLAYER.md#feature-player-movement) | 已完成受击后退版 | 负责玩家平滑移动、基础跳跃、重力贴地、转向，以及战斗击退的短时衰减后退。 |
-| [第三人称自由相机](Features/PLAYER.md#feature-third-person-camera) | 已完成基础避障版 | 负责越肩第三人称视角、自由旋转和上下角度限制，在脱战待机时缓慢拉近、移动或战斗时较快拉远，并处理灰盒环境镜头碰撞。 |
+| [第三人称视角模式](Features/PLAYER.md#feature-third-person-camera) | 已完成双模式基础版 | 保留偏高偏远的高速自由镜头，并提供偏近偏低的魂类镜头预设；魂类模式硬锁后相机会平滑朝向目标。 |
 | [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成动画动作锁版 | 负责 Idle、Move、Attack、Skill、Dodge、Guard、Hit、Dead 的状态切换，并承接普攻连段、攻击缓冲、动画动作锁和强制打断。 |
 | [玩家 ActCombat 基础](Features/PLAYER.md#feature-player-act-combat) | 已完成格挡反馈版 | 提供三段普攻连段、无效下一段超时退出、攻击踏步与软锁追踪，以及带白模反馈的正面格挡和短窗口弹反。 |
 | [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成动画事件接线版 | 同步玩家状态、移动和 Action 参数，并把动画判定、取消窗口与动作结束事件转发给战斗 Driver 和状态机。 |
-| [玩家自动软锁定](Features/PLAYER.md#feature-player-targeting) | 已完成基础版 | 负责在 Enemy Layer 中按固定间隔自动选择当前战斗目标，默认优先最近敌人，并显示轻量目标点。 |
+| [玩家目标选择](Features/PLAYER.md#feature-player-targeting) | 已完成软硬锁基础版 | 自动软目标继续按固定间隔刷新；魂类视角下可用中键固定或解除当前目标，攻击系统统一读取有效目标。 |
 | [玩家战斗驱动](Features/PLAYER.md#feature-player-combat-driver) | 已完成多判定窗口版 | 由状态机调用，支持数据或动画事件驱动判定，并允许单个动画动作重复开启独立 Hitbox 窗口。 |
 | [当前架构边界](Features/PLAYER.md#feature-architecture-boundary) | 已建立初版约定 | 初步明确输入读取、玩家移动、相机控制、状态机、战斗驱动、命中检测之间的职责边界。 |
 

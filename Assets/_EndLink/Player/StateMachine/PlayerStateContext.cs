@@ -56,7 +56,7 @@ namespace EndLink.Core
         /// </summary>
         public PlayerCombatDriver CombatDriver { get; }
 
-        /// <summary>玩家自动软锁定组件。为空时攻击仍可按角色当前朝向正常执行。</summary>
+        /// <summary>玩家目标选择组件。为空时攻击仍可按角色当前朝向正常执行。</summary>
         public PlayerTargeting Targeting { get; }
 
         /// <summary>玩家普攻连段控制器。未挂载时 Attack 保持单段普攻兼容行为。</summary>
@@ -92,7 +92,7 @@ namespace EndLink.Core
         /// <summary>防御期间保留的移动输入倍率。</summary>
         public float GuardMoveInputScale => StateMachine.GuardMoveInputScale;
 
-        /// <summary>攻击期间朝软锁目标平滑转向的速度。</summary>
+        /// <summary>攻击期间朝当前有效目标平滑转向的速度。</summary>
         public float AttackTrackingRotationSharpness => StateMachine.AttackTrackingRotationSharpness;
 
         /// <summary>
@@ -226,7 +226,7 @@ namespace EndLink.Core
             return InputReader.ConsumeDodgePressed();
         }
 
-        /// <summary>返回当前有效软锁目标的唯一根节点。</summary>
+        /// <summary>返回当前有效目标的唯一根节点；存在硬锁时优先返回硬锁目标。</summary>
         public Transform GetCurrentAttackTarget()
         {
             return Targeting != null && Targeting.HasTarget ? Targeting.CurrentTarget : null;

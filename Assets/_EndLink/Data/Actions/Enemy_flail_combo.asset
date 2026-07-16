@@ -10,27 +10,27 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5020b783917c4cc1bdadfbbd75cfb140, type: 3}
-  m_Name: Enemy_jump_slash
+  m_Name: Enemy_flail_combo
   m_EditorClassIdentifier: EndLink.Runtime::EndLink.Combat.CombatActionDefinition
-  actionId: aps01_jump_slash
-  displayName: Jump Slash
-  actionType: 1
-  flatDamage: 14
+  actionId: enemy_flail_combo
+  displayName: Enemy Flail Combo
+  actionType: 0
+  flatDamage: 6
   atkPowerMultiplier: 0
   damageType: 0
-  knockbackForce: 0.8
+  knockbackForce: 0.1
   combatTagToApply: {fileID: 0}
   combatTagDuration: 0
   combatTagStackCount: 1
   synergyGainOnLink: 0
   timingSource: 1
-  cooldown: 4
-  startupTime: 0.75
-  activeTime: 0.25
-  recoveryTime: 0.55
-  useRootMotion: 1
+  cooldown: 1.4
+  startupTime: 0.5
+  activeTime: 2.8
+  recoveryTime: 0.6
+  useRootMotion: 0
   rootMotionScale: 1
-  hitboxPrefab: {fileID: 5103679077457519376, guid: 57ab56abd24e8954ba74ce7bca776763, type: 3}
-  hitboxSpawnDistance: 0.8
-  hitboxSpawnHeight: 0.25
-  effectiveAttackRange: 1.2
+  hitboxPrefab: {fileID: 5103679077457519376, guid: fb9dbd34c8a646749bbe985a58e3bac2, type: 3}
+  hitboxSpawnDistance: 0.9
+  hitboxSpawnHeight: 1
+  effectiveAttackRange: 1.1

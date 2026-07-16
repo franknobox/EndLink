@@ -192,6 +192,15 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": true
                 },
                 {
+                    ""name"": ""TargetLock"",
+                    ""type"": ""Button"",
+                    ""id"": ""a61c7469-54b0-4554-a8b4-a524e20ae993"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
                     ""name"": ""PlayerSkill"",
                     ""type"": ""Button"",
                     ""id"": ""414d3aed-eb4f-444d-8a0c-219bf95742a2"",
@@ -638,6 +647,28 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""groups"": ""Gamepad"",
                     ""action"": ""Interact"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""4f772c22-7984-46b7-9f45-d46b7240efe2"",
+                    ""path"": ""<Mouse>/middleButton"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""TargetLock"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""34d729cd-65bb-4e97-9030-b889c17c3891"",
+                    ""path"": ""<Gamepad>/rightStickPress"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""TargetLock"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -1412,6 +1443,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         m_Player_Sprint = m_Player.FindAction("Sprint", throwIfNotFound: true);
         m_Player_Dodge = m_Player.FindAction("Dodge", throwIfNotFound: true);
         m_Player_Guard = m_Player.FindAction("Guard", throwIfNotFound: true);
+        m_Player_TargetLock = m_Player.FindAction("TargetLock", throwIfNotFound: true);
         m_Player_PlayerSkill = m_Player.FindAction("PlayerSkill", throwIfNotFound: true);
         m_Player_AllySlotASkill = m_Player.FindAction("AllySlotASkill", throwIfNotFound: true);
         m_Player_AllySlotBSkill = m_Player.FindAction("AllySlotBSkill", throwIfNotFound: true);
@@ -1523,6 +1555,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_Sprint;
     private readonly InputAction m_Player_Dodge;
     private readonly InputAction m_Player_Guard;
+    private readonly InputAction m_Player_TargetLock;
     private readonly InputAction m_Player_PlayerSkill;
     private readonly InputAction m_Player_AllySlotASkill;
     private readonly InputAction m_Player_AllySlotBSkill;
@@ -1585,6 +1618,10 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// Provides access to the underlying input action "Player/Guard".
         /// </summary>
         public InputAction @Guard => m_Wrapper.m_Player_Guard;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/TargetLock".
+        /// </summary>
+        public InputAction @TargetLock => m_Wrapper.m_Player_TargetLock;
         /// <summary>
         /// Provides access to the underlying input action "Player/PlayerSkill".
         /// </summary>
@@ -1672,6 +1709,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Guard.started += instance.OnGuard;
             @Guard.performed += instance.OnGuard;
             @Guard.canceled += instance.OnGuard;
+            @TargetLock.started += instance.OnTargetLock;
+            @TargetLock.performed += instance.OnTargetLock;
+            @TargetLock.canceled += instance.OnTargetLock;
             @PlayerSkill.started += instance.OnPlayerSkill;
             @PlayerSkill.performed += instance.OnPlayerSkill;
             @PlayerSkill.canceled += instance.OnPlayerSkill;
@@ -1737,6 +1777,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Guard.started -= instance.OnGuard;
             @Guard.performed -= instance.OnGuard;
             @Guard.canceled -= instance.OnGuard;
+            @TargetLock.started -= instance.OnTargetLock;
+            @TargetLock.performed -= instance.OnTargetLock;
+            @TargetLock.canceled -= instance.OnTargetLock;
             @PlayerSkill.started -= instance.OnPlayerSkill;
             @PlayerSkill.performed -= instance.OnPlayerSkill;
             @PlayerSkill.canceled -= instance.OnPlayerSkill;
@@ -2135,6 +2178,13 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnGuard(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "TargetLock" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnTargetLock(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "PlayerSkill" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>

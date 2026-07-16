@@ -33,6 +33,7 @@ namespace EndLink.Core
         private InputAction _sprintAction;
         private InputAction _dodgeAction;
         private InputAction _guardAction;
+        private InputAction _targetLockAction;
         private InputAction _jumpAction;
         private InputAction _interactAction;
         private InputAction _playerSkillAction;
@@ -45,6 +46,7 @@ namespace EndLink.Core
         private bool _initialized;
         private bool _attackPressed;
         private bool _dodgePressed;
+        private bool _targetLockPressed;
         private bool _jumpPressed;
         private bool _interactPressed;
         private bool _playerSkillPressed;
@@ -94,6 +96,7 @@ namespace EndLink.Core
             _guardAction.started -= OnGuardStartedOrPerformed;
             _guardAction.performed -= OnGuardStartedOrPerformed;
             _guardAction.canceled -= OnGuardCanceled;
+            _targetLockAction.performed -= OnTargetLockPerformed;
             _jumpAction.performed -= OnJumpPerformed;
             _interactAction.performed -= OnInteractPerformed;
             _playerSkillAction.performed -= OnPlayerSkillPerformed;
@@ -124,6 +127,15 @@ namespace EndLink.Core
         public bool ConsumeDodgePressed()
         {
             return ConsumePressed(ref _dodgePressed);
+        }
+
+        /// <summary>
+        /// 消费一次目标锁定输入，默认键位为鼠标中键，手柄为右摇杆按下。
+        /// 这里只缓存锁定意图，实际软锁或硬锁规则由视角与索敌系统决定。
+        /// </summary>
+        public bool ConsumeTargetLockPressed()
+        {
+            return ConsumePressed(ref _targetLockPressed);
         }
 
         /// <summary>
@@ -269,6 +281,11 @@ namespace EndLink.Core
             GuardHeld = false;
         }
 
+        private void OnTargetLockPerformed(InputAction.CallbackContext context)
+        {
+            SetPressedIfButton(context, ref _targetLockPressed);
+        }
+
         private void OnJumpPerformed(InputAction.CallbackContext context)
         {
             SetPressedIfButton(context, ref _jumpPressed);
@@ -339,6 +356,7 @@ namespace EndLink.Core
             GuardHeld = false;
             _attackPressed = false;
             _dodgePressed = false;
+            _targetLockPressed = false;
             _jumpPressed = false;
             _interactPressed = false;
             _playerSkillPressed = false;
@@ -364,6 +382,7 @@ namespace EndLink.Core
             _sprintAction = _inputActions.asset.FindAction("Player/Sprint", true);
             _dodgeAction = _inputActions.asset.FindAction("Player/Dodge", true);
             _guardAction = _inputActions.asset.FindAction("Player/Guard", true);
+            _targetLockAction = _inputActions.asset.FindAction("Player/TargetLock", true);
             _jumpAction = _inputActions.asset.FindAction("Player/Jump", true);
             _interactAction = _inputActions.asset.FindAction("Player/Interact", true);
             _playerSkillAction = _inputActions.asset.FindAction("Player/PlayerSkill", true);
@@ -383,6 +402,7 @@ namespace EndLink.Core
             _guardAction.started += OnGuardStartedOrPerformed;
             _guardAction.performed += OnGuardStartedOrPerformed;
             _guardAction.canceled += OnGuardCanceled;
+            _targetLockAction.performed += OnTargetLockPerformed;
             _jumpAction.performed += OnJumpPerformed;
             _interactAction.performed += OnInteractPerformed;
             _playerSkillAction.performed += OnPlayerSkillPerformed;

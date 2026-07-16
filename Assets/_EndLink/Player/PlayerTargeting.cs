@@ -17,8 +17,8 @@ namespace EndLink.Combat
     }
 
     /// <summary>
-    /// 玩家自动软锁定目标组件。
-    /// 负责按刷新间隔维护当前战斗目标，并提供轻量目标点显示。
+    /// 玩家目标选择组件。
+    /// 负责按刷新间隔维护自动软目标，并可在需要时把当前目标固定为手动硬锁目标。
     /// 不控制相机、不决定攻击能否释放、不生成攻击判定。
     /// </summary>
     [DisallowMultipleComponent]
@@ -58,7 +58,7 @@ namespace EndLink.Combat
         [SerializeField]
         private Transform searchOrigin;
 
-        [Tooltip("视角参考。CameraForward 模式用它评分目标，软锁目标点也会优先朝向它。为空时目标点会尝试使用 Main Camera，评分则使用玩家自身朝向。")]
+        [Tooltip("视角参考。CameraForward 模式用它评分目标，目标点也会优先朝向它。为空时目标点会尝试使用 Main Camera，评分则使用玩家自身朝向。")]
         [SerializeField]
         private Transform viewReference;
 
@@ -71,9 +71,9 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float distanceScoreWeight = 1f;
 
-        [Header("软锁目标点")]
+        [Header("目标点")]
         [FormerlySerializedAs("showLockIndicator")]
-        [Tooltip("有软锁目标时是否显示目标点。")]
+        [Tooltip("有软目标或硬锁目标时是否显示目标点。")]
         [SerializeField]
         private bool showTargetIndicator = true;
 
@@ -109,18 +109,25 @@ namespace EndLink.Combat
 
         private readonly Collider[] _targetBuffer = new Collider[MaxTargetBufferSize];
         private CombatTarget _currentTarget;
+        private CombatTarget _hardLockedTarget;
         private GameObject _targetIndicatorInstance;
         private Material _runtimeIndicatorMaterial;
         private float _nextTargetRefreshTime;
 
-        /// <summary>当前自动软锁定目标。</summary>
-        public Transform CurrentTarget => HasTarget ? _currentTarget.RootTransform : null;
+        /// <summary>当前供攻击等系统使用的有效目标。存在硬锁时优先返回硬锁目标，否则返回自动软目标。</summary>
+        public Transform CurrentTarget => GetEffectiveTarget()?.RootTransform;
 
-        /// <summary>当前软锁目标的锁定参考点。</summary>
-        public Transform CurrentLockPoint => HasTarget ? _currentTarget.LockPoint : null;
+        /// <summary>当前有效目标的锁定参考点。</summary>
+        public Transform CurrentLockPoint => GetEffectiveTarget()?.LockPoint;
 
-        /// <summary>当前是否持有有效软锁目标。</summary>
-        public bool HasTarget => _currentTarget != null && _currentTarget.IsTargetable;
+        /// <summary>当前是否持有可供战斗系统使用的有效目标。</summary>
+        public bool HasTarget => GetEffectiveTarget() != null;
+
+        /// <summary>当前是否处于手动硬锁状态。</summary>
+        public bool IsHardLocked => _hardLockedTarget != null && _hardLockedTarget.IsTargetable;
+
+        /// <summary>当前硬锁目标根节点；没有硬锁时返回 null。</summary>
+        public Transform HardLockedTarget => IsHardLocked ? _hardLockedTarget.RootTransform : null;
 
         /// <summary>目标搜索半径。</summary>
         public float SearchRadius => searchRadius;
@@ -159,6 +166,11 @@ namespace EndLink.Combat
 
         private void Update()
         {
+            if (_hardLockedTarget != null && !IsTargetStillValid(_hardLockedTarget))
+            {
+                ClearHardLock();
+            }
+
             if (!autoTargetingEnabled)
             {
                 ClearTarget();
@@ -205,6 +217,66 @@ namespace EndLink.Combat
         }
 
         /// <summary>
+        /// 在当前自动软目标上建立硬锁；当前没有软目标时会立即搜索一次。
+        /// 返回 true 表示已经成功锁定有效目标。
+        /// </summary>
+        public bool TryAcquireHardLock()
+        {
+            CombatTarget target = _currentTarget != null && IsTargetStillValid(_currentTarget)
+                ? _currentTarget
+                : FindBestTarget();
+
+            if (target == null)
+            {
+                ClearHardLock();
+                return false;
+            }
+
+            _currentTarget = target;
+            _hardLockedTarget = target;
+            UpdateTargetIndicator();
+
+            if (logTargetChanges)
+            {
+                Debug.Log($"PlayerTargeting hard locked: {target.RootTransform.name}", this);
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// 切换硬锁状态。已经锁定时解除；未锁定时尝试锁定当前最佳目标。
+        /// 返回 true 表示调用后仍处于硬锁状态。
+        /// </summary>
+        public bool ToggleHardLock()
+        {
+            if (_hardLockedTarget != null)
+            {
+                ClearHardLock();
+                return false;
+            }
+
+            return TryAcquireHardLock();
+        }
+
+        /// <summary>解除手动硬锁，但保留自动软目标。</summary>
+        public void ClearHardLock()
+        {
+            if (_hardLockedTarget == null)
+            {
+                return;
+            }
+
+            _hardLockedTarget = null;
+            UpdateTargetIndicator();
+
+            if (logTargetChanges)
+            {
+                Debug.Log("PlayerTargeting cleared hard lock.", this);
+            }
+        }
+
+        /// <summary>
         /// 手动设置当前软锁目标。
         /// 主要用于调试、UI 选择或后续切目标逻辑。
         /// </summary>
@@ -245,7 +317,7 @@ namespace EndLink.Combat
             }
 
             _currentTarget = null;
-            SetTargetIndicatorVisible(false);
+            UpdateTargetIndicator();
 
             if (logTargetChanges)
             {
@@ -386,7 +458,8 @@ namespace EndLink.Combat
 
         private void UpdateTargetIndicator()
         {
-            if (!showTargetIndicator || _currentTarget == null)
+            CombatTarget target = GetEffectiveTarget();
+            if (!showTargetIndicator || target == null)
             {
                 SetTargetIndicatorVisible(false);
                 return;
@@ -399,7 +472,7 @@ namespace EndLink.Combat
                 return;
             }
 
-            _targetIndicatorInstance.transform.position = GetTargetIndicatorPosition(_currentTarget);
+            _targetIndicatorInstance.transform.position = GetTargetIndicatorPosition(target);
             _targetIndicatorInstance.transform.rotation = GetTargetIndicatorRotation(_targetIndicatorInstance.transform.position);
             _targetIndicatorInstance.transform.localScale = Vector3.one * targetIndicatorScale;
             SetTargetIndicatorVisible(true);
@@ -566,6 +639,18 @@ namespace EndLink.Combat
                     $"PlayerTargeting current target: {(_currentTarget != null ? _currentTarget.RootTransform.name : "None")}",
                     this);
             }
+        }
+
+        private CombatTarget GetEffectiveTarget()
+        {
+            if (_hardLockedTarget != null && _hardLockedTarget.IsTargetable)
+            {
+                return _hardLockedTarget;
+            }
+
+            return _currentTarget != null && _currentTarget.IsTargetable
+                ? _currentTarget
+                : null;
         }
     }
 }

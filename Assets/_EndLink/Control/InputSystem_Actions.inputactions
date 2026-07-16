@@ -105,6 +105,15 @@
                     "initialStateCheck": true
                 },
                 {
+                    "name": "TargetLock",
+                    "type": "Button",
+                    "id": "a61c7469-54b0-4554-a8b4-a524e20ae993",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "PlayerSkill",
                     "type": "Button",
                     "id": "414d3aed-eb4f-444d-8a0c-219bf95742a2",
@@ -551,6 +560,28 @@
                     "processors": "",
                     "groups": "Gamepad",
                     "action": "Interact",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "4f772c22-7984-46b7-9f45-d46b7240efe2",
+                    "path": "<Mouse>/middleButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "TargetLock",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "34d729cd-65bb-4e97-9030-b889c17c3891",
+                    "path": "<Gamepad>/rightStickPress",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Gamepad",
+                    "action": "TargetLock",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

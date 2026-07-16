@@ -13575,7 +13575,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 418c931a43054bcaa0178c3396f2ef2a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Enemies.EnemyCombatDriver
-  basicAttackAction: {fileID: 11400000, guid: 0faf357c72529cc4c8519d47c09b758d, type: 2}
+  basicAttackAction: {fileID: 11400000, guid: 2cf3eac49cbf4a61863db73976d32b11, type: 2}
   skillAction: {fileID: 11400000, guid: e21674611a3812f47a2960d4ea35660b, type: 2}
   faceTargetBeforeAttack: 1
   fallbackForward: {x: 0, y: 0, z: 1}
@@ -13750,6 +13750,7 @@ MonoBehaviour:
   actionTriggerParameter: ActionTrigger
   hitTriggerParameter: HitTrigger
   deadTriggerParameter: DeadTrigger
+  enableControlledRootMotion: 1
   warnMissingParameters: 0
 --- !u!114 &1262513213 stripped
 MonoBehaviour:
@@ -16158,7 +16159,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 418c931a43054bcaa0178c3396f2ef2a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Enemies.EnemyCombatDriver
-  basicAttackAction: {fileID: 11400000, guid: 0faf357c72529cc4c8519d47c09b758d, type: 2}
+  basicAttackAction: {fileID: 11400000, guid: 2cf3eac49cbf4a61863db73976d32b11, type: 2}
   skillAction: {fileID: 11400000, guid: e21674611a3812f47a2960d4ea35660b, type: 2}
   faceTargetBeforeAttack: 1
   fallbackForward: {x: 0, y: 0, z: 1}
@@ -29718,6 +29719,7 @@ GameObject:
   - component: {fileID: 2084252736}
   - component: {fileID: 2084252735}
   - component: {fileID: 2084252734}
+  - component: {fileID: 2084252739}
   m_Layer: 0
   m_Name: EndLink_3rd_Camera
   m_TagString: Untagged
@@ -29855,6 +29857,57 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2084252739
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2084252733}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e88fcf320e94d66a22356f5d18f75d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: EndLink.Runtime::EndLink.Core.PlayerViewController
+  viewMode: 1
+  playerTargeting: {fileID: 0}
+  playerInputReader: {fileID: 0}
+  fastActionSettings:
+    targetWorldOffset: {x: 0, y: 1, z: -0.1}
+    gamepadYawSpeed: 190
+    gamepadPitchSpeed: 120
+    mouseYawSensitivity: 0.12
+    mousePitchSensitivity: 0.1
+    minPitch: -30
+    maxPitch: 55
+    idleDistance: 5.5
+    activeDistance: 7
+    idleDistanceSmoothTime: 1.2
+    activeDistanceSmoothTime: 0.25
+    shoulderOffset: {x: 0.5, y: 1.45, z: 0}
+    verticalArmLength: 0
+    cameraSide: 1
+    damping: {x: 0.22, y: 0.28, z: 0.24}
+    fieldOfView: 52
+  soulsLikeSettings:
+    targetWorldOffset: {x: 0, y: 1.35, z: 0}
+    gamepadYawSpeed: 125
+    gamepadPitchSpeed: 85
+    mouseYawSensitivity: 0.08
+    mousePitchSensitivity: 0.07
+    minPitch: -22
+    maxPitch: 38
+    idleDistance: 3.2
+    activeDistance: 4.2
+    idleDistanceSmoothTime: 0.65
+    activeDistanceSmoothTime: 0.2
+    shoulderOffset: {x: 0.35, y: 0.75, z: 0}
+    verticalArmLength: 0.15
+    cameraSide: 0.5
+    damping: {x: 0.15, y: 0.2, z: 0.16}
+    fieldOfView: 48
+  hardLockRotationSmoothTime: 0.12
+  fastActionSettingsInitialized: 1
 --- !u!1 &2112096919
 GameObject:
   m_ObjectHideFlags: 0
@@ -30349,6 +30402,7 @@ MonoBehaviour:
   actionTriggerParameter: ActionTrigger
   hitTriggerParameter: HitTrigger
   deadTriggerParameter: DeadTrigger
+  enableControlledRootMotion: 1
   warnMissingParameters: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

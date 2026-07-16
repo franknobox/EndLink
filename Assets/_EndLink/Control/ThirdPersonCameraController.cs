@@ -136,6 +136,99 @@ namespace EndLink.Core
         private bool _lastActiveDistanceRequested = true;
         private CameraDistanceMode _distanceMode = CameraDistanceMode.Active;
         private bool _createdRuntimeCameraTarget;
+        private Transform _lockTarget;
+        private float _lockRotationSmoothTime = 0.12f;
+        private float _lockYawVelocity;
+        private float _lockPitchVelocity;
+
+        /// <summary>当前相机跟随的玩家根节点，供视角模式协调器解析玩家组件。</summary>
+        public Transform FollowTarget => followTarget;
+
+        /// <summary>读取当前自由相机参数，用于保存高速模式基准。</summary>
+        public PlayerViewSettings CaptureViewSettings()
+        {
+            return new PlayerViewSettings(
+                targetWorldOffset,
+                gamepadYawSpeed,
+                gamepadPitchSpeed,
+                mouseYawSensitivity,
+                mousePitchSensitivity,
+                minPitch,
+                maxPitch,
+                idleDistance,
+                activeDistance,
+                idleDistanceSmoothTime,
+                activeDistanceSmoothTime,
+                shoulderOffset,
+                verticalArmLength,
+                cameraSide,
+                damping,
+                fieldOfView);
+        }
+
+        /// <summary>
+        /// 应用一组视角参数。snapDistance 只在初始化时使用，运行时切换默认保留平滑距离过渡。
+        /// </summary>
+        public void ApplyViewSettings(PlayerViewSettings settings, bool snapDistance)
+        {
+            settings = settings.Sanitized();
+            targetWorldOffset = settings.TargetWorldOffset;
+            gamepadYawSpeed = settings.GamepadYawSpeed;
+            gamepadPitchSpeed = settings.GamepadPitchSpeed;
+            mouseYawSensitivity = settings.MouseYawSensitivity;
+            mousePitchSensitivity = settings.MousePitchSensitivity;
+            minPitch = settings.MinPitch;
+            maxPitch = settings.MaxPitch;
+            idleDistance = settings.IdleDistance;
+            activeDistance = settings.ActiveDistance;
+            idleDistanceSmoothTime = settings.IdleDistanceSmoothTime;
+            activeDistanceSmoothTime = settings.ActiveDistanceSmoothTime;
+            shoulderOffset = settings.ShoulderOffset;
+            verticalArmLength = settings.VerticalArmLength;
+            cameraSide = settings.CameraSide;
+            damping = settings.Damping;
+            fieldOfView = settings.FieldOfView;
+
+            if (snapDistance)
+            {
+                _currentDistance = _distanceMode == CameraDistanceMode.Active
+                    ? activeDistance
+                    : idleDistance;
+                _distanceSmoothVelocity = 0f;
+            }
+
+            if (_cinemachineCamera != null && _thirdPersonFollow != null)
+            {
+                ApplyCinemachineSettings();
+            }
+        }
+
+        /// <summary>让自由相机平滑朝向指定硬锁点。</summary>
+        public void SetLockTarget(Transform target, float smoothTime)
+        {
+            if (target == null)
+            {
+                ClearLockTarget();
+                return;
+            }
+
+            if (_lockTarget != target)
+            {
+                _lockYawVelocity = 0f;
+                _lockPitchVelocity = 0f;
+            }
+
+            _lockTarget = target;
+            _lockRotationSmoothTime = Mathf.Max(0.01f, smoothTime);
+        }
+
+        /// <summary>解除相机硬锁朝向，保留当前角度继续自由旋转。</summary>
+        public void ClearLockTarget()
+        {
+            _lockTarget = null;
+            _lockYawVelocity = 0f;
+            _lockPitchVelocity = 0f;
+        }
 
         /// <summary>
         /// 将 pitch 限制在合法范围内。独立成静态方法，方便测试和复用。
@@ -309,6 +402,12 @@ namespace EndLink.Core
 
         private void UpdateRotation(float deltaTime)
         {
+            if (_lockTarget != null)
+            {
+                UpdateLockRotation(deltaTime);
+                return;
+            }
+
             Vector2 lookInput = _inputReader.LookInput;
 
             if (_inputReader.IsPointerLookInput)
@@ -323,6 +422,37 @@ namespace EndLink.Core
             }
 
             _pitch = ClampPitch(_pitch, minPitch, maxPitch);
+            cameraTarget.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
+        }
+
+        private void UpdateLockRotation(float deltaTime)
+        {
+            Vector3 toTarget = _lockTarget.position - cameraTarget.position;
+            if (toTarget.sqrMagnitude <= 0.0001f)
+            {
+                return;
+            }
+
+            Quaternion desiredRotation = Quaternion.LookRotation(toTarget.normalized, Vector3.up);
+            Vector3 desiredEuler = desiredRotation.eulerAngles;
+            float desiredYaw = desiredEuler.y;
+            float desiredPitch = ClampPitch(NormalizePitch(desiredEuler.x), minPitch, maxPitch);
+
+            _yaw = Mathf.SmoothDampAngle(
+                _yaw,
+                desiredYaw,
+                ref _lockYawVelocity,
+                _lockRotationSmoothTime,
+                Mathf.Infinity,
+                deltaTime);
+            _pitch = Mathf.SmoothDampAngle(
+                _pitch,
+                desiredPitch,
+                ref _lockPitchVelocity,
+                _lockRotationSmoothTime,
+                Mathf.Infinity,
+                deltaTime);
+
             cameraTarget.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
         }
 
