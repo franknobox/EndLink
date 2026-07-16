@@ -132,7 +132,7 @@
 - `CombatActionType` 描述动作性质，不描述释放者来源。
 - 当前动作类型包括 `BasicAttack`、`Skill`、`LinkAttack`、`Ultimate`。
 - 主控、队友和敌人后续可以共用同一套动作类型，释放者来源应由后续战斗事件数据携带。
-- 动作配置包含固定伤害 `FlatDamage`、攻击力倍率 `AtkPowerMultiplier`、伤害类型、击退、`CombatTagDefinition` 命中标签、标签持续时间、标签层数、连携协同率收益、冷却、前摇、有效时间、后摇、动画根位移开关与倍率、Hitbox prefab、Hitbox 生成位置和 AI 有效攻击距离。
+- 动作配置包含固定伤害 `FlatDamage`、攻击力倍率 `AtkPowerMultiplier`、伤害类型、击退、`CombatTagDefinition` 命中标签、标签持续时间、标签层数、连携协同率收益、冷却、前摇、有效时间、后摇、动画根位移开关与倍率、Hitbox prefab、Hitbox 生成位置、AI 有效攻击距离和可选命中反馈。
 - 动作伤害基础公式为 `FlatDamage + AttackPower × AtkPowerMultiplier`，因此可配置纯固定伤害、纯倍率伤害或两者混合。
 - 动作配置包含 `TimingSource`：`DataDriven` 使用 `startup / active / recovery` 推进；`AnimationEventDriven` 由动画事件控制判定开始、结束、取消窗口和动作结束。
 - 动画事件模式仍使用数据总时长作为安全超时；缺少 `ActionEnd` 时会结束动作并警告，缺少 `HitboxStart` 时不会自动补一次命中。
@@ -152,6 +152,51 @@
 - `Skill`：普通技能
 - `LinkAttack`：连携攻击
 - `Ultimate`：大招
+
+</details>
+
+<a id="feature-combat-feedback"></a>
+
+### Feature：通用战斗反馈
+
+<details>
+<summary>展开详情</summary>
+功能说明：
+- `CombatFeedbackDefinition` 是可复用的反馈数据资产，一份配置可以同时描述 Hitstop、镜头冲击、手柄震动、一次性音效和命中 VFX。
+- `CombatFeedbackBus` 是通用反馈请求入口。Hitbox、格挡、协议反应和奥义等玩法系统只提交配置、位置、方向、来源与目标，不直接控制具体表现组件。
+- `CombatFeedbackDispatcher` 是场景唯一执行器，统一消费请求；重复启用第二个调度器时会自动禁用并给出警告。
+- `CombatActionDefinition.HitFeedback` 允许每个 Action 引用一份反馈资产；由该 Action 生成的 Hitbox 成功接触有效目标后自动提交反馈请求。
+- Hitstop 使用不受 `Time.timeScale` 影响的真实时间计时；重叠请求保留更强的停顿并延长到最晚结束时间，结束时尽量避免覆盖暂停等外部时间控制。
+- Cinemachine Impulse 的单次强度由反馈资产配置，波形、持续时间、传播和通道由场景中的 `CinemachineImpulseSource` 统一配置。
+- 手柄震动驱动当前 `Gamepad` 的高低频马达；调度器禁用、失去焦点或震动到期时会主动归零。
+- 音效通过调度器的统一 `AudioSource.PlayOneShot` 播放；VFX 以 GameObject prefab 形式生成在命中点，因此可兼容 ParticleSystem 和 Visual Effect Graph prefab。
+- 当前 VFX 仍使用 `Instantiate/Destroy`，尚未接入对象池；正式高频特效接入时与 Hitbox 池化一起处理。
+- 当前 Action 反馈语义是“Hitbox 接触有效受击目标”，格挡和弹反仍可能同时触发该动作的普通接触反馈；后续命中结算结果标准化后再区分普通命中、格挡、弹反和闪避反馈。
+
+对应脚本：
+- `Assets/_EndLink/Combat/Feedback/CombatFeedbackDefinition.cs`
+- `Assets/_EndLink/Combat/Feedback/CombatFeedbackBus.cs`
+- `Assets/_EndLink/Combat/Feedback/CombatFeedbackDispatcher.cs`
+- `Assets/_EndLink/Combat/CombatActionDefinition.cs`
+- `Assets/_EndLink/Combat/Hitbox/HitboxBase.cs`
+
+场景配置：
+- 创建一个全局 `CombatFeedback` 物体并挂载 `CombatFeedbackDispatcher`；Unity 会同时补充 `AudioSource` 和 `CinemachineImpulseSource`。
+- 在实际使用的 `CinemachineCamera` 上添加 `Cinemachine Impulse Listener` 扩展，否则镜头不会响应 Impulse。
+- 通过 `Create > EndLink > Combat > Combat Feedback Definition` 创建反馈资产，并拖到 Action 的 `Hit Feedback` 字段。
+- 没有配置 `Hit Feedback` 的 Action 保持原行为，不会产生额外反馈。
+
+关键配置：
+- `hitstopDuration` / `hitstopTimeScale`：停顿的真实时长与相对时间倍率
+- `cameraImpulseForce`：单次镜头冲击强度
+- `lowFrequencyRumble` / `highFrequencyRumble` / `rumbleDuration`：手柄双马达强度和持续时间
+- `audioClip` / `audioVolume`：一次性命中音效
+- `vfxPrefab` / `vfxLifetime` / `vfxLocalOffset`：命中 VFX 与生命周期
+- `CombatFeedbackDispatcher` 的通道开关：可以在场景中独立关闭某类反馈进行对照调试
+
+代码入口：
+- `CombatFeedbackBus.Raise(...)`：供格挡、协议反应、奥义和后续特殊表现主动提交反馈
+- `CombatFeedbackDispatcher.Play(...)`：供调试工具直接执行完整反馈请求
 
 </details>
 
@@ -372,6 +417,7 @@
 - 命中时如果目标实现 `ICombatTagReceiver`，会把 `CombatTagDefinition` 添加到目标标签容器，并把 Hitbox owner 传入标签事件来源。
 - 命中后触发 `UnityEvent<Collider>`，方便后续挂音效、特效或调试组件。
 - 命中后会通过 `CombatEventsBus` 广播 `HitLanded`。
+- 命中来自带 `HitFeedback` 的 Action 时，会通过 `CombatFeedbackBus` 提交命中点反馈请求。
 
 对应脚本：
 - `Assets/_EndLink/Combat/Hitbox/HitboxBase.cs`

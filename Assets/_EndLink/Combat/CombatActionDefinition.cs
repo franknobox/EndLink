@@ -83,6 +83,11 @@ namespace EndLink.Combat
         [SerializeField, Min(1)]
         private int combatTagStackCount = 1;
 
+        [Header("战斗反馈")]
+        [Tooltip("该动作的 Hitbox 成功接触有效目标时播放的反馈配置。为空表示不触发通用反馈。")]
+        [SerializeField]
+        private CombatFeedbackDefinition hitFeedback;
+
         [Header("连携与奥义")]
         [Tooltip("该动作作为连携技成功释放时，为全队协同率增加的数值。只有 LinkAttack 类型会被小队奥义上下文读取。")]
         [SerializeField, Min(0f)]
@@ -165,6 +170,9 @@ namespace EndLink.Combat
 
         /// <summary>动作命中时施加的战斗标签层数。</summary>
         public int CombatTagStackCount => Mathf.Max(1, combatTagStackCount);
+
+        /// <summary>该动作成功接触目标时使用的通用战斗反馈配置。</summary>
+        public CombatFeedbackDefinition HitFeedback => hitFeedback;
 
         /// <summary>该连携动作成功释放后增加的全队协同率。</summary>
         public float SynergyGainOnLink => Mathf.Max(0f, synergyGainOnLink);

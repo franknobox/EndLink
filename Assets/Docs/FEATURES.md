@@ -20,7 +20,7 @@
 
 ### 当前情况概览
 
-项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party`、`Assets/_EndLink/Enemies`、`Assets/_EndLink/World` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，世界交互代码使用 `EndLink.World`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、统一 Combat Target、统一 Action 执行接口、玩家与敌人 Animator 桥接、动画事件动作时序第一版、基础攻击驱动、基础 Hitbox 配置、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动与动态站位第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架、世界交互底座和战斗 UI 基础。
+项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party`、`Assets/_EndLink/Enemies`、`Assets/_EndLink/World` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，世界交互代码使用 `EndLink.World`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、统一 Combat Target、统一 Action 执行接口、玩家与敌人 Animator 桥接、动画事件动作时序第一版、基础攻击驱动、基础 Hitbox 配置、通用战斗反馈调度基础、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动与动态站位第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架、世界交互底座和战斗 UI 基础。
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
@@ -32,7 +32,7 @@
 | --- | --- | --- |
 | [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成目标锁定输入版 | 负责读取玩家移动、攻击、防御、目标锁定、世界交互和相机等输入，并把输入缓存为控制层可使用的数据。 |
 | [玩家 CharacterController 移动](Features/PLAYER.md#feature-player-movement) | 已完成受击后退版 | 负责玩家平滑移动、基础跳跃、重力贴地、转向，以及战斗击退的短时衰减后退。 |
-| [第三人称视角模式](Features/PLAYER.md#feature-third-person-camera) | 已完成双模式基础版 | 保留偏高偏远的高速自由镜头，并提供偏近偏低的魂类镜头预设；魂类模式硬锁后相机会平滑朝向目标。 |
+| [第三人称视角模式](Features/PLAYER.md#feature-third-person-camera) | 已完成双预设基础版 | 独立保存并调教高速自由与魂类近距两套镜头预设；魂类模式硬锁后相机会平滑朝向目标。 |
 | [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成动画动作锁版 | 负责 Idle、Move、Attack、Skill、Dodge、Guard、Hit、Dead 的状态切换，并承接普攻连段、攻击缓冲、动画动作锁和强制打断。 |
 | [玩家 ActCombat 基础](Features/PLAYER.md#feature-player-act-combat) | 已完成格挡反馈版 | 提供三段普攻连段、无效下一段超时退出、攻击踏步与软锁追踪，以及带白模反馈的正面格挡和短窗口弹反。 |
 | [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成动画事件接线版 | 同步玩家状态、移动和 Action 参数，并把动画判定、取消窗口与动作结束事件转发给战斗 Driver 和状态机。 |
@@ -47,7 +47,8 @@
 | [通用生命值与角色受击接线](Features/COMBAT.md#feature-character-health) | 已完成桥接版 | 提供可复用的血量、受击、治疗和死亡；玩家、队友通过薄桥接层接入各自状态机。 |
 | [统一 Combat Target](Features/COMBAT.md#feature-combat-target) | 已完成第一版 | 为玩家、队友和敌人统一提供唯一根身份、存活/可选状态、锁定点、Collider 表面点和水平表面距离。 |
 | [角色战斗数值基础](Features/COMBAT.md#feature-character-stats) | 已完成第一版 | 提供玩家、队友和敌人共用的攻击力与承受击退倍率，并支持动作按固定伤害与攻击力倍率组合计算伤害。 |
-| [战斗动作配置](Features/COMBAT.md#feature-combat-action) | 已完成动作位移配置版 | 使用 `CombatActionDefinition` 描述伤害、冷却、Hitbox、标签、协同率和动画根位移，并支持数据时间或动画事件驱动动作。 |
+| [战斗动作配置](Features/COMBAT.md#feature-combat-action) | 已完成命中反馈配置版 | 使用 `CombatActionDefinition` 描述伤害、冷却、Hitbox、标签、协同率、动画根位移和命中反馈，并支持数据时间或动画事件驱动动作。 |
+| [通用战斗反馈](Features/COMBAT.md#feature-combat-feedback) | 已完成调度基础版 | 通过可复用反馈资产与场景调度器，统一提供 Hitstop、Cinemachine Impulse、手柄震动、音效和 VFX 请求入口。 |
 | [统一 Action 执行接口](Features/COMBAT.md#feature-combat-action-executor) | 已完成多判定窗口版 | 统一玩家、队友和敌人的动作检查、执行、冷却和目标传入，并支持动画事件动作在一次执行中开启多个判定窗口。 |
 | [伤害结算管线基础](Features/COMBAT.md#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
 | [受击规则基础](Features/COMBAT.md#feature-hit-response) | 已完成动态拦截版 | Hitbox 造成伤害后统一计算击退，并允许格挡、弹反、临时护盾等规则动态接入生命结算，修改伤害与击退结果。 |

@@ -49,77 +49,74 @@ namespace EndLink.Core
         private PartyCombatContext partyCombatContext;
 
         [Tooltip("CameraTarget 相对玩家根节点的世界空间偏移。Y 越大，视角中心越高。")]
-        [SerializeField]
+        [SerializeField, HideInInspector]
         private Vector3 targetWorldOffset = new Vector3(0f, 1.65f, 0f);
 
-        [Header("旋转")]
         [Tooltip("手柄右摇杆水平旋转速度，单位为度/秒。数值越大，左右转视角越快。")]
-        [SerializeField, Min(0f)]
+        [SerializeField, HideInInspector, Min(0f)]
         private float gamepadYawSpeed = 190f;
 
         [Tooltip("手柄右摇杆垂直旋转速度，单位为度/秒。数值越大，上下抬压镜头越快。")]
-        [SerializeField, Min(0f)]
+        [SerializeField, HideInInspector, Min(0f)]
         private float gamepadPitchSpeed = 120f;
 
         [Tooltip("鼠标水平灵敏度。数值越大，鼠标左右移动时视角转得越快。")]
-        [SerializeField, Min(0f)]
+        [SerializeField, HideInInspector, Min(0f)]
         private float mouseYawSensitivity = 0.12f;
 
         [Tooltip("鼠标垂直灵敏度。数值越大，鼠标上下移动时视角抬压越快。")]
-        [SerializeField, Min(0f)]
+        [SerializeField, HideInInspector, Min(0f)]
         private float mousePitchSensitivity = 0.1f;
 
         [Tooltip("相机最低俯仰角。数值越小，越允许镜头向下看或压低到角色身后。")]
-        [SerializeField]
+        [SerializeField, HideInInspector]
         private float minPitch = -30f;
 
         [Tooltip("相机最高俯仰角。数值越大，越允许镜头抬高形成更俯视的战场视角。")]
-        [SerializeField]
+        [SerializeField, HideInInspector]
         private float maxPitch = 55f;
 
+        [Header("输入选项")]
         [Tooltip("是否反转垂直视角输入。开启后，向上推摇杆/移动鼠标会压低或抬高的方向相反。")]
         [SerializeField]
         private bool invertY;
 
-        [Header("自动距离")]
         [Tooltip("脱战且保持 Idle 后的近景距离。数值越小，静止观察时镜头越贴近角色。")]
-        [SerializeField, Min(0.01f)]
+        [SerializeField, HideInInspector, Min(0.01f)]
         private float idleDistance = 5.5f;
 
         [Tooltip("移动、攻击或处于战斗上下文时的远景距离。数值越大，战斗视野越开阔。")]
-        [SerializeField, Min(0.01f)]
+        [SerializeField, HideInInspector, Min(0.01f)]
         private float activeDistance = 7f;
 
         [Tooltip("镜头从远景缓慢拉近到静止距离所用的平滑时间。")]
-        [SerializeField, Min(0.01f)]
+        [SerializeField, HideInInspector, Min(0.01f)]
         private float idleDistanceSmoothTime = 1.2f;
 
         [Tooltip("镜头从近景较快拉远到移动/战斗距离所用的平滑时间。")]
-        [SerializeField, Min(0.01f)]
+        [SerializeField, HideInInspector, Min(0.01f)]
         private float activeDistanceSmoothTime = 0.25f;
 
-        [Header("Cinemachine 越肩构图")]
         [Tooltip("越肩支点偏移。X 影响左右越肩偏移，Y 影响镜头支点高度，Z 通常保持 0。")]
-        [SerializeField]
+        [SerializeField, HideInInspector]
         private Vector3 shoulderOffset = new Vector3(0.8f, 1.45f, 0f);
 
         [Tooltip("肩部到相机手臂的垂直长度。数值越大，镜头越偏高，战场可见范围通常更开阔。")]
-        [SerializeField]
+        [SerializeField, HideInInspector]
         private float verticalArmLength = 0f;
 
         [Tooltip("相机靠哪一侧肩膀。0 为左肩，1 为右肩，0.5 为居中。")]
-        [SerializeField, Range(0f, 1f)]
+        [SerializeField, HideInInspector, Range(0f, 1f)]
         private float cameraSide = 1f;
 
         [Tooltip("Cinemachine 跟随阻尼。X/Y/Z 分别影响本地轴向跟随滞后，数值越大越柔但越拖。")]
-        [SerializeField]
+        [SerializeField, HideInInspector]
         private Vector3 damping = new Vector3(0.22f, 0.28f, 0.24f);
 
         [Tooltip("相机垂直视场角。数值越大画面越广、透视感越强；数值越小画面越窄、目标更近。")]
-        [SerializeField, Range(1f, 179f)]
+        [SerializeField, HideInInspector, Range(1f, 179f)]
         private float fieldOfView = 52f;
 
-        [Header("鼠标")]
         [Tooltip("启用该相机时是否锁定并隐藏鼠标。第三人称自由视角通常开启，调试 UI 时可关闭。")]
         [SerializeField]
         private bool lockCursorOnEnable = true;

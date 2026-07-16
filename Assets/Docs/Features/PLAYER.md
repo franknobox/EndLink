@@ -109,6 +109,7 @@
 - 支持鼠标锁定，方便第三人称自由视角操作。
 - `PlayerViewController` 提供 `FastAction` 与 `SoulsLike` 两种局外可选模式，建议挂在 `EndLink_3rd_Camera`。
 - `PlayerViewController` 独立保存 `FastAction` 与 `SoulsLike` 两套完整预设，切换模式时把所选参数交给 `ThirdPersonCameraController` 执行。
+- `ThirdPersonCameraController` 的 Inspector 只保留对象引用和共享输入选项；已由预设接管的镜头参数保持序列化但不再重复显示。
 - `FastAction` 使用偏高、偏远、旋转较快的预设；已有组件第一次升级时会自动从当前 `ThirdPersonCameraController` 捕获原调参。
 - `SoulsLike` 使用偏近、偏低、旋转较慢的预设；中键建立硬锁后，相机平滑朝向目标锁定点。
 - Play Mode 中修改当前模式的预设会立即重新应用，便于分别调教两套镜头。

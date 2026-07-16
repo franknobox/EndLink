@@ -50,7 +50,7 @@ namespace EndLink.Combat
                 CombatEventType.HitLanded,
                 source,
                 target,
-                null,
+                hitInfo.ActionDefinition,
                 hitInfo.CombatTagToApply,
                 hitInfo.DamageAmount,
                 hitInfo.DamageType,

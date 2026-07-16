@@ -24,6 +24,7 @@ Assets/_EndLink/
 ├─ Combat/               战斗通用系统
 │  ├─ Damage/            伤害上下文、伤害结果和伤害计算
 │  ├─ Events/            战斗事件总线和事件数据
+│  ├─ Feedback/          Hitstop、镜头冲击、震动、音效和 VFX 反馈调度
 │  ├─ Hitbox/            Hitbox、Projectile、命中信息和受击接口
 │  ├─ Stats/             角色战斗数值
 │  ├─ Tags/              战斗标签、标签容器和反应规则

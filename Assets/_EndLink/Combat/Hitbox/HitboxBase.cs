@@ -236,8 +236,15 @@ namespace EndLink.Combat
             }
 
             HitboxHitInfo hitInfo = BuildHitInfo(other);
-            CombatEventsBus.RaiseHitLanded(_owner, ResolveHitTarget(receiver, other), hitInfo);
+            GameObject hitTarget = ResolveHitTarget(receiver, other);
+            CombatEventsBus.RaiseHitLanded(_owner, hitTarget, hitInfo);
             receiver.ReceiveHit(hitInfo);
+            CombatFeedbackBus.Raise(
+                _actionDefinition != null ? _actionDefinition.HitFeedback : null,
+                hitInfo.HitPoint,
+                hitInfo.HitDirection,
+                _owner,
+                hitTarget);
             ApplyCombatTag(other);
             onHit.Invoke(other);
         }
