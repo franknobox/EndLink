@@ -35,6 +35,37 @@
 - `WorldInteractor` 的 `Interactable Layers` 后续建议指向专用 Interactable Layer，避免扫描无关碰撞体。
 - `Player/Interact` 已存在于 Input Actions 中，当前默认绑定键盘 `F` 单击和手柄 `buttonNorth`；系统只消费输入，不手工维护生成文件。
 
+<a id="feature-world-spawn-checkpoint"></a>
+
+## Feature: 通用出生点与检查点
+
+### 当前状态
+已完成第一版。
+
+### 功能说明
+- `WorldSpawnPoint` 只保存稳定 ID、世界位置、朝向、建议半径和用途，不直接生成任何对象。
+- 出生点用途支持开场出生、检查点和敌人生成点多选；未来玩家存档与敌人生成器可以引用同一位置类型，但各自保留独立执行逻辑。
+- `WorldCheckpoint` 继承现有世界交互基类，首次交互会切换当前复活点，再次交互可休整；默认战斗中不可使用。
+- 检查点休整会恢复玩家生命、清除战斗标签、软锁/硬锁目标和残留战斗上下文。
+- `WorldRespawnManager` 维护默认出生点和当前检查点，监听玩家死亡，并使用不受时间缩放影响的延迟执行复活。
+- 复活会安全传送玩家、恢复生命、清理战斗标签与目标，并重置动作、连段、防御、输入缓冲、移动速度、重力和战斗击退。
+- 第一版不写入磁盘存档，也不生成或重置敌人；相关系统后续通过出生点 ID、用途和检查点事件接入。
+
+### 对应脚本
+- `Assets/_EndLink/World/WorldSpawnPoint.cs`
+- `Assets/_EndLink/World/WorldCheckpoint.cs`
+- `Assets/_EndLink/World/WorldRespawnManager.cs`
+- `Assets/_EndLink/Control/PlayerController.cs`
+- `Assets/_EndLink/Player/StateMachine/PlayerStateMachine.cs`
+
+### 相关物体 / 配置
+- 场景系统物体挂一个 `WorldRespawnManager`，拖入玩家根物体和默认 `WorldSpawnPoint`；同一场景只能启用一个调度器。
+- 开场出生点挂 `WorldSpawnPoint` 并选择 `PlayerStart`，朝向箭头表示玩家出生朝向。
+- 可交互检查点根物体挂 `WorldCheckpoint` 和可被 `WorldInteractor` 扫描的 Collider，并放在 Interactable Layer。
+- 推荐在检查点旁创建独立的安全落点子物体并挂 `WorldSpawnPoint`，再拖入 `WorldCheckpoint`；如果出生点与检查点根物体重合，也可以挂在同一物体自动读取。
+- `WorldCheckpoint` 会自动为关联出生点补充 `Checkpoint` 用途；其调度器引用可留空，运行时使用场景中的活动调度器。
+- 复制出生点后需要保证 `Point Id` 唯一；可以通过组件菜单“重新生成出生点 ID”处理重复 ID。
+
 <a id="feature-elevator-platform"></a>
 
 ## Feature: 两层移动电梯

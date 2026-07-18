@@ -253,6 +253,46 @@ namespace EndLink.Core
         }
 
         /// <summary>
+        /// 把玩家安全传送到指定世界位置和朝向，并清除传送前的移动、重力、冲刺与战斗击退残留。
+        /// 复活、场景入口和后续传送机关应统一使用该入口，不要直接修改角色 Transform。
+        /// </summary>
+        public void Teleport(Vector3 worldPosition, Quaternion worldRotation)
+        {
+            if (_characterController == null)
+            {
+                _characterController = GetComponent<CharacterController>();
+            }
+
+            ResetMotionState();
+
+            bool restoreController = _characterController != null && _characterController.enabled;
+            if (restoreController)
+            {
+                _characterController.enabled = false;
+            }
+
+            transform.SetPositionAndRotation(worldPosition, worldRotation);
+
+            if (restoreController)
+            {
+                _characterController.enabled = true;
+            }
+        }
+
+        /// <summary>清除当前移动速度、阻尼缓存、重力、冲刺和战斗击退。</summary>
+        public void ResetMotionState()
+        {
+            _planarVelocity = Vector3.zero;
+            _velocityXSmoothRef = 0f;
+            _velocityZSmoothRef = 0f;
+            _verticalVelocity = 0f;
+            _isSprinting = false;
+            _nextJumpAllowedTime = Time.time;
+            _facingTarget = null;
+            _combatKnockbackMotion.Clear();
+        }
+
+        /// <summary>
         /// 尝试执行一次基础单段跳。
         /// 状态机负责决定哪些状态能请求跳跃，控制器只负责写入垂直初速度。
         /// </summary>

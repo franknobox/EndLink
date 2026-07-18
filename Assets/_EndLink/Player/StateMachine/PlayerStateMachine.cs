@@ -395,6 +395,24 @@ namespace EndLink.Core
         }
 
         /// <summary>
+        /// 清理死亡前遗留的动作、连段、防御和输入状态，并强制回到待机状态。
+        /// 生命恢复与空间传送由复活调度器负责，本入口只重置玩家有限状态机及其战斗执行状态。
+        /// </summary>
+        public void ResetForRespawn()
+        {
+            _combatDriver?.CancelCurrentAction();
+            _comboController?.ResetCombo();
+            _guardController?.EndGuard();
+
+            ClearAttackBuffer();
+            ClearCurrentAction();
+            _isActionActive = false;
+            _actionCanCancel = false;
+            _nextDodgeAllowedTime = Time.time;
+            ChangeState(PlayerStateId.Idle);
+        }
+
+        /// <summary>
         /// 尝试消费仍在有效期内的普攻输入。
         /// 只有动作真正可执行时才会清空缓冲，短暂冷却不会提前吃掉输入。
         /// </summary>

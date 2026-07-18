@@ -87,6 +87,7 @@
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [世界交互底座](Features/WORLD.md#feature-world-interaction) | 已完成接口一致性版 | 提供统一接口扫描、交互点距离判断、执行前范围复检和玩家输入桥接，用于门、电梯、开关等灰盒机关扩展。 |
+| [通用出生点与检查点](Features/WORLD.md#feature-world-spawn-checkpoint) | 已完成第一版 | 提供可复用的世界出生锚点、开场出生、检查点休整和玩家死亡复活流程，并为未来存档与敌人生成保留稳定位置身份。 |
 | [两层移动电梯](Features/WORLD.md#feature-elevator-platform) | 已完成第一版 | 提供可交互的上下层往返平台，通过运动学 Rigidbody 驱动物理实体，并为 CharacterController 乘客补偿平台三维位移。 |
 | [通用开关门](Features/WORLD.md#feature-world-door) | 已完成第一版 | 提供接入世界交互系统的平移门和旋转门，支持平滑开关、运行中反向、动态提示和开关事件。 |
 
