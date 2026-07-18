@@ -1,17 +1,20 @@
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.Scripting.APIUpdating;
 
 namespace EndLink.World
 {
     /// <summary>门的基础运动方式。</summary>
-    public enum WorldDoorMotion
+    [MovedFrom(true, sourceNamespace: "EndLink.World", sourceAssembly: "EndLink.Runtime", sourceClassName: "WorldDoorMotion")]
+    public enum DoorMotion
     {
         Slide,
         Rotate
     }
 
     /// <summary>门当前所处的运行状态。</summary>
-    public enum WorldDoorState
+    [MovedFrom(true, sourceNamespace: "EndLink.World", sourceAssembly: "EndLink.Runtime", sourceClassName: "WorldDoorState")]
+    public enum DoorState
     {
         Closed,
         Opening,
@@ -20,12 +23,13 @@ namespace EndLink.World
     }
 
     /// <summary>
-    /// 通用世界门组件。
+    /// 通用门交互组件。
     /// 组件应挂在稳定的门根物体上，通过 Moving Part 驱动门板平移或旋转，
     /// 并复用现有世界交互系统响应玩家的交互输入。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class WorldDoor : WorldInteractable
+    [MovedFrom(true, sourceNamespace: "EndLink.World", sourceAssembly: "EndLink.Runtime", sourceClassName: "WorldDoor")]
+    public sealed class DoorInteractable : WorldInteractable
     {
         private const float MinMoveDuration = 0.01f;
         private const float EndpointTolerance = 0.0001f;
@@ -42,7 +46,7 @@ namespace EndLink.World
         [Header("开关运动")]
         [Tooltip("Slide 为平移门，Rotate 为绕门板自身 Pivot 旋转。")]
         [SerializeField]
-        private WorldDoorMotion motion = WorldDoorMotion.Slide;
+        private DoorMotion motion = DoorMotion.Slide;
 
         [Tooltip("平移门相对关闭位置的本地坐标偏移。默认向上移动 3 米。")]
         [SerializeField]
@@ -94,16 +98,16 @@ namespace EndLink.World
         private Quaternion _closedLocalRotation;
         private float _openProgress;
         private bool _targetOpen;
-        private WorldDoorState _state;
+        private DoorState _state;
 
         /// <summary>门当前状态。</summary>
-        public WorldDoorState State => _state;
+        public DoorState State => _state;
 
         /// <summary>门从关闭到开启的归一化进度。</summary>
         public float OpenProgress => _openProgress;
 
         /// <summary>门当前是否正在运动。</summary>
-        public bool IsMoving => _state is WorldDoorState.Opening or WorldDoorState.Closing;
+        public bool IsMoving => _state is DoorState.Opening or DoorState.Closing;
 
         /// <inheritdoc />
         public override string InteractionPrompt => _targetOpen ? closePrompt : openPrompt;
@@ -117,7 +121,7 @@ namespace EndLink.World
             _targetOpen = initiallyOpen;
             _openProgress = initiallyOpen ? 1f : 0f;
             ApplyPose(_openProgress, false);
-            _state = initiallyOpen ? WorldDoorState.Open : WorldDoorState.Closed;
+            _state = initiallyOpen ? DoorState.Open : DoorState.Closed;
         }
 
         private void Update()
@@ -184,7 +188,7 @@ namespace EndLink.World
             }
 
             _targetOpen = open;
-            _state = open ? WorldDoorState.Opening : WorldDoorState.Closing;
+            _state = open ? DoorState.Opening : DoorState.Closing;
 
             if (open)
             {
@@ -235,7 +239,7 @@ namespace EndLink.World
         private void CompleteMotion()
         {
             _openProgress = _targetOpen ? 1f : 0f;
-            _state = _targetOpen ? WorldDoorState.Open : WorldDoorState.Closed;
+            _state = _targetOpen ? DoorState.Open : DoorState.Closed;
 
             if (_targetOpen)
             {
@@ -257,10 +261,10 @@ namespace EndLink.World
             float easedProgress = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(progress));
             Vector3 openLocalPosition = _closedLocalPosition + openLocalOffset;
             Quaternion openLocalRotation = _closedLocalRotation * Quaternion.Euler(openLocalEulerOffset);
-            Vector3 localPosition = motion == WorldDoorMotion.Slide
+            Vector3 localPosition = motion == DoorMotion.Slide
                 ? Vector3.LerpUnclamped(_closedLocalPosition, openLocalPosition, easedProgress)
                 : _closedLocalPosition;
-            Quaternion localRotation = motion == WorldDoorMotion.Rotate
+            Quaternion localRotation = motion == DoorMotion.Rotate
                 ? Quaternion.SlerpUnclamped(_closedLocalRotation, openLocalRotation, easedProgress)
                 : _closedLocalRotation;
 

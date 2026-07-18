@@ -43,7 +43,8 @@ Assets/_EndLink/
 │  ├─ ActCombat/         玩家连段、攻击位移、格挡弹反和战斗执行
 │  └─ StateMachine/      玩家状态机
 ├─ Tests/                测试脚本和可复用的 EndLink.Tests.asmdef
-├─ World/                灰盒地图中的门、电梯、机关等世界交互底座
+├─ World/                灰盒地图中的世界交互、出生与复活底座
+│  └─ Interactable/      门、电梯、检查点等具体交互实现
 └─ UI/                   运行时 HUD、动作槽位和血条组件
 ```
 

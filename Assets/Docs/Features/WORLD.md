@@ -53,7 +53,7 @@
 
 ### 对应脚本
 - `Assets/_EndLink/World/WorldSpawnPoint.cs`
-- `Assets/_EndLink/World/WorldCheckpoint.cs`
+- `Assets/_EndLink/World/Interactable/WorldCheckpoint.cs`
 - `Assets/_EndLink/World/WorldRespawnManager.cs`
 - `Assets/_EndLink/Control/PlayerController.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerStateMachine.cs`
@@ -81,8 +81,8 @@
 - 提供开始运行、抵达下层和抵达上层事件，后续可以接电梯门、音效、灯光或关卡逻辑。
 
 ### 对应脚本
-- `Assets/_EndLink/World/ElevatorPlatform.cs`
-- `Assets/_EndLink/World/ElevatorInteractable.cs`
+- `Assets/_EndLink/World/Interactable/ElevatorPlatform.cs`
+- `Assets/_EndLink/World/Interactable/ElevatorInteractable.cs`
 - `Assets/_EndLink/Control/IExternalDisplacementReceiver.cs`
 
 ### 相关物体 / 配置
@@ -107,9 +107,9 @@
 - 提供开门开始、完全开启、关门开始和完全关闭事件。
 
 ### 对应脚本
-- `Assets/_EndLink/World/WorldDoor.cs`
+- `Assets/_EndLink/World/Interactable/DoorInteractable.cs`
 
 ### 相关物体 / 配置
-- 推荐使用稳定的门根物体挂 `WorldDoor` 和交互 Trigger，独立门板子物体拖入 `Moving Part`。
+- 推荐使用稳定的门根物体挂 `DoorInteractable` 和交互 Trigger，独立门板子物体拖入 `Moving Part`。
 - 升降闸门选择 `Slide`，通过 `Open Local Offset` 设置开启偏移；平开门选择 `Rotate`，并把门板 Pivot 放在门轴位置。
 - 门框和活动门板不能是同一个不可分离的 ProBuilder Mesh，否则会整体移动。

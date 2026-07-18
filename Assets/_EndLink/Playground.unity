@@ -4540,6 +4540,61 @@ MonoBehaviour:
   m_EditMode: 0
   m_FlipNormals: 0
   isOnGrid: 1
+--- !u!1 &150618761
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 150618762}
+  - component: {fileID: 150618763}
+  m_Layer: 0
+  m_Name: EndLink_WorldSystem
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &150618762
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 150618761}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -17.84528, y: 0, z: -3.28861}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &150618763
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 150618761}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32af58c37c414b5dafd911132b82e890, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: EndLink.Runtime::EndLink.World.WorldRespawnManager
+  playerRoot: {fileID: 509600059}
+  initialSpawnPoint: {fileID: 0}
+  placePlayerAtInitialPoint: 1
+  respawnDelay: 1
+  partyCombatContext: {fileID: 0}
+  onCheckpointChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  onPlayerRespawned:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1001 &151662886
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -21778,12 +21833,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1703493502}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -0, z: 0}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -9.34117, y: 0, z: -19.15642}
   m_LocalScale: {x: 6, y: 1, z: 6}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 2068868051}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!43 &1707448413
 Mesh:
@@ -29909,6 +29964,7 @@ Transform:
   - {fileID: 433007034}
   - {fileID: 1122381769}
   - {fileID: 178030428}
+  - {fileID: 1703493506}
   m_Father: {fileID: 353305793}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2084252733
@@ -30642,10 +30698,10 @@ SceneRoots:
   - {fileID: 330585546}
   - {fileID: 410087041}
   - {fileID: 832575519}
-  - {fileID: 1703493506}
-  - {fileID: 509600059}
+  - {fileID: 150618762}
   - {fileID: 2084252738}
   - {fileID: 87766233}
+  - {fileID: 509600059}
   - {fileID: 813602087}
   - {fileID: 45882478}
   - {fileID: 698380648}
