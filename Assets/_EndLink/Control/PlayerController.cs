@@ -73,6 +73,7 @@ namespace EndLink.Core
         private float _verticalVelocity;
         private bool _isSprinting;
         private float _nextJumpAllowedTime;
+        private Transform _facingTarget;
 
         /// <summary>当前帧玩家是否正在冲刺移动。</summary>
         public bool IsSprinting => _isSprinting;
@@ -101,6 +102,9 @@ namespace EndLink.Core
             get => movementReference;
             set => movementReference = value;
         }
+
+        /// <summary>当前是否由硬锁等上层系统指定了持续面向目标。</summary>
+        public bool HasFacingTarget => _facingTarget != null;
 
         /// <summary>
         /// 根据输入和参考旋转计算 XZ 平面的移动方向。
@@ -131,6 +135,32 @@ namespace EndLink.Core
             return Vector3.ClampMagnitude(moveDirection, 1f);
         }
 
+        /// <summary>
+        /// 根据角色与锁定目标的位置计算目标相对移动方向。
+        /// 输入前后用于接近或远离目标，输入左右用于沿目标周围横移。
+        /// </summary>
+        public static Vector3 GetPlanarMoveDirectionForTarget(
+            Vector2 moveInput,
+            Vector3 actorPosition,
+            Vector3 targetPosition)
+        {
+            if (moveInput.sqrMagnitude <= MoveInputDeadZoneSqr)
+            {
+                return Vector3.zero;
+            }
+
+            Vector3 targetForward = Vector3.ProjectOnPlane(targetPosition - actorPosition, Vector3.up);
+            if (targetForward.sqrMagnitude <= MoveInputDeadZoneSqr)
+            {
+                return new Vector3(moveInput.x, 0f, moveInput.y).normalized;
+            }
+
+            targetForward.Normalize();
+            Vector3 targetRight = Vector3.Cross(Vector3.up, targetForward).normalized;
+            Vector3 moveDirection = targetRight * moveInput.x + targetForward * moveInput.y;
+            return Vector3.ClampMagnitude(moveDirection, 1f);
+        }
+
         private void Awake()
         {
             _characterController = GetComponent<CharacterController>();
@@ -144,6 +174,7 @@ namespace EndLink.Core
         private void OnDisable()
         {
             _combatKnockbackMotion.Clear();
+            _facingTarget = null;
         }
 
         /// <summary>
@@ -175,7 +206,10 @@ namespace EndLink.Core
             motion.y = _verticalVelocity;
             _characterController.Move(motion * deltaTime);
 
-            RotateTowardsMoveDirection(desiredMoveDirection, deltaTime);
+            if (!RotateTowardsFacingTarget(deltaTime))
+            {
+                RotateTowardsMoveDirection(desiredMoveDirection, deltaTime);
+            }
         }
 
         /// <summary>
@@ -198,10 +232,24 @@ namespace EndLink.Core
             motion.y = _verticalVelocity;
             _characterController.Move(motion * deltaTime);
 
-            if (faceDodgeDirection)
+            if (!RotateTowardsFacingTarget(deltaTime) && faceDodgeDirection)
             {
-                FaceDirection(dodgeDirection, false);
+                FaceDirection(dodgeDirection, false, deltaTime, rotationSharpness);
             }
+        }
+
+        /// <summary>
+        /// 指定持续面向目标。PlayerController 只执行朝向与目标相对移动，不决定何时建立或解除硬锁。
+        /// </summary>
+        public void SetFacingTarget(Transform target)
+        {
+            _facingTarget = target;
+        }
+
+        /// <summary>解除上层系统指定的持续面向目标。</summary>
+        public void ClearFacingTarget()
+        {
+            _facingTarget = null;
         }
 
         /// <summary>
@@ -354,8 +402,38 @@ namespace EndLink.Core
                 return Vector3.zero;
             }
 
+            if (_facingTarget != null)
+            {
+                Vector3 lockedMoveDirection = GetPlanarMoveDirectionForTarget(
+                    moveInput,
+                    transform.position,
+                    _facingTarget.position);
+                if (lockedMoveDirection.sqrMagnitude > MoveInputDeadZoneSqr)
+                {
+                    return lockedMoveDirection;
+                }
+            }
+
             Quaternion referenceRotation = movementReference != null ? movementReference.rotation : Quaternion.identity;
             return GetPlanarMoveDirectionForReference(moveInput, referenceRotation);
+        }
+
+        private bool RotateTowardsFacingTarget(float deltaTime)
+        {
+            if (_facingTarget == null)
+            {
+                return false;
+            }
+
+            Vector3 facingDirection = _facingTarget.position - transform.position;
+            facingDirection.y = 0f;
+            if (facingDirection.sqrMagnitude <= MoveInputDeadZoneSqr)
+            {
+                return false;
+            }
+
+            FaceDirection(facingDirection, false, deltaTime, rotationSharpness);
+            return true;
         }
 
         private void RotateTowardsMoveDirection(Vector3 desiredMoveDirection, float deltaTime)

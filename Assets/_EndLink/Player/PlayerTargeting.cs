@@ -259,6 +259,36 @@ namespace EndLink.Combat
             return TryAcquireHardLock();
         }
 
+        /// <summary>
+        /// 在当前硬锁目标的左侧或右侧寻找下一个目标。
+        /// direction 小于 0 表示向左，大于 0 表示向右；没有对应方向目标时保持当前锁定。
+        /// </summary>
+        public bool SwitchHardLockTarget(int direction)
+        {
+            int switchDirection = direction < 0 ? -1 : direction > 0 ? 1 : 0;
+            if (switchDirection == 0 || !IsHardLocked)
+            {
+                return false;
+            }
+
+            CombatTarget nextTarget = FindHardLockSwitchTarget(switchDirection);
+            if (nextTarget == null)
+            {
+                return false;
+            }
+
+            _currentTarget = nextTarget;
+            _hardLockedTarget = nextTarget;
+            UpdateTargetIndicator();
+
+            if (logTargetChanges)
+            {
+                Debug.Log($"PlayerTargeting switched hard lock: {nextTarget.RootTransform.name}", this);
+            }
+
+            return true;
+        }
+
         /// <summary>解除手动硬锁，但保留自动软目标。</summary>
         public void ClearHardLock()
         {
@@ -372,6 +402,71 @@ namespace EndLink.Combat
                 if (score > bestScore)
                 {
                     bestScore = score;
+                    bestTarget = candidate;
+                }
+            }
+
+            return bestTarget;
+        }
+
+        private CombatTarget FindHardLockSwitchTarget(int switchDirection)
+        {
+            Transform origin = GetSearchOrigin();
+            Vector3 originPosition = origin.position;
+            Vector3 currentPosition = _hardLockedTarget.LockPoint != null
+                ? _hardLockedTarget.LockPoint.position
+                : _hardLockedTarget.RootTransform.position;
+            Vector3 currentDirection = Vector3.ProjectOnPlane(currentPosition - originPosition, Vector3.up);
+
+            if (currentDirection.sqrMagnitude <= 0.0001f)
+            {
+                return null;
+            }
+
+            currentDirection.Normalize();
+            int hitCount = Physics.OverlapSphereNonAlloc(
+                originPosition,
+                searchRadius,
+                _targetBuffer,
+                targetLayerMask,
+                QueryTriggerInteraction.Ignore);
+
+            CombatTarget bestTarget = null;
+            float bestCost = float.PositiveInfinity;
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                if (!CombatTargetUtility.TryResolve(_targetBuffer[i], out ICombatTarget resolvedTarget)
+                    || resolvedTarget is not CombatTarget candidate
+                    || candidate == _hardLockedTarget
+                    || !IsTargetStillValid(candidate))
+                {
+                    continue;
+                }
+
+                Vector3 candidatePosition = candidate.LockPoint != null
+                    ? candidate.LockPoint.position
+                    : candidate.RootTransform.position;
+                Vector3 candidateDirection = Vector3.ProjectOnPlane(candidatePosition - originPosition, Vector3.up);
+                if (candidateDirection.sqrMagnitude <= 0.0001f)
+                {
+                    continue;
+                }
+
+                candidateDirection.Normalize();
+                float signedAngle = Vector3.SignedAngle(currentDirection, candidateDirection, Vector3.up);
+                if ((switchDirection < 0 && signedAngle >= -1f)
+                    || (switchDirection > 0 && signedAngle <= 1f))
+                {
+                    continue;
+                }
+
+                // 先选视觉方向上最邻近的目标，再用距离做轻量修正，避免突然跨过多个敌人。
+                float normalizedDistance = Mathf.Clamp01(candidate.GetSurfaceDistance(originPosition) / searchRadius);
+                float cost = Mathf.Abs(signedAngle) + normalizedDistance * 15f;
+                if (cost < bestCost)
+                {
+                    bestCost = cost;
                     bestTarget = candidate;
                 }
             }

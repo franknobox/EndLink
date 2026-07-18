@@ -214,7 +214,7 @@ namespace EndLink.Core
 
     /// <summary>
     /// 玩家视角模式协调器。
-    /// 挂在第三人称相机物体上，负责切换镜头预设，并在魂类模式下把目标锁定输入接到相机朝向。
+    /// 挂在第三人称相机物体上，负责切换镜头预设，并在魂类模式下协调硬锁目标、镜头朝向和玩家锁定操控。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(ThirdPersonCameraController))]
@@ -233,6 +233,10 @@ namespace EndLink.Core
         [Tooltip("玩家输入读取器。为空时会尝试从相机 Follow Target 自动获取。")]
         [SerializeField]
         private PlayerInputReader playerInputReader;
+
+        [Tooltip("玩家移动控制器。魂类硬锁时由本组件指定持续面向目标，并启用目标相对移动。为空时会尝试从相机 Follow Target 自动获取。")]
+        [SerializeField]
+        private PlayerController playerController;
 
         [Header("高速动作视角")]
         [Tooltip("Fast Action 模式使用的偏高、偏远和较快旋转参数。首次升级组件时会从当前 ThirdPersonCameraController 自动捕获。")]
@@ -314,6 +318,16 @@ namespace EndLink.Core
                 }
             }
 
+            bool previousPressed = playerInputReader != null && playerInputReader.ConsumePreviousPressed();
+            bool nextPressed = playerInputReader != null && playerInputReader.ConsumeNextPressed();
+            if (viewMode == PlayerViewMode.SoulsLike
+                && playerTargeting != null
+                && playerTargeting.IsHardLocked
+                && previousPressed != nextPressed)
+            {
+                playerTargeting.SwitchHardLockTarget(previousPressed ? -1 : 1);
+            }
+
             RefreshCameraLockTarget();
         }
 
@@ -325,6 +339,7 @@ namespace EndLink.Core
             }
 
             playerTargeting?.ClearHardLock();
+            playerController?.ClearFacingTarget();
             _cameraController.ClearLockTarget();
             _cameraController.ApplyViewSettings(fastActionSettings, false);
         }
@@ -401,6 +416,7 @@ namespace EndLink.Core
 
             playerTargeting ??= followTarget.GetComponentInParent<PlayerTargeting>();
             playerInputReader ??= followTarget.GetComponentInParent<PlayerInputReader>();
+            playerController ??= followTarget.GetComponentInParent<PlayerController>();
         }
 
         private void ApplyMode(PlayerViewMode mode, bool snapDistance)
@@ -410,6 +426,7 @@ namespace EndLink.Core
             if (mode == PlayerViewMode.FastAction)
             {
                 playerTargeting?.ClearHardLock();
+                playerController?.ClearFacingTarget();
                 _cameraController.ClearLockTarget();
                 _cameraController.ApplyViewSettings(fastActionSettings, snapDistance);
                 return;
@@ -424,12 +441,15 @@ namespace EndLink.Core
             if (viewMode != PlayerViewMode.SoulsLike || playerTargeting == null || !playerTargeting.IsHardLocked)
             {
                 _cameraController.ClearLockTarget();
+                playerController?.ClearFacingTarget();
                 return;
             }
 
+            Transform lockPoint = playerTargeting.CurrentLockPoint;
             _cameraController.SetLockTarget(
-                playerTargeting.CurrentLockPoint,
+                lockPoint,
                 hardLockRotationSmoothTime);
+            playerController?.SetFacingTarget(lockPoint);
         }
 
         private void EnsureFastActionSettingsInitialized()

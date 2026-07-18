@@ -39,6 +39,11 @@ namespace EndLink.Core
                 return;
             }
 
+            if (Context.TryCancelCurrentActionFromInput())
+            {
+                return;
+            }
+
             _elapsedTime += deltaTime;
 
             Vector2 skillMoveInput = Context.InputReader.MoveInput * Context.SkillMoveInputScale;

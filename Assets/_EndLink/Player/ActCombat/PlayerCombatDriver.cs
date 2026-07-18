@@ -149,6 +149,17 @@ namespace EndLink.Combat
         }
 
         /// <summary>
+        /// 判断先取消当前动作后，指定动作是否具备执行条件。
+        /// 只供状态机的合法取消窗口使用，不应绕过状态机直接调用。
+        /// </summary>
+        public bool CanExecuteAfterCancel(CombatActionDefinition actionDefinition)
+        {
+            return actionDefinition != null
+                && actionDefinition.HitboxPrefab != null
+                && GetCooldownRemaining(actionDefinition) <= 0f;
+        }
+
+        /// <summary>
         /// 执行指定玩家动作。
         /// 该方法不判断玩家状态机是否允许出手，只负责动作资源、冷却和 Hitbox 执行。
         /// </summary>
@@ -380,6 +391,7 @@ namespace EndLink.Combat
                 && _currentActionTimeline.Phase == CombatActionPhase.Recovery)
             {
                 EndCurrentHitbox();
+                _actionLockReceiver?.NotifyActionCanCancel();
             }
 
             if (completed)

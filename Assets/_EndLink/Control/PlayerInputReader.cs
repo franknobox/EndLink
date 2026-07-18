@@ -34,6 +34,8 @@ namespace EndLink.Core
         private InputAction _dodgeAction;
         private InputAction _guardAction;
         private InputAction _targetLockAction;
+        private InputAction _previousAction;
+        private InputAction _nextAction;
         private InputAction _jumpAction;
         private InputAction _interactAction;
         private InputAction _playerSkillAction;
@@ -47,6 +49,8 @@ namespace EndLink.Core
         private bool _attackPressed;
         private bool _dodgePressed;
         private bool _targetLockPressed;
+        private bool _previousPressed;
+        private bool _nextPressed;
         private bool _jumpPressed;
         private bool _interactPressed;
         private bool _playerSkillPressed;
@@ -97,6 +101,8 @@ namespace EndLink.Core
             _guardAction.performed -= OnGuardStartedOrPerformed;
             _guardAction.canceled -= OnGuardCanceled;
             _targetLockAction.performed -= OnTargetLockPerformed;
+            _previousAction.performed -= OnPreviousPerformed;
+            _nextAction.performed -= OnNextPerformed;
             _jumpAction.performed -= OnJumpPerformed;
             _interactAction.performed -= OnInteractPerformed;
             _playerSkillAction.performed -= OnPlayerSkillPerformed;
@@ -136,6 +142,24 @@ namespace EndLink.Core
         public bool ConsumeTargetLockPressed()
         {
             return ConsumePressed(ref _targetLockPressed);
+        }
+
+        /// <summary>
+        /// 消费一次“上一个”输入。
+        /// 当前由魂类硬锁模式用于向左切换目标，默认绑定为鼠标滚轮向上和手柄右摇杆向左。
+        /// </summary>
+        public bool ConsumePreviousPressed()
+        {
+            return ConsumePressed(ref _previousPressed);
+        }
+
+        /// <summary>
+        /// 消费一次“下一个”输入。
+        /// 当前由魂类硬锁模式用于向右切换目标，默认绑定为鼠标滚轮向下和手柄右摇杆向右。
+        /// </summary>
+        public bool ConsumeNextPressed()
+        {
+            return ConsumePressed(ref _nextPressed);
         }
 
         /// <summary>
@@ -286,6 +310,16 @@ namespace EndLink.Core
             SetPressedIfButton(context, ref _targetLockPressed);
         }
 
+        private void OnPreviousPerformed(InputAction.CallbackContext context)
+        {
+            SetPressedIfButton(context, ref _previousPressed);
+        }
+
+        private void OnNextPerformed(InputAction.CallbackContext context)
+        {
+            SetPressedIfButton(context, ref _nextPressed);
+        }
+
         private void OnJumpPerformed(InputAction.CallbackContext context)
         {
             SetPressedIfButton(context, ref _jumpPressed);
@@ -357,6 +391,8 @@ namespace EndLink.Core
             _attackPressed = false;
             _dodgePressed = false;
             _targetLockPressed = false;
+            _previousPressed = false;
+            _nextPressed = false;
             _jumpPressed = false;
             _interactPressed = false;
             _playerSkillPressed = false;
@@ -383,6 +419,8 @@ namespace EndLink.Core
             _dodgeAction = _inputActions.asset.FindAction("Player/Dodge", true);
             _guardAction = _inputActions.asset.FindAction("Player/Guard", true);
             _targetLockAction = _inputActions.asset.FindAction("Player/TargetLock", true);
+            _previousAction = _inputActions.asset.FindAction("Player/Previous", true);
+            _nextAction = _inputActions.asset.FindAction("Player/Next", true);
             _jumpAction = _inputActions.asset.FindAction("Player/Jump", true);
             _interactAction = _inputActions.asset.FindAction("Player/Interact", true);
             _playerSkillAction = _inputActions.asset.FindAction("Player/PlayerSkill", true);
@@ -403,6 +441,8 @@ namespace EndLink.Core
             _guardAction.performed += OnGuardStartedOrPerformed;
             _guardAction.canceled += OnGuardCanceled;
             _targetLockAction.performed += OnTargetLockPerformed;
+            _previousAction.performed += OnPreviousPerformed;
+            _nextAction.performed += OnNextPerformed;
             _jumpAction.performed += OnJumpPerformed;
             _interactAction.performed += OnInteractPerformed;
             _playerSkillAction.performed += OnPlayerSkillPerformed;

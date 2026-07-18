@@ -5,7 +5,8 @@ namespace EndLink.Core
     /// <summary>
     /// 玩家闪避状态。
     /// 第一版用于白模阶段验证近战敌人规避手感：有移动输入时按输入方向闪避；
-    /// 没有移动输入时默认向角色正后方后撤。
+    /// 没有移动输入时默认向角色正后方后撤。硬锁时移动方向由 PlayerController 转为目标相对方向，
+    /// 因此前后对应接近/远离目标，左右对应侧向闪避，并在闪避过程中继续面向目标。
     /// </summary>
     public sealed class PlayerDodgeState : PlayerStateBase
     {

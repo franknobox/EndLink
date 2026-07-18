@@ -46,6 +46,11 @@ namespace EndLink.Core
             _elapsedTime += deltaTime;
             Context.ConsumeJumpPressed();
 
+            if (Context.TryCancelCurrentActionFromInput())
+            {
+                return;
+            }
+
             Vector2 attackMoveInput = Context.InputReader.MoveInput * Context.AttackMoveInputScale;
             Context.Controller.TickMovement(attackMoveInput, deltaTime);
             Context.TickAttackTargetFacing(deltaTime);

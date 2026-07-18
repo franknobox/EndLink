@@ -264,5 +264,11 @@ namespace EndLink.Core
         {
             return StateMachine.ConsumeSkillRequest();
         }
+
+        /// <summary>尝试在当前动作的取消窗口中响应闪避、格挡或普攻派生输入。</summary>
+        public bool TryCancelCurrentActionFromInput()
+        {
+            return StateMachine.TryCancelCurrentActionFromInput();
+        }
     }
 }

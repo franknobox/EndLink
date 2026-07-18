@@ -4,6 +4,17 @@ using UnityEngine;
 
 namespace EndLink.Core
 {
+    /// <summary>动作进入可取消窗口后，允许切入的玩家行动类型。</summary>
+    [System.Flags]
+    public enum PlayerActionCancelOptions
+    {
+        None = 0,
+        Attack = 1 << 0,
+        Skill = 1 << 1,
+        Dodge = 1 << 2,
+        Guard = 1 << 3
+    }
+
     /// <summary>
     /// 玩家有限状态机。
     /// 负责持有状态实例、切换当前状态，并把每帧执行权交给当前状态。
@@ -36,6 +47,14 @@ namespace EndLink.Core
         [Tooltip("普攻输入缓冲时间。攻击、技能或短暂冷却结束前按下攻击，可在该时间内自动衔接下一次普攻。")]
         [SerializeField, Min(0f)]
         private float attackInputBufferDuration = 0.15f;
+
+        [Header("动作取消")]
+        [Tooltip("动作收到 CanCancel 后允许切入的行动。第一版默认支持技能与普攻互相派生，并允许闪避或防御取消；受击和死亡始终可以强制打断。")]
+        [SerializeField]
+        private PlayerActionCancelOptions actionCancelOptions = PlayerActionCancelOptions.Attack
+            | PlayerActionCancelOptions.Skill
+            | PlayerActionCancelOptions.Dodge
+            | PlayerActionCancelOptions.Guard;
 
         [Header("防御状态")]
         [Tooltip("防御期间保留的移动输入倍率。第一版默认站定防御，后续可改为带朝向锁定的防御移动。")]
@@ -108,6 +127,9 @@ namespace EndLink.Core
         /// 当前动作是否仍锁定普通状态切换。受击和死亡始终可以强制打断。
         /// </summary>
         public bool IsActionLocked => _isActionActive && !_actionCanCancel;
+
+        /// <summary>当前动作是否已经进入可取消窗口。</summary>
+        public bool IsActionCancelWindowOpen => _isActionActive && _actionCanCancel;
 
         /// <summary>当前通用技能状态准备执行的动作。</summary>
         public CombatActionDefinition CurrentAction => _currentAction;
@@ -249,7 +271,7 @@ namespace EndLink.Core
                 return;
             }
 
-            if (IsActionLocked && !CanForceInterruptAction(nextStateId))
+            if (!CanTransitionFromCurrentAction(nextStateId))
             {
                 return;
             }
@@ -261,6 +283,11 @@ namespace EndLink.Core
             }
 
             PlayerStateId previousStateId = CurrentStateId;
+
+            if (previousStateId == PlayerStateId.Skill && nextStateId != PlayerStateId.Skill)
+            {
+                ClearCurrentAction();
+            }
 
             _currentState?.Exit();
             _currentState = nextState;
@@ -293,21 +320,44 @@ namespace EndLink.Core
         /// </summary>
         public bool RequestAction(CombatActionDefinition action, Transform target)
         {
-            if (CurrentStateId != PlayerStateId.Idle && CurrentStateId != PlayerStateId.Move)
+            bool fromLocomotion = CurrentStateId == PlayerStateId.Idle || CurrentStateId == PlayerStateId.Move;
+            bool cancelAttackIntoSkill = CurrentStateId == PlayerStateId.Attack
+                && CanCancelCurrentActionTo(PlayerStateId.Skill);
+            if (!fromLocomotion && !cancelAttackIntoSkill)
             {
                 return false;
             }
 
             ICombatActionExecutor actionExecutor = _combatDriver;
-            if (_actionRequested || actionExecutor == null || !actionExecutor.CanExecute(action))
+            bool canExecute = cancelAttackIntoSkill
+                ? _combatDriver != null && _combatDriver.CanExecuteAfterCancel(action)
+                : actionExecutor != null && actionExecutor.CanExecute(action);
+            if (_actionRequested || !canExecute)
             {
                 return false;
             }
 
             _currentAction = action;
             _currentActionTarget = target;
+
+            if (cancelAttackIntoSkill)
+            {
+                _actionRequested = false;
+                ChangeState(PlayerStateId.Skill);
+                return CurrentStateId == PlayerStateId.Skill;
+            }
+
             _actionRequested = true;
             return true;
+        }
+
+        /// <summary>
+        /// 判断当前动作的取消窗口是否允许切入指定状态。
+        /// 受击和死亡属于强制打断，不受该配置限制。
+        /// </summary>
+        public bool CanCancelCurrentActionTo(PlayerStateId nextStateId)
+        {
+            return IsActionCancelWindowOpen && IsCancelOptionEnabled(nextStateId);
         }
 
         /// <summary>
@@ -378,6 +428,44 @@ namespace EndLink.Core
 
             _actionRequested = false;
             return true;
+        }
+
+        /// <summary>
+        /// 在动作取消窗口中按固定优先级处理玩家输入：闪避、格挡、技能后的普攻派生。
+        /// 技能请求由 RequestAction 直接完成 Attack -> Skill 切换。
+        /// </summary>
+        internal bool TryCancelCurrentActionFromInput()
+        {
+            if (!IsActionCancelWindowOpen || _inputReader == null)
+            {
+                return false;
+            }
+
+            if (CanCancelCurrentActionTo(PlayerStateId.Dodge)
+                && CanStartDodge
+                && _inputReader.ConsumeDodgePressed())
+            {
+                ChangeState(PlayerStateId.Dodge);
+                return CurrentStateId == PlayerStateId.Dodge;
+            }
+
+            if (CanCancelCurrentActionTo(PlayerStateId.Guard)
+                && _guardController != null
+                && _inputReader.GuardHeld)
+            {
+                ChangeState(PlayerStateId.Guard);
+                return CurrentStateId == PlayerStateId.Guard;
+            }
+
+            if (CurrentStateId == PlayerStateId.Skill
+                && CanCancelCurrentActionTo(PlayerStateId.Attack)
+                && TryConsumeAttackBuffer(CanStartAttackAfterCancel()))
+            {
+                ChangeState(PlayerStateId.Attack);
+                return CurrentStateId == PlayerStateId.Attack;
+            }
+
+            return false;
         }
 
         /// <summary>结束当前通用动作并回到移动或待机。</summary>
@@ -457,6 +545,44 @@ namespace EndLink.Core
         private static bool IsActionState(PlayerStateId stateId)
         {
             return stateId == PlayerStateId.Attack || stateId == PlayerStateId.Skill;
+        }
+
+        private bool CanTransitionFromCurrentAction(PlayerStateId nextStateId)
+        {
+            if (!_isActionActive || !IsActionState(CurrentStateId))
+            {
+                return true;
+            }
+
+            if (CanForceInterruptAction(nextStateId))
+            {
+                return true;
+            }
+
+            return CanCancelCurrentActionTo(nextStateId);
+        }
+
+        private bool IsCancelOptionEnabled(PlayerStateId stateId)
+        {
+            PlayerActionCancelOptions option = stateId switch
+            {
+                PlayerStateId.Attack => PlayerActionCancelOptions.Attack,
+                PlayerStateId.Skill => PlayerActionCancelOptions.Skill,
+                PlayerStateId.Dodge => PlayerActionCancelOptions.Dodge,
+                PlayerStateId.Guard => PlayerActionCancelOptions.Guard,
+                _ => PlayerActionCancelOptions.None
+            };
+
+            return option != PlayerActionCancelOptions.None && (actionCancelOptions & option) != 0;
+        }
+
+        private bool CanStartAttackAfterCancel()
+        {
+            CombatActionDefinition fallbackAction = _combatDriver != null ? _combatDriver.BasicAttackAction : null;
+            CombatActionDefinition firstAction = _comboController != null
+                ? _comboController.GetFirstAction(fallbackAction)
+                : fallbackAction;
+            return _combatDriver != null && _combatDriver.CanExecuteAfterCancel(firstAction);
         }
 
         private static bool CanForceInterruptAction(PlayerStateId nextStateId)

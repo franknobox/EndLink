@@ -21,6 +21,7 @@
 - 攻击输入读取 `Player/Attack`，由状态机统一捕获并写入短时攻击缓冲，再决定是否进入攻击状态。
 - 防御输入读取 `Player/Guard`，默认键位为鼠标右键、手柄左扳机，只缓存当前是否按住。
 - 目标锁定输入读取 `Player/TargetLock`，默认键位为鼠标中键、手柄右摇杆按下；输入层只缓存按下事件，是否建立硬锁由视角模式决定。
+- 硬锁目标切换读取 `Player/Previous` 和 `Player/Next`；默认使用鼠标滚轮上/下或手柄右摇杆左/右，输入层不负责候选目标选择。
 - 闪避输入读取 `Player/Dodge`，默认键位为键盘 `Left Ctrl`、手柄 `buttonEast`。
 - 主控主动技能读取 `Player/PlayerSkill`，默认键位 Q。
 - 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`；当前不绑定键盘，路由配置入口和手柄绑定继续保留。
@@ -60,6 +61,8 @@
 - 支持按住 `Left Shift` 冲刺；当前冲刺作为移动速度修饰，不单独进入状态机大状态。
 - 支持基础单段跳，跳跃高度和冷却由 `PlayerController` 配置，垂直速度继续走现有手动重力。
 - 支持状态机驱动的闪避位移，闪避期间由 `PlayerDodgeState` 决定方向、速度和持续时间。
+- 魂类硬锁建立后，移动改为目标相对方向：前后输入接近/远离目标，左右输入沿目标周围横移，并持续保持角色正面朝向锁定点。
+- 硬锁闪避复用同一目标相对方向；没有移动输入时默认向远离目标的角色后方闪避，过程中不转背。
 - 支持接收敌人推挤和移动平台带来的三维外部位移；敌人仍只传水平推挤，电梯可稳定带动玩家上下移动。
 - 战斗命中产生的总击退距离会通过 `CombatKnockbackMotion` 在短时间内逐帧衰减执行，不再单帧瞬移。
 - 移动调用由 `PlayerStateMachine` 驱动，`PlayerController` 通过 `TickMovement` 执行实际位移。
@@ -113,7 +116,7 @@
 - `FastAction` 使用偏高、偏远、旋转较快的预设；已有组件第一次升级时会自动从当前 `ThirdPersonCameraController` 捕获原调参。
 - `SoulsLike` 使用偏近、偏低、旋转较慢的预设；中键建立硬锁后，相机平滑朝向目标锁定点。
 - Play Mode 中修改当前模式的预设会立即重新应用，便于分别调教两套镜头。
-- 第一版只切换镜头与目标锁定策略，尚未改变玩家移动为锁定横移或定向闪避。
+- 魂类硬锁会同时把锁定点交给 `PlayerController`，统一驱动镜头跟随、角色面向、目标相对移动和定向闪避；解除硬锁或切回高速模式后恢复相机相对自由移动。
 
 对应脚本：
 - `Assets/_EndLink/Control/ThirdPersonCameraController.cs`
@@ -175,12 +178,13 @@
 - `Idle` 和 `Move` 会在缓冲有效且普攻可执行时切换到 `Attack`。
 - `Skill` 是通用技能状态，当前由 `PartyCombatRouter` 发起请求，状态机决定是否进入，进入状态后再调用 `PlayerCombatDriver` 执行技能表现和判定。
 - `Attack` 状态按当前连段 Action 调用 `PlayerCombatDriver`；窗口内再次输入普攻会缓存下一段，当前段结束后继续执行。
-- 动画事件动作开始后会锁定普通状态退出，`CanCancel` 事件打开取消/连段窗口，`ActionEnd` 决定自然收招；`Hit` 和 `Dead` 始终可以强制打断。
-- 数据驱动动作继续使用配置时间；动画事件动作不会再被 `attackDuration` 或 `skillDuration` 提前切回移动状态。
+- 动作开始后会锁定普通状态退出；动画事件动作由 `CanCancel` 打开取消窗口，数据驱动动作则在进入 Recovery 段时自动打开，`ActionEnd` 或数据时序结束负责自然收招。
+- 第一版取消策略允许普攻与技能互相派生，并允许在取消窗口切入闪避或防御；具体许可可通过 `actionCancelOptions` 调整，`Hit` 和 `Dead` 始终可以强制打断。
+- 动画事件动作不会被 `attackDuration` 或 `skillDuration` 提前切回移动状态。
 - 攻击期间移动输入会乘以 `attackMoveInputScale`，当前默认可以做站桩攻击。
 - 攻击期间会按 `attackTrackingRotationSharpness` 平滑跟随当前软锁点；目标失效或参数为 `0` 时保持当前朝向。
 - `Guard` 由按住防御输入进入，松开后回到 `Move` 或 `Idle`；第一版允许从防御直接闪避。
-- `Dodge` 状态负责主控闪避：有移动输入时按输入方向闪避，没有移动输入时默认向角色正后方后撤。
+- `Dodge` 状态负责主控闪避：自由移动时按相机相对输入闪避；硬锁时按目标相对方向定向闪避并保持面向目标；没有输入时默认向角色正后方后撤。
 - 闪避期间普通移动、攻击和技能不会响应；闪避结束后根据移动输入回到 `Move` 或 `Idle`。
 - 闪避开始时会刷新冷却，并给 `CharacterHealth` 设置短暂临时免伤窗口。
 - `Hit` 可以被外部通过 `RequestHit()` 触发，用于短暂受击硬直，结束后根据移动输入回到 `Move` 或 `Idle`。
@@ -214,6 +218,7 @@
 - `attackMoveInputScale`：攻击期间移动输入倍率
 - `attackTrackingRotationSharpness`：攻击期间软锁跟随转向速度，`0` 表示关闭持续跟随
 - `attackInputBufferDuration`：普攻输入缓冲时间，默认 `0.15` 秒
+- `actionCancelOptions`：动作进入取消窗口后允许切入的普攻、技能、闪避和防御类型
 - `guardMoveInputScale`：防御期间保留的移动输入倍率，默认 `0`
 - `skillDuration`：通用技能状态持续时间
 - `skillMoveInputScale`：技能期间移动输入倍率
@@ -341,6 +346,8 @@
 - 负责按固定刷新间隔搜索并保存当前软锁目标。
 - 硬锁建立后优先作为战斗系统的有效目标，不再随自动刷新切换；解除硬锁后立即回退到自动软目标。
 - `PlayerViewController` 处于 `SoulsLike` 模式时，鼠标中键或手柄右摇杆按下会切换硬锁。
+- 已硬锁时可用鼠标滚轮上/下或手柄右摇杆左/右切换到当前目标对应方向上最邻近的候选目标；没有该方向候选时保持当前目标。
+- 硬锁目标会同步交给 `PlayerController`，使玩家移动和闪避使用目标相对方向并持续面向锁定点。
 - 硬锁目标死亡、被设为不可选、离开搜索范围、Layer 不匹配或被销毁时会自动解除。
 - 默认选择范围内距离玩家最近的敌人，也保留 `CameraForward` 模式用于后续偏动作游戏的视角优先设置。
 - 最近目标按 `CombatTarget` 的 Collider 水平表面距离计算，不再按敌人根节点或模型中心距离计算。
@@ -351,7 +358,7 @@
 - `Nearest` 模式按距离最近自动刷新目标，刷新间隔默认 0.2 秒。
 - `CameraForward` 模式会同时考虑视角/朝向夹角和距离。
 - 当前目标离开搜索范围、Layer 不匹配、死亡、被设为不可选或被销毁时，会自动清除。
-- 对外提供软目标获取，以及 `TryAcquireHardLock()`、`ToggleHardLock()`、`ClearHardLock()` 等硬锁入口。
+- 对外提供软目标获取，以及 `TryAcquireHardLock()`、`ToggleHardLock()`、`SwitchHardLockTarget()`、`ClearHardLock()` 等硬锁入口。
 - `PlayerCombatDriver` 会读取当前有效目标；硬锁存在时优先使用硬锁目标，否则使用自动软目标。攻击开始先让玩家正面转向目标，Attack 状态期间继续平滑跟随。
 
 对应脚本：
