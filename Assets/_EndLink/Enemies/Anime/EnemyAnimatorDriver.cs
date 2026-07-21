@@ -66,6 +66,10 @@ namespace EndLink.Enemies
         [SerializeField]
         private string hitTriggerParameter = CombatAnimatorParams.HitTrigger;
 
+        [Tooltip("进入 Stagger 失衡状态时触发的 Trigger 参数名。为空则不触发。")]
+        [SerializeField]
+        private string staggerTriggerParameter = CombatAnimatorParams.StaggerTrigger;
+
         [Tooltip("进入 Dead 状态时触发的 Trigger 参数名。为空则不触发。")]
         [SerializeField]
         private string deadTriggerParameter = CombatAnimatorParams.DeadTrigger;
@@ -271,6 +275,9 @@ namespace EndLink.Enemies
             {
                 case EnemyStateId.Hit:
                     SetTriggerIfExists(hitTriggerParameter);
+                    break;
+                case EnemyStateId.Stagger:
+                    SetTriggerIfExists(staggerTriggerParameter);
                     break;
                 case EnemyStateId.Dead:
                     SetTriggerIfExists(deadTriggerParameter);

@@ -71,6 +71,14 @@ namespace EndLink.Combat
         [SerializeField, Min(0f)]
         private float knockbackForce = 3f;
 
+        [Tooltip("动作的命中强度。敌人用它和自身 Poise 比较，决定这次命中是否进入 Hit 受击状态；它不直接影响伤害或平衡值。")]
+        [SerializeField, Min(0f)]
+        private float hitStrength = 1f;
+
+        [Tooltip("动作对敌人平衡值造成的削减量。平衡归零后敌人进入 Stagger 失衡状态；设为 0 表示不削减平衡。")]
+        [SerializeField, Min(0f)]
+        private float balanceDamage = 10f;
+
         [Tooltip("动作命中时施加的战斗标签资产。")]
         [SerializeField]
         private CombatTagDefinition combatTagToApply;
@@ -162,6 +170,12 @@ namespace EndLink.Combat
         /// <summary>基础瞬时击退距离。</summary>
         public float KnockbackForce => knockbackForce;
 
+        /// <summary>用于和受击者韧性比较的单次命中强度。</summary>
+        public float HitStrength => Mathf.Max(0f, hitStrength);
+
+        /// <summary>动作命中后削减的敌人平衡值。</summary>
+        public float BalanceDamage => Mathf.Max(0f, balanceDamage);
+
         /// <summary>命中时施加的战斗标签资产。</summary>
         public CombatTagDefinition CombatTagToApply => combatTagToApply;
 
@@ -248,6 +262,8 @@ namespace EndLink.Combat
             flatDamage = Mathf.Max(0f, flatDamage);
             atkPowerMultiplier = Mathf.Max(0f, atkPowerMultiplier);
             knockbackForce = Mathf.Max(0f, knockbackForce);
+            hitStrength = Mathf.Max(0f, hitStrength);
+            balanceDamage = Mathf.Max(0f, balanceDamage);
             combatTagDuration = Mathf.Max(0f, combatTagDuration);
             combatTagStackCount = Mathf.Max(1, combatTagStackCount);
             synergyGainOnLink = Mathf.Max(0f, synergyGainOnLink);

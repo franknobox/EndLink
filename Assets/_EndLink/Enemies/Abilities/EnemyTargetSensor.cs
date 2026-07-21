@@ -289,7 +289,9 @@ namespace EndLink.Enemies
             }
 
             EnemyStateId stateId = _stateMachine.CurrentStateId;
-            return stateId == EnemyStateId.Combat || stateId == EnemyStateId.Hit;
+            return stateId == EnemyStateId.Combat
+                || stateId == EnemyStateId.Hit
+                || stateId == EnemyStateId.Stagger;
         }
 
         private void ClearAlertTracking()

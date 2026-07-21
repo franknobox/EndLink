@@ -108,6 +108,12 @@ namespace EndLink.Enemies
         public UnityEvent OnDead => onDead;
 
         /// <summary>
+        /// 受到有效伤害后的详细结果事件。
+        /// 敌人韧性、平衡等运行时规则通过它读取动作配置，不需要反向查找 Hitbox。
+        /// </summary>
+        public event System.Action<DamageResult> DamagedDetailed;
+
+        /// <summary>
         /// 生命值和死亡标记完成重置后触发。
         /// 供状态机、对象池或后续敌人刷新流程同步清理运行时状态。
         /// </summary>
@@ -251,6 +257,7 @@ namespace EndLink.Enemies
             }
 
             onDamaged.Invoke(appliedDamage, damageResult.CombatTag);
+            DamagedDetailed?.Invoke(damageResult);
             CombatEventsBus.RaiseDamaged(
                 damageResult.Source,
                 gameObject,

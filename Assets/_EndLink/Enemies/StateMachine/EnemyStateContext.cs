@@ -13,11 +13,13 @@ namespace EndLink.Enemies
             EnemyStateMachine stateMachine,
             EnemyActor actor,
             EnemyHealth health,
+            EnemyBalance balance,
             Transform transform)
         {
             StateMachine = stateMachine;
             Actor = actor;
             Health = health;
+            Balance = balance;
             Transform = transform;
         }
 
@@ -29,6 +31,9 @@ namespace EndLink.Enemies
 
         /// <summary>敌人生命组件。</summary>
         public EnemyHealth Health { get; }
+
+        /// <summary>敌人平衡值组件。</summary>
+        public EnemyBalance Balance { get; }
 
         /// <summary>敌人的移动能力组件。没有移动能力的敌人可以为空。</summary>
         public EnemyMotorBase Motor => Actor != null ? Actor.Motor : null;
@@ -56,6 +61,9 @@ namespace EndLink.Enemies
 
         /// <summary>受击硬直持续时间。</summary>
         public float HitDuration => StateMachine.HitDuration;
+
+        /// <summary>平衡归零后的失衡持续时间，也是第一版处决资格窗口。</summary>
+        public float StaggerDuration => StateMachine.StaggerDuration;
 
         /// <summary>Combat 状态追击目标时保留的表面间隔。</summary>
         public float CombatChaseStopDistance => StateMachine.CombatChaseStopDistance;

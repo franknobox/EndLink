@@ -132,7 +132,7 @@
 - `CombatActionType` 描述动作性质，不描述释放者来源。
 - 当前动作类型包括 `BasicAttack`、`Skill`、`LinkAttack`、`Ultimate`。
 - 主控、队友和敌人后续可以共用同一套动作类型，释放者来源应由后续战斗事件数据携带。
-- 动作配置包含固定伤害 `FlatDamage`、攻击力倍率 `AtkPowerMultiplier`、伤害类型、击退、`CombatTagDefinition` 命中标签、标签持续时间、标签层数、连携协同率收益、冷却、前摇、有效时间、后摇、动画根位移开关与倍率、Hitbox prefab、Hitbox 生成位置、AI 有效攻击距离和可选命中反馈。
+- 动作配置包含固定伤害 `FlatDamage`、攻击力倍率 `AtkPowerMultiplier`、伤害类型、击退、命中强度 `HitStrength`、平衡伤害 `BalanceDamage`、`CombatTagDefinition` 命中标签、标签持续时间、标签层数、连携协同率收益、冷却、前摇、有效时间、后摇、动画根位移开关与倍率、Hitbox prefab、Hitbox 生成位置、AI 有效攻击距离和可选命中反馈。
 - 动作伤害基础公式为 `FlatDamage + AttackPower × AtkPowerMultiplier`，因此可配置纯固定伤害、纯倍率伤害或两者混合。
 - 动作配置包含 `TimingSource`：`DataDriven` 使用 `startup / active / recovery` 推进；`AnimationEventDriven` 由动画事件控制判定开始、结束、取消窗口和动作结束。
 - 动画事件模式仍使用数据总时长作为安全超时；缺少 `ActionEnd` 时会结束动作并警告，缺少 `HitboxStart` 时不会自动补一次命中。

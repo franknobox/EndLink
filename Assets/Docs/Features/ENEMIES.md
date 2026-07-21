@@ -1,6 +1,6 @@
 # Enemies Features
 
-正式敌人身份、生命、感知、状态机、围攻协调、基础移动和动画桥接详情。
+正式敌人身份、生命、韧性与平衡、感知、状态机、围攻协调、基础移动和动画桥接详情。
 
 主索引见 [FEATURES.md](../FEATURES.md)。
 
@@ -13,7 +13,7 @@
 <summary>展开详情</summary>
 
 功能说明：
-- `EnemyActor` 是正式敌人的根入口组件，只暴露敌人身份和能力组件引用，并要求同物体存在 `CombatTarget`。
+- `EnemyActor` 是正式敌人的根入口组件，只暴露敌人身份和能力组件引用，并要求同物体存在 `CombatTarget`、`EnemyHealth` 和 `EnemyBalance`。
 - `EnemyActor.enemyKind` 记录敌人的根类别，当前分为 `APShell`、`APFree`、`DAgent`、`RSUnit`，用于后续创建具体敌人时快速归纳设定来源。
 - `EnemyActor.combatRole` 记录敌人的战斗定位，当前分为 `GroundMelee`、`GroundRanged`、`FlyingRanged`，用于区分基础地面近战、地面远程和浮空远程等行为方向。
 - `APShell` 表示异常程序显壳态，可以接受运行伤害与结构伤害；`APFree` 表示异常程序游离态，不接受结构伤害。
@@ -26,13 +26,12 @@
 - `EnemyHealth` 完成生命重置后会通知状态机同步清理目标、动作、冷却和死亡状态，支持敌人重新启用及后续对象池复用。
 - `CombatTarget` 统一提供敌人的根身份、存活/可选状态、锁定点和 Collider 表面距离；敌人死亡后会自动失效。
 - `EnemyHealth` 死亡后会立即让目标失效，可选禁用非 Trigger Collider，并在延迟后隐藏敌人根物体，作为当前无死亡动画阶段的最小退场流程。
-- `EnemyDummy` 保留为早期轻量命中测试对象，用于快速验证 Hitbox、扣血和死亡显示；正式敌人能力以本节敌人基底为准。
 
 对应脚本：
-- `Assets/_EndLink/Enemies/EnemyActor.cs`
-- `Assets/_EndLink/Enemies/EnemyKind.cs`
-- `Assets/_EndLink/Enemies/EnemyCombatRole.cs`
-- `Assets/_EndLink/Enemies/EnemyHealth.cs`
+- `Assets/_EndLink/Enemies/Base/EnemyActor.cs`
+- `Assets/_EndLink/Enemies/Base/EnemyKind.cs`
+- `Assets/_EndLink/Enemies/Base/EnemyCombatRole.cs`
+- `Assets/_EndLink/Enemies/Base/EnemyHealth.cs`
 - `Assets/_EndLink/Combat/Tags/CombatTagContainer.cs`
 - `Assets/_EndLink/Combat/Target/ICombatTarget.cs`
 - `Assets/_EndLink/Combat/Target/CombatTarget.cs`
@@ -44,6 +43,7 @@
 - 正式敌人根物体
   - `EnemyActor`
   - `EnemyHealth`
+  - `EnemyBalance`
   - `CombatTarget`
   - `CombatTagContainer`
   - Collider
@@ -63,6 +63,43 @@
 - `deathDeactivateDelay`：死亡事件触发后等待多久隐藏敌人
 - `feedbackRenderer`：受击和死亡变色使用的 Renderer；为空时会自动查找敌人视觉体上的 Renderer，可支持 SkinnedMeshRenderer
 - `showHealthInName`：是否在 GameObject 名字上显示血量
+
+</details>
+
+<a id="feature-enemy-balance-stagger"></a>
+
+### Feature：敌人韧性、平衡与失衡
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- 韧性 `Poise` 是敌人状态机上的隐性阈值，只决定一次有效命中是否触发 `Hit` 受击硬直，不会被消耗。
+- 动作的 `HitStrength` 与敌人 `Poise` 比较；达到阈值才进入 `Hit`，伤害高低不再直接决定是否硬直。
+- `EnemyBalance` 独立管理可消耗的平衡值。动作的 `BalanceDamage` 会削减平衡，停止受击一段时间后平衡自动恢复。
+- 平衡归零后进入独立 `Stagger` 大状态，中断当前动作、停止移动，并在失衡持续时间内开放 `CanBeExecuted`。
+- 第一版只提供处决资格和事件，不实现处决输入、处决动画或处决伤害，后续系统无需反向判断状态机即可接入。
+- 失衡结束后恢复满平衡；死亡和敌人重置会关闭处决资格，避免对象复用时残留运行状态。
+
+对应脚本：
+- `Assets/_EndLink/Enemies/Base/EnemyBalance.cs`
+- `Assets/_EndLink/Enemies/Base/EnemyHealth.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyStaggerState.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyStateMachine.cs`
+- `Assets/_EndLink/Combat/CombatActionDefinition.cs`
+
+相关物体：
+- 正式敌人根物体
+  - `EnemyBalance`
+  - `EnemyStateMachine`
+
+关键配置：
+- `CombatActionDefinition.hitStrength`：动作的单次命中强度，用于和敌人韧性比较
+- `CombatActionDefinition.balanceDamage`：动作造成的平衡削减量；设为 0 表示不影响平衡
+- `EnemyStateMachine.poise`：敌人的隐性受击抗性阈值
+- `EnemyStateMachine.staggerDuration`：失衡持续时间和第一版处决资格窗口
+- `EnemyBalance.maxBalance`：最大平衡值
+- `EnemyBalance.recoveryDelay`：受击后开始恢复平衡前的等待时间
+- `EnemyBalance.recoveryPerSecond`：未失衡时每秒恢复的平衡值
 
 </details>
 
@@ -106,6 +143,7 @@ Animator 参数：
 - `ActionType`：Int，对应 `CombatActionType`
 - `ActionTrigger`：Trigger，动作成功开始
 - `HitTrigger`：Trigger，进入 Hit
+- `StaggerTrigger`：Trigger，进入 Stagger；当前 Animator Controller 未配置时会被安全跳过
 - `DeadTrigger`：Trigger，进入 Dead
 
 动画事件配置：
@@ -124,10 +162,10 @@ Animator 参数：
 <summary>展开详情</summary>
 
 功能说明：
-- `EnemyStateMachine` 管理 `Idle`、`Alert`、`Combat`、`Hit`、`Return`、`Dead` 六个敌人大状态。
+- `EnemyStateMachine` 管理 `Idle`、`Alert`、`Combat`、`Hit`、`Stagger`、`Return`、`Dead` 七个敌人大状态。
 - `EnemyStateMachine` 集中暴露索敌配置，`EnemyTargetSensor` 只作为执行器读取状态机参数，不在自身 Inspector 中重复配置。
 - `EnemyTargetSensor` 负责第一版敌人索敌：玩家进入发现范围后请求进入 `Alert`，持续停留达到警觉时间后请求进入 `Combat`。
-- `EnemyTargetSensor` 在 `Idle` / `Alert` 阶段建立目标；进入 `Combat` / `Hit` 后由状态机持有当前战斗目标，Sensor 仅在该目标失效时重新扫描接管。
+- `EnemyTargetSensor` 在 `Idle` / `Alert` 阶段建立目标；进入 `Combat` / `Hit` / `Stagger` 后由状态机持有当前战斗目标，Sensor 仅在该目标失效时重新扫描接管。
 - 自动索敌可以在 `EnemyStateMachine` 中关闭，关闭后不会主动触发 `Alert` / `Combat`。
 - `Combat` 通过轻量 `EnemyCombatBehavior` 推进基础战斗行为，当前包含 `Approach`、`Position`、`Prepare`、`Engage`、`Attack`、`Recover`、`Reposition` 七个内部阶段。
 - `Approach` 负责进入战斗位置，`Position` 负责观察和等待许可，`Prepare` 在获得许可后完成攻击预备机动，`Engage` 接近动作距离，`Attack` 提交本轮选中的普攻或技能，`Recover` 等待动作恢复结束，`Reposition` 负责攻击后或站位失效时重新归位。
@@ -140,10 +178,10 @@ Animator 参数：
 - Return 开始时仍处于警戒范围内的玩家不会立刻重新触发；玩家离开后再次进入范围会转入 `Alert`，警戒失败则继续 Return，警戒完成则重新进入 Combat。
 - 没有配置 `EnemyCombatDriver`，或普攻与技能都未配置的敌人，仍保持只追击和面向目标，方便制作不会攻击的测试敌人。
 - 当前行为层只处理敌人面对单个目标的基础普攻/技能选择，不包含复杂技能条件或连招；后续可继续扩展决策规则，或整体替换为行为树。
-- `Hit` 作为独立大状态处理受击打断，不放进 Combat 行为树，方便后续加入硬直、霸体、击倒等规则。
-- 敌人受到有效伤害时，会优先把当前战斗目标切换为伤害来源；轻击只让敌人接战，重击才进入 `Hit` 状态并短暂停止移动。
+- `Hit` 作为独立大状态处理普通受击打断；`Stagger` 作为更高优先级的平衡归零状态，两者都不放进 Combat 行为树。
+- 敌人受到有效伤害时，会优先把当前战斗目标切换为伤害来源；动作 `HitStrength` 达到敌人 `Poise` 才进入 `Hit`，不再按最终伤害值判断。
 - `Hit` 状态触发带有短冷却，避免多段 Hitbox 在极短时间内反复刷新受击打断。
-- 离开 `Combat`、进入 `Hit` / `Dead` 或禁用敌人时会取消尚未结束的动作时间线，避免受击或死亡后继续生成攻击判定。
+- 离开 `Combat`、进入 `Hit` / `Stagger` / `Dead` 或禁用敌人时会取消尚未结束的动作时间线，避免受击、失衡或死亡后继续生成攻击判定。
 - 状态机每次启用都会按当前生命状态重新进入初始状态或 `Dead`；生命重置会同步恢复初始状态。
 
 对应脚本：
@@ -158,6 +196,7 @@ Animator 参数：
 - `Assets/_EndLink/Enemies/StateMachine/EnemyCombatBehavior.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyCombatState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyHitState.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyStaggerState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyReturnState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyDeadState.cs`
 
@@ -179,8 +218,9 @@ Animator 参数：
 - `EnemyStateMachine.drawDetectionGizmo`：是否绘制索敌范围 Gizmo
 - `hitDuration`：`Hit` 受击硬直时间
 - `retargetOnDamage`：受到有效伤害时是否把当前目标切换为伤害来源
-- `heavyHitDamageThreshold`：实际伤害达到多少才触发 `Hit` 状态；小于等于 0 表示所有有效伤害都会触发
+- `poise`：敌人的隐性韧性阈值；动作 `HitStrength` 达到该值才触发 `Hit`
 - `hitReactCooldown`：两次 `Hit` 触发之间的最短间隔
+- `staggerDuration`：平衡归零后保持 `Stagger` 和处决资格的时间
 - `combatChaseStopDistance`：Combat 追击时保留的目标表面间隔，实际停止距离会额外加上敌人自身碰撞半径
 - `combatAttackRangeTolerance`：Position 退出攻击范围时向外增加的容差，用于距离滞回
 - `combatAttackInnerOffset`：Approach 进入 Position 前相对动作极限距离向内靠近的距离
@@ -202,7 +242,7 @@ Animator 参数：
 
 功能说明：
 - `EnemyCombatCoordinator` 是区域级敌人战斗协调器，挂在战斗区域的 `EnemyCoordinator` 物体上，通过半径扫描自动接管范围内敌人。
-- 敌人在非战斗状态下可按协调器优先级和距离切换归属；进入 `Combat` / `Hit` 后会保留当前协调器，避免战斗中围攻规则跳变。
+- 敌人在非战斗状态下可按协调器优先级和距离切换归属；进入 `Combat` / `Hit` / `Stagger` 后会保留当前协调器，避免战斗中围攻规则跳变。
 - 同一目标周围的敌人会按距离和等待时间计算攻击评分，竞争有限的攻击许可；同时攻击数量和两次许可授予间隔由区域统一控制。
 - 攻击许可包含短时预留。敌人获准后进入 `Engage` 并接近攻击距离，预留到期仍未开始攻击时会自动释放，避免多个敌人在接近途中突破同时攻击上限。
 - 未获准攻击的敌人不再全部贴近目标，而是由协调器在目标周围动态分配软站位；软站位不是固定环形槽位。

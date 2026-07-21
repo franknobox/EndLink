@@ -77,8 +77,9 @@
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [敌人身份与生命目标](Features/ENEMIES.md#feature-enemy-identity-health) | 已完成分类基础版 | 提供正式敌人根身份、根类别、战斗定位、生命受击、视觉受击反馈、死亡事件、目标有效性、死亡退场、战斗标签容器和基础调试显示。 |
+| [敌人韧性、平衡与失衡](Features/ENEMIES.md#feature-enemy-balance-stagger) | 已完成第一版 | 用隐性韧性判断单次命中是否触发受击，以可恢复平衡值驱动独立失衡状态，并向后续处决流程暴露资格和事件。 |
 | [敌人 Animator 桥接](Features/ENEMIES.md#feature-enemy-animator) | 已完成受控根运动版 | 把敌人移动、大状态和动作参数同步给 Animator，并支持动画关键帧驱动判定、动作结束和按动作应用水平根位移。 |
-| [敌人感知与大状态机](Features/ENEMIES.md#feature-enemy-state-sensor) | 已完成基础战斗循环版 | 提供 Idle、Alert、Combat、Hit、Return、Dead 大状态，以及 Combat 内部的接近、观察、攻击准备、攻击、恢复和重新定位流程。 |
+| [敌人感知与大状态机](Features/ENEMIES.md#feature-enemy-state-sensor) | 已完成失衡接线版 | 提供 Idle、Alert、Combat、Hit、Stagger、Return、Dead 大状态，以及 Combat 内部的接近、观察、攻击准备、攻击、恢复和重新定位流程。 |
 | [敌人围攻协调](Features/ENEMIES.md#feature-enemy-combat-coordination) | 已完成观察移动版 | 通过区域协调器统一管理敌人归属、攻击评分、同时攻击数量、许可预留、动态软站位和等待/攻击准备机动。 |
 | [敌人移动与战斗能力](Features/ENEMIES.md#feature-enemy-motor-combat) | 已完成多段动作版 | 提供地面移动、NavMesh 追击、转向、重力、碰撞推挤、衰减击退、普攻/技能选择和单 Action 多段判定。 |
 

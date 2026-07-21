@@ -8,12 +8,13 @@ namespace EndLink.Enemies
 {
     /// <summary>
     /// 敌人有限状态机。
-    /// 当前管理 Idle、Alert、Combat、Hit、Return、Dead 这些大状态；
+    /// 当前管理 Idle、Alert、Combat、Hit、Stagger、Return、Dead 这些大状态；
     /// Combat 内部先由轻量战斗行为状态机处理基础循环，后续可替换或扩展为行为树。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyActor))]
     [RequireComponent(typeof(EnemyHealth))]
+    [RequireComponent(typeof(EnemyBalance))]
     public sealed class EnemyStateMachine : MonoBehaviour, ICombatParryReceiver
     {
         private const string PlayerLayerName = "Player";
@@ -57,8 +58,8 @@ namespace EndLink.Enemies
         [SerializeField, Min(0.01f)]
         private float requiredAlertTime = 3f;
 
-        [Header("受击状态")]
-        [Tooltip("受击硬直的基础持续时间。后续可由攻击数据、霸体或韧性系统覆盖。")]
+        [Header("受击与韧性")]
+        [Tooltip("受击硬直的基础持续时间。只有动作 Hit Strength 达到敌人 Poise 时才会进入 Hit。")]
         [SerializeField, Min(0.01f)]
         private float hitDuration = 0.25f;
 
@@ -66,13 +67,18 @@ namespace EndLink.Enemies
         [SerializeField]
         private bool retargetOnDamage = true;
 
-        [Tooltip("实际伤害达到该值时才进入 Hit 状态。小于等于 0 表示任何有效伤害都会触发 Hit。低于阈值的轻击只会让敌人接战，不会打断当前状态。")]
+        [Tooltip("敌人的隐性韧性。动作 Hit Strength 达到该值时才触发 Hit；Poise 不会被消耗，也不等同于平衡值。")]
         [SerializeField, Min(0f)]
-        private float heavyHitDamageThreshold = 8f;
+        private float poise = 1f;
 
         [Tooltip("两次 Hit 状态触发之间的最短间隔，避免多段 Hitbox 在极短时间内反复打断敌人。")]
         [SerializeField, Min(0f)]
         private float hitReactCooldown = 0.12f;
+
+        [Header("失衡状态")]
+        [Tooltip("平衡值归零后保持 Stagger 失衡的时间。第一版中这段时间同时作为处决资格窗口。")]
+        [SerializeField, Min(0.01f)]
+        private float staggerDuration = 3f;
 
         [Header("Combat 移动与攻击")]
         [Tooltip("基础敌人追击目标时，和目标表面之间保留的很近间隔。实际中心停止距离会自动加上敌人和目标的碰撞半径。")]
@@ -132,6 +138,7 @@ namespace EndLink.Enemies
         private IEnemyState _currentState;
         private EnemyActor _actor;
         private EnemyHealth _health;
+        private EnemyBalance _balance;
         private Transform _currentTarget;
         private GameObject _stateIndicatorInstance;
         private Material _stateIndicatorMaterial;
@@ -192,6 +199,12 @@ namespace EndLink.Enemies
         /// <summary>受击硬直持续时间。</summary>
         public float HitDuration => hitDuration;
 
+        /// <summary>敌人的隐性韧性阈值。</summary>
+        public float Poise => Mathf.Max(0f, poise);
+
+        /// <summary>平衡归零后的失衡持续时间。</summary>
+        public float StaggerDuration => staggerDuration;
+
         /// <summary>Combat 状态追击目标时的停止距离。</summary>
         public float CombatChaseStopDistance => combatChaseStopDistance;
 
@@ -230,18 +243,21 @@ namespace EndLink.Enemies
             EnsureDetectionDefaults();
             _actor = GetComponent<EnemyActor>();
             _health = GetComponent<EnemyHealth>();
+            _balance = GetComponent<EnemyBalance>();
             CaptureHomeIfNeeded();
 
             EnemyStateContext context = new EnemyStateContext(
                 this,
                 _actor,
                 _health,
+                _balance,
                 transform);
 
             RegisterState(new EnemyIdleState(context));
             RegisterState(new EnemyAlertState(context));
             RegisterState(new EnemyCombatState(context));
             RegisterState(new EnemyHitState(context));
+            RegisterState(new EnemyStaggerState(context));
             RegisterState(new EnemyDeadState(context));
             RegisterState(new EnemyReturnState(context));
             CacheEnemyBoundsComponents();
@@ -254,9 +270,21 @@ namespace EndLink.Enemies
                 _health = GetComponent<EnemyHealth>();
             }
 
-            _health.OnDamaged.AddListener(HandleDamaged);
+            if (_balance == null)
+            {
+                _balance = GetComponent<EnemyBalance>();
+            }
+
+            _health.DamagedDetailed += HandleDamaged;
             _health.OnDead.AddListener(HandleDead);
             _health.ResetPerformed += HandleHealthReset;
+
+            if (_balance != null)
+            {
+                _balance.StaggerStarted -= HandleStaggerStarted;
+                _balance.StaggerStarted += HandleStaggerStarted;
+            }
+
             ResetRuntimeState();
         }
 
@@ -274,9 +302,14 @@ namespace EndLink.Enemies
         {
             if (_health != null)
             {
-                _health.OnDamaged.RemoveListener(HandleDamaged);
+                _health.DamagedDetailed -= HandleDamaged;
                 _health.OnDead.RemoveListener(HandleDead);
                 _health.ResetPerformed -= HandleHealthReset;
+            }
+
+            if (_balance != null)
+            {
+                _balance.StaggerStarted -= HandleStaggerStarted;
             }
 
             _currentState?.Exit();
@@ -293,8 +326,9 @@ namespace EndLink.Enemies
             detectionRadius = Mathf.Max(0.1f, detectionRadius);
             requiredAlertTime = Mathf.Max(0.01f, requiredAlertTime);
             hitDuration = Mathf.Max(0.01f, hitDuration);
-            heavyHitDamageThreshold = Mathf.Max(0f, heavyHitDamageThreshold);
+            poise = Mathf.Max(0f, poise);
             hitReactCooldown = Mathf.Max(0f, hitReactCooldown);
+            staggerDuration = Mathf.Max(0.01f, staggerDuration);
             combatChaseStopDistance = Mathf.Max(0f, combatChaseStopDistance);
             combatAttackRangeTolerance = Mathf.Max(0f, combatAttackRangeTolerance);
             combatAttackInnerOffset = Mathf.Max(0f, combatAttackInnerOffset);
@@ -346,7 +380,7 @@ namespace EndLink.Enemies
 
         /// <summary>
         /// 尝试把敌人归属到指定战斗协调器。
-        /// 敌人正在 Combat / Hit 且已有协调器时不会切换，避免战斗中围攻规则跳变。
+        /// 敌人正在 Combat / Hit / Stagger 且已有协调器时不会切换，避免战斗中围攻规则跳变。
         /// </summary>
         public bool TryAssignCombatCoordinator(
             EnemyCombatCoordinator coordinator,
@@ -371,7 +405,7 @@ namespace EndLink.Enemies
 
         /// <summary>
         /// 尝试清除当前战斗协调器。
-        /// 非强制模式下，Combat / Hit 中的敌人会保留当前协调器直到脱战。
+        /// 非强制模式下，Combat / Hit / Stagger 中的敌人会保留当前协调器直到脱战。
         /// </summary>
         public bool TryClearCombatCoordinator(EnemyCombatCoordinator coordinator, bool force)
         {
@@ -380,7 +414,7 @@ namespace EndLink.Enemies
                 return false;
             }
 
-            if (!force && (CurrentStateId == EnemyStateId.Combat || CurrentStateId == EnemyStateId.Hit))
+            if (!force && IsCombatOwnedState(CurrentStateId))
             {
                 return false;
             }
@@ -412,6 +446,7 @@ namespace EndLink.Enemies
             _currentTarget = null;
             _alertFallbackState = EnemyStateId.Idle;
             _nextHitReactTime = 0f;
+            _balance?.ResetBalance();
             _actor?.CombatDriver?.ResetRuntimeState();
 
             EnemyStateId resetState = _health != null && _health.IsDead
@@ -426,7 +461,7 @@ namespace EndLink.Enemies
         /// </summary>
         public bool RequestAlert(Transform target = null)
         {
-            if (!CanAcceptNonDeadRequest())
+            if (!CanAcceptStandardRequest())
             {
                 return false;
             }
@@ -453,7 +488,7 @@ namespace EndLink.Enemies
         /// </summary>
         public bool RequestCombat(Transform target = null)
         {
-            if (!CanAcceptNonDeadRequest())
+            if (!CanAcceptStandardRequest())
             {
                 return false;
             }
@@ -490,7 +525,7 @@ namespace EndLink.Enemies
         /// </summary>
         public bool RequestHit()
         {
-            if (!CanAcceptNonDeadRequest())
+            if (!CanAcceptStandardRequest())
             {
                 return false;
             }
@@ -500,8 +535,24 @@ namespace EndLink.Enemies
         }
 
         /// <summary>
+        /// 请求进入 Stagger 失衡状态。
+        /// 会先确保平衡组件进入失衡并开放处决资格，再切换敌人大状态。
+        /// </summary>
+        public bool RequestStagger(GameObject source = null)
+        {
+            if (!CanAcceptNonDeadRequest())
+            {
+                return false;
+            }
+
+            _balance?.ForceStagger(source);
+            ChangeState(EnemyStateId.Stagger);
+            return CurrentStateId == EnemyStateId.Stagger;
+        }
+
+        /// <summary>
         /// 接收玩家成功弹反结果。
-        /// 第一版直接复用敌人 Hit 大状态，后续可替换为独立失衡、处决窗口或韧性结算。
+        /// 第一版仍触发普通 Hit；后续弹反规则可以通过平衡伤害或 RequestStagger 单独进入失衡。
         /// </summary>
         public void ReceiveParry(GameObject parrySource)
         {
@@ -521,7 +572,7 @@ namespace EndLink.Enemies
         /// <summary>请求停止当前战斗并返回 Home。</summary>
         public bool RequestReturn()
         {
-            if (!CanAcceptNonDeadRequest())
+            if (!CanAcceptStandardRequest())
             {
                 return false;
             }
@@ -590,20 +641,27 @@ namespace EndLink.Enemies
             }
         }
 
-        private void HandleDamaged(int damage, CombatTagDefinition tag)
+        private void HandleDamaged(DamageResult damageResult)
         {
-            if (_health != null && _health.IsDead)
+            if (_health != null && _health.CurrentHealth <= 0)
             {
-                RequestDead();
                 return;
             }
 
             bool acquiredTarget = TryRetargetFromDamageSource();
+
+            if (CurrentStateId == EnemyStateId.Stagger)
+            {
+                return;
+            }
+
+            CombatActionDefinition actionDefinition = damageResult.Context.ActionDefinition;
+            float hitStrength = actionDefinition != null ? actionDefinition.HitStrength : 0f;
             float currentTime = Time.time;
 
             if (ShouldTriggerHitReaction(
-                    damage,
-                    heavyHitDamageThreshold,
+                    hitStrength,
+                    poise,
                     currentTime,
                     _nextHitReactTime))
             {
@@ -614,9 +672,23 @@ namespace EndLink.Enemies
 
             if (acquiredTarget
                 && CurrentStateId != EnemyStateId.Combat
-                && CurrentStateId != EnemyStateId.Hit)
+                && CurrentStateId != EnemyStateId.Hit
+                && CurrentStateId != EnemyStateId.Stagger)
             {
                 RequestCombat(_currentTarget);
+            }
+        }
+
+        private void HandleStaggerStarted(GameObject source)
+        {
+            if (TryResolveDamageSourceTarget(source, out Transform damageSourceTarget))
+            {
+                SetTarget(damageSourceTarget);
+            }
+
+            if (CanAcceptNonDeadRequest())
+            {
+                ChangeState(EnemyStateId.Stagger);
             }
         }
 
@@ -648,6 +720,11 @@ namespace EndLink.Enemies
             return CurrentStateId != EnemyStateId.Dead && (_health == null || !_health.IsDead);
         }
 
+        private bool CanAcceptStandardRequest()
+        {
+            return CanAcceptNonDeadRequest() && CurrentStateId != EnemyStateId.Stagger;
+        }
+
         private bool CanAcceptCombatCoordinator(
             EnemyCombatCoordinator candidate,
             float distanceSqr,
@@ -663,7 +740,7 @@ namespace EndLink.Enemies
                 return true;
             }
 
-            if ((CurrentStateId == EnemyStateId.Combat || CurrentStateId == EnemyStateId.Hit)
+            if (IsCombatOwnedState(CurrentStateId)
                 && _combatCoordinator != null)
             {
                 return false;
@@ -709,17 +786,24 @@ namespace EndLink.Enemies
         }
 
         public static bool ShouldTriggerHitReaction(
-            int damage,
-            float heavyHitDamageThreshold,
+            float hitStrength,
+            float poise,
             float currentTime,
             float nextAllowedTime)
         {
-            if (damage <= 0 || currentTime < nextAllowedTime)
+            if (hitStrength <= 0f || currentTime < nextAllowedTime)
             {
                 return false;
             }
 
-            return heavyHitDamageThreshold <= 0f || damage >= heavyHitDamageThreshold;
+            return poise <= 0f || hitStrength >= poise;
+        }
+
+        private static bool IsCombatOwnedState(EnemyStateId stateId)
+        {
+            return stateId == EnemyStateId.Combat
+                || stateId == EnemyStateId.Hit
+                || stateId == EnemyStateId.Stagger;
         }
 
         public static bool TryResolveDamageSourceTarget(GameObject damageSource, out Transform target)

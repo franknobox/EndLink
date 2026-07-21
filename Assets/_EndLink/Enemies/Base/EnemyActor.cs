@@ -9,6 +9,7 @@ namespace EndLink.Enemies
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyHealth))]
+    [RequireComponent(typeof(EnemyBalance))]
     [RequireComponent(typeof(CombatTagContainer))]
     [RequireComponent(typeof(CombatTarget))]
     public sealed class EnemyActor : MonoBehaviour, ICharacterStatsTypeProvider
@@ -37,6 +38,7 @@ namespace EndLink.Enemies
         private EnemyCombatDriver combatDriver;
 
         private EnemyHealth _health;
+        private EnemyBalance _balance;
         private CombatTagContainer _tagContainer;
         private CombatTarget _combatTarget;
 
@@ -51,6 +53,20 @@ namespace EndLink.Enemies
                 }
 
                 return _health;
+            }
+        }
+
+        /// <summary>敌人的平衡值与失衡资格组件。</summary>
+        public EnemyBalance Balance
+        {
+            get
+            {
+                if (_balance == null)
+                {
+                    _balance = GetComponent<EnemyBalance>();
+                }
+
+                return _balance;
             }
         }
 
@@ -119,6 +135,7 @@ namespace EndLink.Enemies
         private void Awake()
         {
             _health = GetComponent<EnemyHealth>();
+            _balance = GetComponent<EnemyBalance>();
             _tagContainer = GetComponent<CombatTagContainer>();
             _combatTarget = GetComponent<CombatTarget>();
         }
@@ -126,6 +143,7 @@ namespace EndLink.Enemies
         private void Reset()
         {
             _health = GetComponent<EnemyHealth>();
+            _balance = GetComponent<EnemyBalance>();
             _tagContainer = GetComponent<CombatTagContainer>();
             _combatTarget = GetComponent<CombatTarget>();
             bodyRoot = transform;

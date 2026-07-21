@@ -12,6 +12,7 @@ namespace EndLink.Enemies
         Combat = 3,
         Hit = 4,
         Dead = 5,
-        Return = 6
+        Return = 6,
+        Stagger = 7
     }
 }
