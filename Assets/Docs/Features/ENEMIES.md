@@ -167,17 +167,10 @@ Animator 参数：
 - `EnemyTargetSensor` 负责第一版敌人索敌：玩家进入发现范围后请求进入 `Alert`，持续停留达到警觉时间后请求进入 `Combat`。
 - `EnemyTargetSensor` 在 `Idle` / `Alert` 阶段建立目标；进入 `Combat` / `Hit` / `Stagger` 后由状态机持有当前战斗目标，Sensor 仅在该目标失效时重新扫描接管。
 - 自动索敌可以在 `EnemyStateMachine` 中关闭，关闭后不会主动触发 `Alert` / `Combat`。
-- `Combat` 通过轻量 `EnemyCombatBehavior` 推进基础战斗行为，当前包含 `Approach`、`Position`、`Prepare`、`Engage`、`Attack`、`Recover`、`Reposition` 七个内部阶段。
-- `Approach` 负责进入战斗位置，`Position` 负责观察和等待许可，`Prepare` 在获得许可后完成攻击预备机动，`Engage` 接近动作距离，`Attack` 提交本轮选中的普攻或技能，`Recover` 等待动作恢复结束，`Reposition` 负责攻击后或站位失效时重新归位。
-- 每轮攻击会从 `EnemyCombatDriver` 配置的普攻和技能中选择一次并保持到恢复结束；`combatBasicAttacksBeforeSkill > 0` 时优先按固定普攻次数触发技能，设为 `0` 时改用 `combatSkillChance` 概率规则。
-- 固定计数只在动作完整结束后更新，被受击打断不计数；短暂进入 `Hit` 会保留计数，脱战、归位、死亡或完整重置时清零。固定轮到技能但技能仍在冷却时，敌人继续观察等待且不会提前占用攻击许可。
-- 定位阶段使用距离滞回：进入距离由本轮动作的 `EffectiveAttackRange - combatAttackInnerOffset` 决定，退出距离由 `EffectiveAttackRange + combatAttackRangeTolerance` 决定，避免敌人在攻击边界反复切换移动和停位。
 - `Combat` 的最大追击距离以出生区域 `Home` 为圆心计算，不再使用敌人与当前目标的距离；越界后进入 `Return`。
 - 战斗目标失效后会等待 `lostTargetDelay`，期间允许 Sensor 重新获取目标；延迟结束仍无目标时进入 `Return`。
 - `Return` 会清除战斗目标、取消当前动作并返回 `Home`，抵达出生区域后恢复 `Idle`。
 - Return 开始时仍处于警戒范围内的玩家不会立刻重新触发；玩家离开后再次进入范围会转入 `Alert`，警戒失败则继续 Return，警戒完成则重新进入 Combat。
-- 没有配置 `EnemyCombatDriver`，或普攻与技能都未配置的敌人，仍保持只追击和面向目标，方便制作不会攻击的测试敌人。
-- 当前行为层只处理敌人面对单个目标的基础普攻/技能选择，不包含复杂技能条件或连招；后续可继续扩展决策规则，或整体替换为行为树。
 - `Hit` 作为独立大状态处理普通受击打断；`Stagger` 作为更高优先级的平衡归零状态，两者都不放进 Combat 行为树。
 - 敌人受到有效伤害时，会优先把当前战斗目标切换为伤害来源；动作 `HitStrength` 达到敌人 `Poise` 才进入 `Hit`，不再按最终伤害值判断。
 - `Hit` 状态触发带有短冷却，避免多段 Hitbox 在极短时间内反复刷新受击打断。
@@ -193,7 +186,6 @@ Animator 参数：
 - `Assets/_EndLink/Enemies/StateMachine/EnemyStateContext.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyIdleState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyAlertState.cs`
-- `Assets/_EndLink/Enemies/StateMachine/EnemyCombatBehavior.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyCombatState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyHitState.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyStaggerState.cs`
@@ -221,15 +213,50 @@ Animator 参数：
 - `poise`：敌人的隐性韧性阈值；动作 `HitStrength` 达到该值才触发 `Hit`
 - `hitReactCooldown`：两次 `Hit` 触发之间的最短间隔
 - `staggerDuration`：平衡归零后保持 `Stagger` 和处决资格的时间
+- `homePoint`：敌人的归位参考点；留空时自动记录创建位置
+- `maxChaseRadius`：相对 Home 的最大水平追击半径；小于等于 0 表示不限制
+- `lostTargetDelay`：战斗目标失效后等待重新获取目标的时间
+- `returnStopDistance`：Return 抵达 Home 时允许的水平停止距离
+
+</details>
+
+<a id="feature-enemy-combat-behavior"></a>
+
+### Feature：敌人基础战斗行为
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- `Combat` 大状态根据 `EnemyActor.combatRole` 选择内部行为：`GroundMelee` 使用 `EnemyCombatBehavior`，`GroundRanged` 和 `FlyingRanged` 使用 `EnemyCombatBehaviorR`；脱战、受击、失衡、死亡和归位仍由外层状态机管理。
+- 行为统一使用 `Approach`、`Position`、`Prepare`、`Engage`、`Attack`、`Recover`、`Reposition` 七个内部阶段。
+- `Approach` 负责进入战斗位置，`Position` 负责观察和等待许可，`Prepare` 在获得许可后完成攻击预备，`Engage` 修正到动作执行距离，`Attack` 提交动作，`Recover` 等待动作结束，`Reposition` 负责攻击后或站位失效时重新选位。
+- 每轮攻击会从 `EnemyCombatDriver` 配置的普攻和技能中选择一次并保持到恢复结束；`combatBasicAttacksBeforeSkill > 0` 时优先按固定普攻次数触发技能，设为 `0` 时改用 `combatSkillChance` 概率规则。
+- 固定计数只在动作完整结束后更新，被受击打断不计数；短暂进入 `Hit` 会保留计数，脱战、归位、死亡或完整重置时清零。固定轮到技能但技能仍在冷却时，敌人继续观察等待且不会提前占用攻击许可。
+- 定位阶段使用距离滞回：进入距离由本轮动作的 `EffectiveAttackRange - combatAttackInnerOffset` 决定，退出距离由 `EffectiveAttackRange + combatAttackRangeTolerance` 决定，避免敌人在攻击边界反复切换移动和停位。
+- 远程行为以当前 Action 的 `EffectiveAttackRange` 作为最远攻击距离，并在状态机配置的最小距离与偏好距离之间维持距离带；目标过近时在 `Engage` 内后撤，不额外增加 `Retreat` 阶段。
+- 远程行为攻击前会检查发射点到目标 `LockPoint` 的视线。视线受阻或攻击恢复结束后会向左右选择新的位置，重新获得视线后再申请攻击许可。
+- Projectile 在判定实际生成时重新瞄准目标 `LockPoint`，允许朝不同高度发射；敌人根物体仍只做水平转向。
+- 没有配置 `EnemyCombatDriver`，或普攻与技能都未配置的敌人，仍保持只追击和面向目标，方便制作不会攻击的测试敌人。
+- 行为层当前不包含复杂技能条件或连招，后续可以继续扩展决策规则，或在保持外层状态不变的前提下替换为行为树。
+
+对应脚本：
+- `Assets/_EndLink/Enemies/StateMachine/EnemyCombatBehavior.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyCombatBehaviorR.cs`
+- `Assets/_EndLink/Enemies/StateMachine/EnemyCombatState.cs`
+- `Assets/_EndLink/Enemies/Abilities/EnemyCombatDriver.cs`
+- `Assets/_EndLink/Combat/CombatActionDefinition.cs`
+
+关键配置：
 - `combatChaseStopDistance`：Combat 追击时保留的目标表面间隔，实际停止距离会额外加上敌人自身碰撞半径
 - `combatAttackRangeTolerance`：Position 退出攻击范围时向外增加的容差，用于距离滞回
 - `combatAttackInnerOffset`：Approach 进入 Position 前相对动作极限距离向内靠近的距离
 - `combatBasicAttacksBeforeSkill`：大于 0 时，完整执行指定次数普攻后固定释放一次技能；设为 0 时关闭计数
 - `combatSkillChance`：未启用固定计数时，每轮普攻和技能都可用时选择技能的概率
-- `homePoint`：敌人的归位参考点；留空时自动记录创建位置
-- `maxChaseRadius`：相对 Home 的最大水平追击半径；小于等于 0 表示不限制
-- `lostTargetDelay`：战斗目标失效后等待重新获取目标的时间
-- `returnStopDistance`：Return 抵达 Home 时允许的水平停止距离
+- `rangedMinimumDistance`：远程目标进入该表面距离以内时开始后撤
+- `rangedPreferredDistance`：远程行为接近或后撤时希望恢复到的目标表面距离
+- `rangedRequireLineOfSight` / `rangedObstructionLayers`：是否检查远程攻击视线，以及哪些 Layer 会阻挡射击
+- `rangedRepositionDistance`：视线受阻或一次攻击结束后的侧向重新选位距离
+- `CombatActionDefinition.EffectiveAttackRange`：当前远程 Action 的最远攻击距离
 
 </details>
 

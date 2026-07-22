@@ -101,6 +101,27 @@ namespace EndLink.Enemies
         [SerializeField, Range(0f, 1f)]
         private float combatSkillChance = 0.35f;
 
+        [Header("Combat 远程行为")]
+        [Tooltip("远程敌人允许目标接近的最小表面距离。低于该值时，Engage 阶段会先后撤再尝试攻击。")]
+        [SerializeField, Min(0f)]
+        private float rangedMinimumDistance = 3.5f;
+
+        [Tooltip("远程敌人希望保持的目标表面距离。运行时会限制在最小距离和当前 Action 的 Effective Attack Range 之间。")]
+        [SerializeField, Min(0.01f)]
+        private float rangedPreferredDistance = 6f;
+
+        [Tooltip("远程攻击前是否要求发射点到目标锁定点之间没有环境遮挡。")]
+        [SerializeField]
+        private bool rangedRequireLineOfSight = true;
+
+        [Tooltip("远程视线检测视为遮挡物的 Layer。建议包含 Default、Environment 和 Interactable，不要包含 Player 或 Enemy。")]
+        [SerializeField]
+        private LayerMask rangedObstructionLayers;
+
+        [Tooltip("远程敌人视线受阻或攻击结束后，单次侧向重新选位的移动距离。")]
+        [SerializeField, Min(0.1f)]
+        private float rangedRepositionDistance = 2f;
+
         [Header("脱战与归位")]
         [Tooltip("敌人的归位参考点。为空时记录敌人创建时的世界坐标作为 Home。")]
         [SerializeField]
@@ -220,6 +241,21 @@ namespace EndLink.Enemies
         /// <summary>未启用固定计数时，每轮攻击同时可选普攻和技能时使用技能的概率。</summary>
         public float CombatSkillChance => Mathf.Clamp01(combatSkillChance);
 
+        /// <summary>远程行为允许目标接近的最小表面距离。</summary>
+        public float RangedMinimumDistance => Mathf.Max(0f, rangedMinimumDistance);
+
+        /// <summary>远程行为希望保持的目标表面距离。</summary>
+        public float RangedPreferredDistance => Mathf.Max(0.01f, rangedPreferredDistance);
+
+        /// <summary>远程行为是否要求攻击视线畅通。</summary>
+        public bool RangedRequireLineOfSight => rangedRequireLineOfSight;
+
+        /// <summary>远程攻击视线检测使用的遮挡 Layer。</summary>
+        public LayerMask RangedObstructionLayers => rangedObstructionLayers;
+
+        /// <summary>远程行为单次重新选位距离。</summary>
+        public float RangedRepositionDistance => Mathf.Max(0.1f, rangedRepositionDistance);
+
         /// <summary>当前归属的敌人战斗协调器。为空时仍可按自身行为攻击，但不参与区域围攻限制。</summary>
         public EnemyCombatCoordinator CombatCoordinator => _combatCoordinator;
 
@@ -332,6 +368,9 @@ namespace EndLink.Enemies
             combatChaseStopDistance = Mathf.Max(0f, combatChaseStopDistance);
             combatAttackRangeTolerance = Mathf.Max(0f, combatAttackRangeTolerance);
             combatAttackInnerOffset = Mathf.Max(0f, combatAttackInnerOffset);
+            rangedMinimumDistance = Mathf.Max(0f, rangedMinimumDistance);
+            rangedPreferredDistance = Mathf.Max(0.01f, rangedPreferredDistance);
+            rangedRepositionDistance = Mathf.Max(0.1f, rangedRepositionDistance);
             maxChaseRadius = Mathf.Max(0f, maxChaseRadius);
             lostTargetDelay = Mathf.Max(0f, lostTargetDelay);
             returnStopDistance = Mathf.Max(0f, returnStopDistance);
@@ -841,6 +880,11 @@ namespace EndLink.Enemies
             if (targetLayerMask.value == 0)
             {
                 targetLayerMask = GetDefaultPlayerLayerMask();
+            }
+
+            if (rangedObstructionLayers.value == 0)
+            {
+                rangedObstructionLayers = LayerMask.GetMask("Default", "Environment", "Interactable");
             }
         }
 

@@ -266,11 +266,16 @@ namespace EndLink.Enemies
                 return false;
             }
 
-            Vector3 attackForward = ResolveAttackForward(target);
+            bool usesProjectile = actionDefinition.HitboxPrefab.TryGetComponent<HitboxProjectile>(out _);
+            Vector3 attackForward = ResolveAttackForward(target, actionDefinition, usesProjectile);
 
             if (faceTargetBeforeAttack)
             {
-                transform.rotation = Quaternion.LookRotation(attackForward, Vector3.up);
+                Vector3 facingForward = Vector3.ProjectOnPlane(attackForward, Vector3.up);
+                if (facingForward.sqrMagnitude > 0.0001f)
+                {
+                    transform.rotation = Quaternion.LookRotation(facingForward.normalized, Vector3.up);
+                }
             }
 
             _lastExecutedAction = actionDefinition;
@@ -454,10 +459,24 @@ namespace EndLink.Enemies
 
             _hasTriggeredActionEffect = true;
 
+            bool isProjectile = _currentActionDefinition.HitboxPrefab
+                .TryGetComponent<HitboxProjectile>(out _);
+            Vector3 effectForward = isProjectile
+                ? ResolveAttackForward(_currentActionTarget, _currentActionDefinition, true)
+                : _currentActionForward;
+            Vector3 spawnForward = Vector3.ProjectOnPlane(effectForward, Vector3.up);
+            if (spawnForward.sqrMagnitude <= 0.0001f)
+            {
+                spawnForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+            }
+
+            spawnForward = spawnForward.sqrMagnitude > 0.0001f
+                ? spawnForward.normalized
+                : Vector3.forward;
             Vector3 spawnPosition = transform.position
-                + _currentActionForward * _currentActionDefinition.HitboxSpawnDistance
+                + spawnForward * _currentActionDefinition.HitboxSpawnDistance
                 + Vector3.up * _currentActionDefinition.HitboxSpawnHeight;
-            Quaternion spawnRotation = Quaternion.LookRotation(_currentActionForward, Vector3.up);
+            Quaternion spawnRotation = CreateAttackRotation(effectForward);
             GameObject hitboxInstance = Instantiate(_currentActionDefinition.HitboxPrefab, spawnPosition, spawnRotation);
             ConfigureHitbox(hitboxInstance, _currentActionDefinition);
 
@@ -511,17 +530,30 @@ namespace EndLink.Enemies
             _hasLoggedAnimationTimeout = false;
         }
 
-        private Vector3 ResolveAttackForward(Transform target)
+        private Vector3 ResolveAttackForward(
+            Transform target,
+            CombatActionDefinition actionDefinition,
+            bool includeVertical)
         {
             if (target != null
                 && CombatTargetUtility.TryResolve(target, out ICombatTarget combatTarget))
             {
-                target = combatTarget.LockPoint;
+                target = combatTarget.LockPoint != null
+                    ? combatTarget.LockPoint
+                    : combatTarget.RootTransform;
             }
 
             if (target != null)
             {
-                Vector3 toTarget = Vector3.ProjectOnPlane(target.position - transform.position, Vector3.up);
+                Vector3 origin = transform.position
+                    + Vector3.up * (actionDefinition != null
+                        ? actionDefinition.HitboxSpawnHeight
+                        : 0f);
+                Vector3 toTarget = target.position - origin;
+                if (!includeVertical)
+                {
+                    toTarget = Vector3.ProjectOnPlane(toTarget, Vector3.up);
+                }
 
                 if (toTarget.sqrMagnitude > 0.0001f)
                 {
@@ -538,6 +570,17 @@ namespace EndLink.Enemies
 
             Vector3 normalizedFallback = Vector3.ProjectOnPlane(fallbackForward, Vector3.up);
             return normalizedFallback.sqrMagnitude > 0.0001f ? normalizedFallback.normalized : Vector3.forward;
+        }
+
+        private static Quaternion CreateAttackRotation(Vector3 forward)
+        {
+            Vector3 normalizedForward = forward.sqrMagnitude > 0.0001f
+                ? forward.normalized
+                : Vector3.forward;
+            Vector3 up = Mathf.Abs(Vector3.Dot(normalizedForward, Vector3.up)) > 0.99f
+                ? Vector3.forward
+                : Vector3.up;
+            return Quaternion.LookRotation(normalizedForward, up);
         }
 
         private void LogFailure(string message)

@@ -80,6 +80,21 @@ namespace EndLink.Enemies
         /// <summary>未启用固定计数时，每轮攻击同时可选普攻和技能时使用技能的概率。</summary>
         public float CombatSkillChance => StateMachine.CombatSkillChance;
 
+        /// <summary>远程行为允许目标接近的最小表面距离。</summary>
+        public float RangedMinimumDistance => StateMachine.RangedMinimumDistance;
+
+        /// <summary>远程行为希望保持的目标表面距离。</summary>
+        public float RangedPreferredDistance => StateMachine.RangedPreferredDistance;
+
+        /// <summary>远程行为是否要求攻击视线畅通。</summary>
+        public bool RangedRequireLineOfSight => StateMachine.RangedRequireLineOfSight;
+
+        /// <summary>远程攻击视线检测使用的遮挡 Layer。</summary>
+        public LayerMask RangedObstructionLayers => StateMachine.RangedObstructionLayers;
+
+        /// <summary>远程行为单次重新选位距离。</summary>
+        public float RangedRepositionDistance => StateMachine.RangedRepositionDistance;
+
         /// <summary>当前归属的敌人战斗协调器。为空时不参与区域围攻限制。</summary>
         public EnemyCombatCoordinator CombatCoordinator => StateMachine.CombatCoordinator;
 
