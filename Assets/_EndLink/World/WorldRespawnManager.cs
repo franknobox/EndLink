@@ -34,6 +34,11 @@ namespace EndLink.World
         [SerializeField, Min(0f)]
         private float respawnDelay = 1f;
 
+        [Header("坠落死亡")]
+        [Tooltip("玩家根物体低于该世界 Y 高度时立即死亡。默认 -50 表示跌出 Y=-50 的地图下界后进入正常复活流程。")]
+        [SerializeField]
+        private float fallDeathHeight = -50f;
+
         [Header("可选上下文")]
         [Tooltip("小队战斗上下文。配置后，战斗中默认不能使用检查点，并会在复活时清空战斗上下文。")]
         [SerializeField]
@@ -118,6 +123,20 @@ namespace EndLink.World
             {
                 MovePlayerTo(initialSpawnPoint);
             }
+        }
+
+        private void Update()
+        {
+            if (playerRoot == null
+                || _playerHealth == null
+                || _playerHealth.IsDead
+                || IsRespawning
+                || playerRoot.position.y > fallDeathHeight)
+            {
+                return;
+            }
+
+            _playerHealth.Kill();
         }
 
         private void OnDisable()

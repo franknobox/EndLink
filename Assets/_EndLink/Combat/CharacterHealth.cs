@@ -326,6 +326,23 @@ namespace EndLink.Combat
         }
 
         /// <summary>
+        /// 无视临时免伤和普通伤害结算，立即把当前角色置为死亡。
+        /// 用于坠落出界、关卡处决等不应被闪避或格挡拦截的世界规则。
+        /// </summary>
+        public bool Kill(GameObject source = null)
+        {
+            if (_isDead)
+            {
+                return false;
+            }
+
+            _currentHealth = 0;
+            NotifyHealthChanged(source);
+            Die(source);
+            return true;
+        }
+
+        /// <summary>
         /// 重置生命值和死亡状态。
         /// </summary>
         public void ResetHealth()

@@ -113,6 +113,12 @@ namespace EndLink.Combat
             return _health.Heal(amount);
         }
 
+        /// <summary>立即触发玩家死亡，用于坠落出界等不经过普通伤害判定的世界规则。</summary>
+        public bool Kill()
+        {
+            return _health != null && _health.Kill();
+        }
+
         /// <summary>重置玩家生命值。</summary>
         public void ResetHealth()
         {

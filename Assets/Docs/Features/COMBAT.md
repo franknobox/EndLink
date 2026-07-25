@@ -13,6 +13,7 @@
 
 功能说明：
 - `CharacterHealth` 是玩家、队友和后续更多角色可以复用的通用生命组件。
+- `CharacterHealth.Kill()` 提供无视临时免伤的直接死亡入口，供坠落出界等世界规则使用；普通战斗伤害仍统一经过伤害管线。
 - 负责最大生命值、当前生命值、治疗、受击、死亡和基础受击闪色反馈。
 - 实现 `IHitReceiver`、`IDamageable` 和 `ICombatTargetLifeState`；目标身份、锁定点和表面距离由独立 `CombatTarget` 负责。
 - 接收 `HitboxHitInfo` 后会扣血、触发受击事件，并通过 `CombatEventsBus` 广播 `Damaged`。

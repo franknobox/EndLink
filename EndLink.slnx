@@ -1,5 +1,6 @@
 ﻿<Solution>
   <Project Path="EndLink.Runtime.csproj" />
   <Project Path="EndLink.Editor.csproj" />
-  <Project Path="EndLink.Tests.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="Assembly-CSharp-Editor.csproj" />
 </Solution>

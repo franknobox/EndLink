@@ -48,6 +48,7 @@
 - `WorldCheckpoint` 继承现有世界交互基类，首次交互会切换当前复活点，再次交互可休整；默认战斗中不可使用。
 - 检查点休整会恢复玩家生命、清除战斗标签、软锁/硬锁目标和残留战斗上下文。
 - `WorldRespawnManager` 维护默认出生点和当前检查点，监听玩家死亡，并使用不受时间缩放影响的延迟执行复活。
+- 玩家根物体低于 `fallDeathHeight` 时会立即触发死亡并沿用正常复活流程；当前默认世界下界为 `Y=-50`。
 - 复活会安全传送玩家、恢复生命、清理战斗标签与目标，并重置动作、连段、防御、输入缓冲、移动速度、重力和战斗击退。
 - 第一版不写入磁盘存档，也不生成或重置敌人；相关系统后续通过出生点 ID、用途和检查点事件接入。
 
@@ -60,6 +61,7 @@
 
 ### 相关物体 / 配置
 - 场景系统物体挂一个 `WorldRespawnManager`，拖入玩家根物体和默认 `WorldSpawnPoint`；同一场景只能启用一个调度器。
+- `fallDeathHeight`：玩家坠落死亡使用的世界 Y 高度，当前默认 `-50`。
 - 开场出生点挂 `WorldSpawnPoint` 并选择 `PlayerStart`，朝向箭头表示玩家出生朝向。
 - 可交互检查点根物体挂 `WorldCheckpoint` 和可被 `WorldInteractor` 扫描的 Collider，并放在 Interactable Layer。
 - 推荐在检查点旁创建独立的安全落点子物体并挂 `WorldSpawnPoint`，再拖入 `WorldCheckpoint`；如果出生点与检查点根物体重合，也可以挂在同一物体自动读取。
