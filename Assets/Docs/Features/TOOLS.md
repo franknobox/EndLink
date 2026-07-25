@@ -134,3 +134,32 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 - `EndLink > Debug > Ally Monitor`
 
 </details>
+
+<a id="feature-art-asset-validator"></a>
+
+### Feature：美术资源校验工具
+
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- `Assets/Art/_Incoming` 中的资源完成导入、删除或移动后，会自动延迟执行一次静态校验。
+- 自动校验只报告问题，不会擅自替换 Shader、修改模型 Rig、调整贴图或重写 Prefab。
+- `Error` 和 `Warning` 会自动输出到 Console；`Info` 只在窗口显示，避免普通命名提示刷屏。
+- 通过 `EndLink > Validation > Asset Validator` 打开结果窗口，可以切换扫描 `_Incoming` 或整个 `Assets/Art`。
+- 窗口支持按严重程度和关键字筛选、复制报告，并可直接选中和定位问题资源。
+- 材质检查覆盖缺失 Shader、错误 Shader、不受支持 Shader，以及 URP 工程中的 Legacy/Built-in Shader。
+- Prefab 检查覆盖 Missing Script、丢失材质、Renderer 材质 Shader；如果临时 Prefab 挂有任何外部或项目脚本，会汇总脚本类型并提示人工确认是否需要保留。
+- FBX 检查覆盖动画导入开关、默认 Clip 名和无效 Humanoid Avatar；`Loop Time` 等动作使用配置不作为通用资源健康问题。
+- 贴图检查覆盖 Normal Map 命名与导入类型不匹配、超大最大导入尺寸提示。
+- `_Incoming` 临时命名检查覆盖非 ASCII 名称、空格路径和常见副本括号命名；这些提示用于转正前整理，不阻止临时导入。
+
+对应脚本：
+- `Assets/_EndLink/Editor/EndLinkAssetValidation.cs`
+- `Assets/_EndLink/Editor/EndLinkIncomingAssetPostprocessor.cs`
+- `Assets/_EndLink/Editor/EndLinkAssetValidatorWindow.cs`
+
+相关 Editor 工具：
+- `EndLink > Validation > Asset Validator`
+
+</details>

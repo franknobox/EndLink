@@ -35,7 +35,7 @@
 | [第三人称视角模式](Features/PLAYER.md#feature-third-person-camera) | 已完成锁定操控版 | 独立保存高速自由与魂类近距两套镜头预设；魂类硬锁会统一驱动镜头、玩家朝向、锁定移动和定向闪避。 |
 | [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成动作取消策略版 | 负责八个玩家状态，并承接普攻缓冲、动作锁、取消窗口、普攻/技能派生、闪避/格挡取消和强制打断。 |
 | [玩家 ActCombat 基础](Features/PLAYER.md#feature-player-act-combat) | 已完成格挡反馈版 | 提供三段普攻连段、无效下一段超时退出、攻击踏步与软锁追踪，以及带白模反馈的正面格挡和短窗口弹反。 |
-| [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成动画事件接线版 | 同步玩家状态、移动和 Action 参数，并把动画判定、取消窗口与动作结束事件转发给战斗 Driver 和状态机。 |
+| [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成动画器骨架版 | 同步玩家状态、移动和 Action 参数，提供 `Reaction > Action > Locomotion` 统一动画器结构，并转发动画判定、取消窗口与动作结束事件。 |
 | [玩家目标选择](Features/PLAYER.md#feature-player-targeting) | 已完成硬锁切换版 | 自动软目标按固定间隔刷新；魂类视角可固定、解除并按左右方向切换硬锁目标，攻击系统统一读取有效目标。 |
 | [玩家战斗驱动](Features/PLAYER.md#feature-player-combat-driver) | 已完成多判定窗口版 | 由状态机调用，支持数据或动画事件驱动判定，并允许单个动画动作重复开启独立 Hitbox 窗口。 |
 | [当前架构边界](Features/PLAYER.md#feature-architecture-boundary) | 已建立初版约定 | 初步明确输入读取、玩家移动、相机控制、状态机、战斗驱动、命中检测之间的职责边界。 |
@@ -107,3 +107,4 @@
 | [战斗 HUD 生成工具](Features/TOOLS.md#feature-combat-hud-generator) | 已完成 Panel 生成版 | 提供 Editor 菜单入口生成基础 UGUI 战斗 HUD Panel Prefab，默认去掉可见英文占位文案，主角/队友状态条使用绿色、奥义条使用黄色，作为后续由 Agent 或人工扩展 HUD 的稳定通道。 |
 | [EndLink Combat Lab](Features/TOOLS.md#feature-combat-lab) | 已完成新模型实验版 | 提供浏览器端战斗实验工具，用于快速验证标签定义、层数、持续时间、反应效果、基础伤害和连携窗口。 |
 | [队友调试监视窗口](Features/TOOLS.md#feature-ally-monitor) | 已完成第一版 | 提供 Editor 窗口集中查看队友状态快照和队友行为日志，辅助排查助战、冷却、距离和目标问题。 |
+| [美术资源校验工具](Features/TOOLS.md#feature-art-asset-validator) | 已完成自动校验第一版 | 自动检查 `_Incoming` 中的 Shader、材质、Prefab、FBX、贴图和临时命名问题，并提供完整结果窗口与资源定位。 |

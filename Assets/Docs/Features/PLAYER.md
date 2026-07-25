@@ -300,6 +300,9 @@
 - `CombatAnimationEventReceiver` 把 Clip 上的 `OnActionHitboxStart`、`OnActionHitboxEnd`、`OnActionCanCancel`、`OnActionEnd` 转发给角色 Driver。
 - `ICombatRootMotionReceiver` 预留 Root Motion 位移接入口，后续可让动画驱动位移再交给角色移动层处理。
 - `PlayerStateMachine` 已实现 `ICombatActionLockReceiver`，处理动作开始锁定、取消窗口、自然结束和外部打断。
+- `AC_Player` 使用单一 `Base Layer`，内部按 `Reaction`、`Action`、`Locomotion` 拆分三个子状态机，避免多个全身 Animator Layer 同时争夺角色姿态。
+- 动画优先级固定为 `Reaction > Action > Locomotion`：死亡和受击可以抢占动作，攻击、技能、闪避和格挡可以抢占待机与移动。
+- 第一版状态均为空 Motion 骨架，后续可直接填入正式 Clip，并继续增加锁定移动、失衡、击倒和处决等状态。
 
 对应脚本：
 - `Assets/_EndLink/Control/PlayerAnimatorDriver.cs`
@@ -309,6 +312,7 @@
 - `Assets/_EndLink/Control/Animation/ICombatRootMotionReceiver.cs`
 - `Assets/_EndLink/Control/Animation/ICombatActionLockReceiver.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerStateMachine.cs`
+- `Assets/_EndLink/Player/Animate/AC_Player.controller`
 
 相关物体：
 - 玩家根物体
@@ -317,6 +321,7 @@
   - `CharacterController`
 - 玩家模型或子物体
   - `Animator`
+  - `AC_Player` Runtime Animator Controller
 
 关键配置：
 - `animator`：目标 Animator，可为空自动查找子物体
