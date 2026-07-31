@@ -46,6 +46,7 @@ Assets/_EndLink/
 ├─ World/                灰盒地图中的世界交互、出生与复活底座
 │  └─ Interactable/      门、电梯、检查点等具体交互实现
 └─ UI/                   运行时 HUD、动作槽位和血条组件
+   └─ PartyUI/           暂时归档的小队战斗 UI 组件
 ```
 
 程序集边界：

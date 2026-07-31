@@ -146,7 +146,7 @@ namespace EndLink.Core
 
         /// <summary>
         /// 消费一次“上一个”输入。
-        /// 当前由魂类硬锁模式用于向左切换目标，默认绑定为鼠标滚轮向上和手柄右摇杆向左。
+        /// 当前硬锁切换已经改用 Look 方向输入；该入口作为 Input Actions 的通用预留保留。
         /// </summary>
         public bool ConsumePreviousPressed()
         {
@@ -155,7 +155,7 @@ namespace EndLink.Core
 
         /// <summary>
         /// 消费一次“下一个”输入。
-        /// 当前由魂类硬锁模式用于向右切换目标，默认绑定为鼠标滚轮向下和手柄右摇杆向右。
+        /// 当前硬锁切换已经改用 Look 方向输入；该入口作为 Input Actions 的通用预留保留。
         /// </summary>
         public bool ConsumeNextPressed()
         {

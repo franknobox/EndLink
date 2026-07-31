@@ -12,7 +12,7 @@ namespace EndLink.Enemies
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyHealth))]
-    public sealed class EnemyBalance : MonoBehaviour
+    public sealed class EnemyBalance : MonoBehaviour, IBalanceSource
     {
         private const float BalanceEpsilon = 0.001f;
 

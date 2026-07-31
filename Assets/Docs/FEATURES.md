@@ -30,13 +30,13 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成硬锁切换输入版 | 负责读取玩家移动、攻击、防御、目标锁定/切换、世界交互和相机等输入，并把输入缓存为控制层可使用的数据。 |
+| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成方向切换输入版 | 负责读取玩家移动、攻击、防御、目标锁定、世界交互和 Look 等输入，并把输入缓存为控制层可使用的数据。 |
 | [玩家 CharacterController 移动](Features/PLAYER.md#feature-player-movement) | 已完成锁定移动版 | 负责玩家平滑移动、基础跳跃、重力贴地、转向、目标相对移动，以及战斗击退的短时衰减后退。 |
 | [第三人称视角模式](Features/PLAYER.md#feature-third-person-camera) | 已完成锁定操控版 | 独立保存高速自由与魂类近距两套镜头预设；魂类硬锁会统一驱动镜头、玩家朝向、锁定移动和定向闪避。 |
 | [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成动作取消策略版 | 负责八个玩家状态，并承接普攻缓冲、动作锁、取消窗口、普攻/技能派生、闪避/格挡取消和强制打断。 |
 | [玩家 ActCombat 基础](Features/PLAYER.md#feature-player-act-combat) | 已完成格挡反馈版 | 提供三段普攻连段、无效下一段超时退出、攻击踏步与软锁追踪，以及带白模反馈的正面格挡和短窗口弹反。 |
 | [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成动画器骨架版 | 同步玩家状态、移动和 Action 参数，提供 `Reaction > Action > Locomotion` 统一动画器结构，并转发动画判定、取消窗口与动作结束事件。 |
-| [玩家目标选择](Features/PLAYER.md#feature-player-targeting) | 已完成硬锁切换版 | 自动软目标按固定间隔刷新；魂类视角可固定、解除并按左右方向切换硬锁目标，攻击系统统一读取有效目标。 |
+| [玩家目标选择](Features/PLAYER.md#feature-player-targeting) | 已完成方向切换版 | 自动软目标按固定间隔刷新；魂类视角可固定、解除，并通过鼠标横向滑动或手柄右摇杆左右推动切换硬锁目标。 |
 | [玩家战斗驱动](Features/PLAYER.md#feature-player-combat-driver) | 已完成多判定窗口版 | 由状态机调用，支持数据或动画事件驱动判定，并允许单个动画动作重复开启独立 Hitbox 窗口。 |
 | [当前架构边界](Features/PLAYER.md#feature-architecture-boundary) | 已建立初版约定 | 初步明确输入读取、玩家移动、相机控制、状态机、战斗驱动、命中检测之间的职责边界。 |
 
@@ -97,7 +97,7 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [战斗 UI 基础](Features/UI.md#feature-combat-ui-foundation) | 已完成队伍血条接线版 | 提供 HUD 总入口、小队动作栏、成员头像连携高亮、终链奥义条、运行时调试日志、动作槽位冷却显示、主角/队友状态血条自绑定、通用血条、敌人头顶血条和 UGUI 生成入口。 |
+| [战斗 UI 基础](Features/UI.md#feature-combat-ui-foundation) | 已完成平衡值接口版 | 提供生命与平衡值通用显示接口、敌人头顶血条、运行时调试日志和 UGUI 生成入口；旧版小队动作栏、头像及奥义 UI 已暂时归档。 |
 
 #### TOOLS
 

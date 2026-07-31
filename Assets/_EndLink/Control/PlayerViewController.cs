@@ -234,6 +234,10 @@ namespace EndLink.Core
         [SerializeField]
         private PlayerInputReader playerInputReader;
 
+        [Tooltip("相机 Look 输入读取器。硬锁时用鼠标横向滑动或手柄右摇杆左右推动切换目标；为空时从当前相机物体自动获取。")]
+        [SerializeField]
+        private PlayerCameraInputReader cameraInputReader;
+
         [Tooltip("玩家移动控制器。魂类硬锁时由本组件指定持续面向目标，并启用目标相对移动。为空时会尝试从相机 Follow Target 自动获取。")]
         [SerializeField]
         private PlayerController playerController;
@@ -252,12 +256,32 @@ namespace EndLink.Core
         [SerializeField, Min(0.01f)]
         private float hardLockRotationSmoothTime = 0.12f;
 
+        [Header("硬锁目标切换")]
+        [Tooltip("鼠标在硬锁期间需要累计多少横向像素位移才切换一次目标。越小越灵敏，越大越不容易误触。")]
+        [SerializeField, Min(1f)]
+        private float mouseTargetSwitchThreshold = 36f;
+
+        [Tooltip("手柄右摇杆横向输入达到该值时切换一次目标。切换后必须先让摇杆回中。")]
+        [SerializeField, Range(0.1f, 1f)]
+        private float gamepadTargetSwitchThreshold = 0.65f;
+
+        [Tooltip("手柄右摇杆横向输入回落到该值以内时，允许下一次目标切换。必须小于触发阈值。")]
+        [SerializeField, Range(0f, 0.9f)]
+        private float gamepadTargetSwitchResetThreshold = 0.25f;
+
+        [Tooltip("两次硬锁目标切换之间的最短间隔，避免鼠标快速抖动或设备切换造成连续跳转。")]
+        [SerializeField, Min(0f)]
+        private float targetSwitchCooldown = 0.18f;
+
         [SerializeField, HideInInspector]
         private bool fastActionSettingsInitialized;
 
         private ThirdPersonCameraController _cameraController;
         private PlayerViewMode _appliedMode;
         private bool _initialized;
+        private float _mouseTargetSwitchAccumulator;
+        private float _nextTargetSwitchTime;
+        private bool _gamepadTargetSwitchArmed = true;
 
         /// <summary>当前选择的视角模式。</summary>
         public PlayerViewMode ViewMode => viewMode;
@@ -278,6 +302,10 @@ namespace EndLink.Core
                 : PlayerViewSettings.CreateFastActionDefault();
             soulsLikeSettings = PlayerViewSettings.CreateSoulsLikeDefault();
             hardLockRotationSmoothTime = 0.12f;
+            mouseTargetSwitchThreshold = 36f;
+            gamepadTargetSwitchThreshold = 0.65f;
+            gamepadTargetSwitchResetThreshold = 0.25f;
+            targetSwitchCooldown = 0.18f;
             fastActionSettingsInitialized = true;
         }
 
@@ -310,22 +338,29 @@ namespace EndLink.Core
                 ApplyMode(viewMode, false);
             }
 
+            bool handledTargetLockInput = false;
             if (playerInputReader != null && playerInputReader.ConsumeTargetLockPressed())
             {
                 if (viewMode == PlayerViewMode.SoulsLike)
                 {
                     playerTargeting?.ToggleHardLock();
+                    ResetTargetSwitchInput();
+                    handledTargetLockInput = true;
                 }
             }
 
-            bool previousPressed = playerInputReader != null && playerInputReader.ConsumePreviousPressed();
-            bool nextPressed = playerInputReader != null && playerInputReader.ConsumeNextPressed();
             if (viewMode == PlayerViewMode.SoulsLike
                 && playerTargeting != null
-                && playerTargeting.IsHardLocked
-                && previousPressed != nextPressed)
+                && playerTargeting.IsHardLocked)
             {
-                playerTargeting.SwitchHardLockTarget(previousPressed ? -1 : 1);
+                if (!handledTargetLockInput)
+                {
+                    HandleTargetSwitchInput();
+                }
+            }
+            else
+            {
+                ResetTargetSwitchInput();
             }
 
             RefreshCameraLockTarget();
@@ -350,6 +385,13 @@ namespace EndLink.Core
             fastActionSettings = fastActionSettings.Sanitized();
             soulsLikeSettings = soulsLikeSettings.Sanitized();
             hardLockRotationSmoothTime = Mathf.Max(0.01f, hardLockRotationSmoothTime);
+            mouseTargetSwitchThreshold = Mathf.Max(1f, mouseTargetSwitchThreshold);
+            gamepadTargetSwitchThreshold = Mathf.Clamp(gamepadTargetSwitchThreshold, 0.1f, 1f);
+            gamepadTargetSwitchResetThreshold = Mathf.Clamp(
+                gamepadTargetSwitchResetThreshold,
+                0f,
+                Mathf.Max(0f, gamepadTargetSwitchThreshold - 0.05f));
+            targetSwitchCooldown = Mathf.Max(0f, targetSwitchCooldown);
 
             if (Application.isPlaying && _initialized && isActiveAndEnabled)
             {
@@ -399,6 +441,7 @@ namespace EndLink.Core
             }
 
             _cameraController = GetComponent<ThirdPersonCameraController>();
+            cameraInputReader ??= GetComponent<PlayerCameraInputReader>();
             EnsureFastActionSettingsInitialized();
             ResolvePlayerReferences();
 
@@ -450,6 +493,84 @@ namespace EndLink.Core
                 lockPoint,
                 hardLockRotationSmoothTime);
             playerController?.SetFacingTarget(lockPoint);
+        }
+
+        private void HandleTargetSwitchInput()
+        {
+            cameraInputReader ??= GetComponent<PlayerCameraInputReader>();
+            if (cameraInputReader == null)
+            {
+                return;
+            }
+
+            Vector2 lookInput = cameraInputReader.LookInput;
+            if (cameraInputReader.IsPointerLookInput)
+            {
+                HandleMouseTargetSwitch(lookInput);
+                return;
+            }
+
+            HandleGamepadTargetSwitch(lookInput.x);
+        }
+
+        private void HandleMouseTargetSwitch(Vector2 lookInput)
+        {
+            _gamepadTargetSwitchArmed = true;
+
+            float horizontal = lookInput.x;
+            if (Mathf.Abs(horizontal) <= Mathf.Abs(lookInput.y))
+            {
+                _mouseTargetSwitchAccumulator = Mathf.MoveTowards(
+                    _mouseTargetSwitchAccumulator,
+                    0f,
+                    Mathf.Abs(lookInput.y));
+                return;
+            }
+
+            _mouseTargetSwitchAccumulator = Mathf.Clamp(
+                _mouseTargetSwitchAccumulator + horizontal,
+                -mouseTargetSwitchThreshold,
+                mouseTargetSwitchThreshold);
+
+            if (Mathf.Abs(_mouseTargetSwitchAccumulator) < mouseTargetSwitchThreshold
+                || Time.unscaledTime < _nextTargetSwitchTime)
+            {
+                return;
+            }
+
+            int direction = _mouseTargetSwitchAccumulator < 0f ? -1 : 1;
+            playerTargeting.SwitchHardLockTarget(direction);
+            _mouseTargetSwitchAccumulator = 0f;
+            _nextTargetSwitchTime = Time.unscaledTime + targetSwitchCooldown;
+        }
+
+        private void HandleGamepadTargetSwitch(float horizontal)
+        {
+            _mouseTargetSwitchAccumulator = 0f;
+
+            float absoluteHorizontal = Mathf.Abs(horizontal);
+            if (absoluteHorizontal <= gamepadTargetSwitchResetThreshold)
+            {
+                _gamepadTargetSwitchArmed = true;
+                return;
+            }
+
+            if (!_gamepadTargetSwitchArmed
+                || absoluteHorizontal < gamepadTargetSwitchThreshold
+                || Time.unscaledTime < _nextTargetSwitchTime)
+            {
+                return;
+            }
+
+            playerTargeting.SwitchHardLockTarget(horizontal < 0f ? -1 : 1);
+            _gamepadTargetSwitchArmed = false;
+            _nextTargetSwitchTime = Time.unscaledTime + targetSwitchCooldown;
+        }
+
+        private void ResetTargetSwitchInput()
+        {
+            _mouseTargetSwitchAccumulator = 0f;
+            _gamepadTargetSwitchArmed = false;
         }
 
         private void EnsureFastActionSettingsInitialized()

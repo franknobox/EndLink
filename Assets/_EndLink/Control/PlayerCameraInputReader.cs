@@ -5,8 +5,8 @@ namespace EndLink.Core
 {
     /// <summary>
     /// 玩家相机输入读取器。
-    /// 只负责读取视角旋转 Look 输入，
-    /// 不处理相机旋转、自动距离变化或 Cinemachine 参数。
+    /// 只负责读取 Look 输入，供自由视角旋转和硬锁目标方向切换复用，
+    /// 不处理相机旋转、目标选择、自动距离变化或 Cinemachine 参数。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class PlayerCameraInputReader : MonoBehaviour

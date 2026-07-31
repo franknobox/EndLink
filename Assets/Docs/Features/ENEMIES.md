@@ -76,11 +76,13 @@
 - 韧性 `Poise` 是敌人状态机上的隐性阈值，只决定一次有效命中是否触发 `Hit` 受击硬直，不会被消耗。
 - 动作的 `HitStrength` 与敌人 `Poise` 比较；达到阈值才进入 `Hit`，伤害高低不再直接决定是否硬直。
 - `EnemyBalance` 独立管理可消耗的平衡值。动作的 `BalanceDamage` 会削减平衡，停止受击一段时间后平衡自动恢复。
+- `EnemyBalance` 实现通用 `IBalanceSource`，向 HUD 和调试工具统一提供当前值、最大值、归一化比例、失衡状态和平衡变化事件。
 - 平衡归零后进入独立 `Stagger` 大状态，中断当前动作、停止移动，并在失衡持续时间内开放 `CanBeExecuted`。
 - 第一版只提供处决资格和事件，不实现处决输入、处决动画或处决伤害，后续系统无需反向判断状态机即可接入。
 - 失衡结束后恢复满平衡；死亡和敌人重置会关闭处决资格，避免对象复用时残留运行状态。
 
 对应脚本：
+- `Assets/_EndLink/Combat/IBalanceSource.cs`
 - `Assets/_EndLink/Enemies/Base/EnemyBalance.cs`
 - `Assets/_EndLink/Enemies/Base/EnemyHealth.cs`
 - `Assets/_EndLink/Enemies/StateMachine/EnemyStaggerState.cs`

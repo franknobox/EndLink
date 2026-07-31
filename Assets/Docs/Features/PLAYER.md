@@ -21,7 +21,7 @@
 - 攻击输入读取 `Player/Attack`，由状态机统一捕获并写入短时攻击缓冲，再决定是否进入攻击状态。
 - 防御输入读取 `Player/Guard`，默认键位为鼠标右键、手柄左扳机，只缓存当前是否按住。
 - 目标锁定输入读取 `Player/TargetLock`，默认键位为鼠标中键、手柄右摇杆按下；输入层只缓存按下事件，是否建立硬锁由视角模式决定。
-- 硬锁目标切换读取 `Player/Previous` 和 `Player/Next`；默认使用鼠标滚轮上/下或手柄右摇杆左/右，输入层不负责候选目标选择。
+- 硬锁目标切换复用 `Player/Look`：键鼠按鼠标横向滑动方向切换，手柄按右摇杆左右推动方向切换；输入层只提供原始方向，候选目标仍由索敌系统选择。
 - 闪避输入读取 `Player/Dodge`，默认键位为键盘 `Left Ctrl`、手柄 `buttonEast`。
 - 主控主动技能读取 `Player/PlayerSkill`，默认键位 Q。
 - 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`；当前不绑定键盘，路由配置入口和手柄绑定继续保留。
@@ -158,6 +158,10 @@
 - `fastActionSettings`：高速动作模式独立的距离、高度、构图、FOV 与旋转灵敏度
 - `soulsLikeSettings`：魂类模式独立的距离、高度、构图、FOV 与旋转灵敏度
 - `hardLockRotationSmoothTime`：硬锁镜头跟随目标的平滑时间
+- `mouseTargetSwitchThreshold`：鼠标触发一次硬锁切换需要累计的横向像素位移
+- `gamepadTargetSwitchThreshold`：手柄右摇杆触发切换的横向阈值
+- `gamepadTargetSwitchResetThreshold`：右摇杆回中并重新允许切换的阈值
+- `targetSwitchCooldown`：两次目标切换之间的最短间隔
 - `Avoid Obstacles`：镜头避障开关；当前半径为 `0.25`，进入碰撞阻尼为 `0.05`，离开碰撞阻尼为 `0.5`
 
 
@@ -353,7 +357,8 @@
 - 负责按固定刷新间隔搜索并保存当前软锁目标。
 - 硬锁建立后优先作为战斗系统的有效目标，不再随自动刷新切换；解除硬锁后立即回退到自动软目标。
 - `PlayerViewController` 处于 `SoulsLike` 模式时，鼠标中键或手柄右摇杆按下会切换硬锁。
-- 已硬锁时可用鼠标滚轮上/下或手柄右摇杆左/右切换到当前目标对应方向上最邻近的候选目标；没有该方向候选时保持当前目标。
+- 已硬锁时可通过鼠标横向滑动或手柄右摇杆左右推动，切换到当前目标对应方向上最邻近的候选目标；没有该方向候选时保持当前目标。
+- 鼠标需要累计达到横向位移阈值；手柄每次越过触发阈值后必须回中，配合最短切换间隔避免抖动和连续误切。
 - 硬锁目标会同步交给 `PlayerController`，使玩家移动和闪避使用目标相对方向并持续面向锁定点。
 - 硬锁目标死亡、被设为不可选、离开搜索范围、Layer 不匹配或被销毁时会自动解除。
 - 默认选择范围内距离玩家最近的敌人，也保留 `CameraForward` 模式用于后续偏动作游戏的视角优先设置。
@@ -452,7 +457,7 @@
 - `PlayerStateMachine` 决定当前状态，负责 Idle、Move、Attack 等流程切换。
 - `PlayerController` 负责移动能力和朝向，不负责读取输入或判断是否允许移动。
 - `PlayerAnimatorDriver` 只负责参数和事件桥接；动作合法性仍由状态机与 Driver 决定，动画事件只提交判定窗口和退出时机。
-- `PlayerTargeting` 负责玩家当前自动软锁目标选择，不控制相机、UI 或攻击执行。
+- `PlayerTargeting` 负责维护玩家软目标与硬锁目标，并按方向选择硬锁候选，不控制相机、UI 或攻击执行。
 - `PlayerCombatDriver` 不读取输入，只执行攻击表现和判定。
 - `CharacterHealth` 负责通用生命值、受击和死亡，不直接切换任何角色状态机。
 - `CombatTarget` 负责统一目标身份、存活/可选状态、锁定点和 Collider 表面距离，不负责扣血或状态切换。

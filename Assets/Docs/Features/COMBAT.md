@@ -229,7 +229,7 @@
 - `Assets/_EndLink/Player/ActCombat/PlayerCombatDriver.cs`
 - `Assets/_EndLink/Ally/AllyCombatDriver.cs`
 - `Assets/_EndLink/Enemies/Abilities/EnemyCombatDriver.cs`
-- `Assets/_EndLink/UI/UICombatActionSlot.cs`
+- `Assets/_EndLink/UI/PartyUI/UICombatActionSlot.cs`
 
 </details>
 

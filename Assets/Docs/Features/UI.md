@@ -13,6 +13,7 @@
 
 功能说明：
 - `HUDCombatController` 是战斗 HUD 总入口，负责绑定 `PartyManager`、控制 HUD 显隐，并驱动下属 UI 模块刷新。
+- 旧版小队动作槽、成员头像和终链奥义显示组件暂时归档在 `UI/PartyUI`，供后续恢复小队战斗 UI 时复用；新版单人战斗 UI 不继续依赖这些组件。
 - `UIPartyCombatAction` 是小队动作栏管理器，当前负责绑定主控、队友 A、队友 B 的主动技能槽。
 - `UICombatActionSlot` 是单个动作槽位组件，槽位绑定的是小队命令槽，例如 `PlayerSkill`、`AllySlotASkill`、`AllySlotBSkill`，而不是固定动作资产。
 - `UICombatActionSlot` 通过 `PartyManager` 解析当前角色，通过角色 CombatDriver 读取当前槽位动作和该动作自己的冷却。
@@ -27,6 +28,8 @@
 - 左上主角/队友状态区里的 `Health_Main`、`Health_AllyA`、`Health_AllyB` 会按默认命名自动绑定到 `PartyManager` 当前的小队生命组件；如果场景里有 `HUDCombatController`，也可以由它统一重绑。
 - `UIHealthBar` 支持 `Image.fillAmount`、可选血量文本、满血隐藏、死亡隐藏、无生命来源隐藏和运行时绑定生命来源。
 - `UIHealthBar` 优先监听生命事件刷新，`autoRefresh` 只作为兜底刷新开关。
+- `UIBalanceBar` 是通用平衡条组件，只依赖 `IBalanceSource`；当前可直接绑定 `EnemyBalance`，后续主角平衡组件实现同一接口后可以复用。
+- `UIBalanceBar` 显示当前剩余平衡值，优先监听 `BalanceChanged` 事件刷新，不负责削减平衡、进入失衡或判断处决。
 - `UIHealthBar` 和 `UIEnemyHealthBar` 不会在 `Awake` / `OnValidate` 里修改 `CanvasGroup` 显隐，首次显示刷新延后到 `Start`，避免编辑器生命周期 warning。
 - `UIEnemyHealthBar` 是敌人头顶血条控制器，负责 World Space 跟随、面向相机、绑定 `EnemyHealth` 和套用默认半透明暗红色样式。
 - 敌人头顶血条预制体使用小尺寸世界单位 RectTransform，避免拖入场景时因为缩放重置变成巨大半透明面片；显隐刷新只在运行期改 `CanvasGroup`。
@@ -36,12 +39,13 @@
 
 对应脚本：
 - `Assets/_EndLink/UI/HUDCombatController.cs`
-- `Assets/_EndLink/UI/UIPartyCombatAction.cs`
-- `Assets/_EndLink/UI/UICombatActionSlot.cs`
-- `Assets/_EndLink/UI/UIPartyMemberPortrait.cs`
-- `Assets/_EndLink/UI/UIPartyUltimateBar.cs`
+- `Assets/_EndLink/UI/PartyUI/UIPartyCombatAction.cs`
+- `Assets/_EndLink/UI/PartyUI/UICombatActionSlot.cs`
+- `Assets/_EndLink/UI/PartyUI/UIPartyMemberPortrait.cs`
+- `Assets/_EndLink/UI/PartyUI/UIPartyUltimateBar.cs`
 - `Assets/_EndLink/UI/HUDDebugLogPanel.cs`
 - `Assets/_EndLink/UI/UIHealthBar.cs`
+- `Assets/_EndLink/UI/UIBalanceBar.cs`
 - `Assets/_EndLink/UI/UIEnemyHealthBar.cs`
 - `Assets/_EndLink/Editor/CombatHUDPrefabGenerator.cs`
 
@@ -70,6 +74,10 @@
   - `UIHealthBar`
   - `Image` 填充图
   - 可选 `TextMeshProUGUI` 血量文本
+- 平衡条物体
+  - `UIBalanceBar`
+  - `Image` 填充图
+  - 可选 `CanvasGroup` 和 `TextMeshProUGUI` 数值文本
 - 敌人头顶血条物体
   - `Canvas`，Render Mode 为 World Space
   - `CanvasGroup`
@@ -109,6 +117,10 @@
 - `UIHealthBar.valueText`：可选血量文本
 - `UIHealthBar.hideWhenFull` / `hideWhenDead`：满血和死亡时是否隐藏
 - `UIHealthBar.autoRefresh`：事件刷新之外的兜底刷新开关，默认关闭
+- `UIBalanceBar.balanceSource`：实现 `IBalanceSource` 的平衡来源；当前正式敌人使用 `EnemyBalance`
+- `UIBalanceBar.fillImage`：平衡条填充图，推荐 Image Type 使用 Filled
+- `UIBalanceBar.hideWhenFull`：满平衡时是否隐藏；主角和 Boss HUD 通常关闭
+- `UIBalanceBar.autoRefresh`：事件刷新之外的兜底刷新开关，默认关闭
 - `UIEnemyHealthBar.enemyHealth`：要显示的正式敌人生命组件；为空时可从父物体查找
 - `UIEnemyHealthBar.worldOffset`：血条相对敌人锁定点或生命组件位置的世界偏移
 - `UIEnemyHealthBar.backgroundColor` / `fillColor`：敌人血条背景和填充颜色，默认半透明暗红色
