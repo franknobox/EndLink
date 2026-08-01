@@ -156,6 +156,43 @@
 
 </details>
 
+<a id="feature-player-weapon-forms"></a>
+
+### Feature：三种武器形态基础
+
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- `PlayerWeaponController` 是主角武器形态的唯一运行时入口，固定包含 `A`、`B`、`C` 三种形态；当前设计定位分别为标准、射击、重刃。
+- 每种形态分别配置独立的普攻连段和主动技能，具体伤害、平衡伤害、Hitbox 与动作时序继续复用 `CombatActionDefinition`。
+- `PlayerComboController` 会在连段开始时读取并锁定当前形态的普攻列表；`PlayerCombatDriver` 会读取当前形态的普攻起手和主动技能。
+- 第一版直接切换只允许在 `Idle`、`Move` 或状态机尚未初始化时进行，避免攻击中途直接替换动作组；后续战斗内切换由玩家状态机在合法取消窗口或形态派生流程中授权。
+- 提供指定形态、上一形态和下一形态请求，以及 `FormChanged` 变化事件；当前不直接读取输入，键位与新版战斗 UI 后续通过公开接口接入。
+- `PlayerAnimatorDriver` 会向 Animator 写入 `WeaponForm` Int 参数：0 为 A、1 为 B、2 为 C。
+- 未挂载 `PlayerWeaponController` 时，现有 `PlayerComboController` 和 `PlayerCombatDriver` 配置继续作为兼容回退，当前场景不会因新增基础组件失效。
+
+对应脚本：
+- `Assets/_EndLink/Combat/Weapon/PlayerWeaponController.cs`
+- `Assets/_EndLink/Player/ActCombat/PlayerComboController.cs`
+- `Assets/_EndLink/Player/ActCombat/PlayerCombatDriver.cs`
+- `Assets/_EndLink/Control/PlayerAnimatorDriver.cs`
+- `Assets/_EndLink/Control/Animation/CombatAnimatorParams.cs`
+
+相关物体：
+- 主角根物体
+  - `PlayerWeaponController`
+  - `PlayerComboController`
+  - `PlayerCombatDriver`
+
+关键配置：
+- `initialForm`：进入场景时默认使用的形态
+- `formA`：A 形态的普攻连段与主动技能，当前定位为标准
+- `formB`：B 形态的普攻连段与主动技能，当前定位为射击
+- `formC`：C 形态的普攻连段与主动技能，当前定位为重刃
+
+</details>
+
 <a id="feature-combat-feedback"></a>
 
 ### Feature：通用战斗反馈
@@ -358,7 +395,7 @@
 - `CombatEvent` 是一条战斗事件的数据结构，包含事件类型、来源、目标、动作配置、战斗标签、伤害、命中信息和时间戳。
 - `CombatEventType` 目前包含 `ActionStarted`、`HitLanded`、`Damaged`、`Dead`、`TagAdded`、`TagRemoved`、`TagExpired`、`ReactionTriggered`。
 - `CombatEventLog` 是白模阶段用的 Console 日志监听器，默认不打印，必要时手动开启。
-- `CombatMonitorWindow` 是 Editor 战斗事件监视窗口，通过 `EndLink > Debug > Combat Monitor` 打开，订阅事件后以表格查看最近的战斗事件。
+- `CombatMonitorWindow` 是 Editor 战斗事件监视窗口，通过 `EndLink > Debug > Combat Monitor` 打开；支持分别筛选动作、命中、伤害、死亡、标签和协议反应，显示标签层数，并可复制当前事件报告。
 - 事件总栈只广播事实，不保存状态，不决定连携规则，不直接驱动队友 AI。
 - 接入范围包括 `PlayerCombatDriver` / `AllyCombatDriver` / `EnemyCombatDriver` 的动作开始、`HitboxBase` 的命中、`CharacterHealth` / `EnemyHealth` / `EnemyDummy` 的受伤与死亡，以及 `CombatTagContainer` 的标签添加、移除、过期和协议反应。
 

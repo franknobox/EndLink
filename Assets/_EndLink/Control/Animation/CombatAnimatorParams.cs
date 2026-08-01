@@ -17,6 +17,7 @@ namespace EndLink.Core
         public const string ActionId = nameof(ActionId);
         public const string ActionType = nameof(ActionType);
         public const string ActionTrigger = nameof(ActionTrigger);
+        public const string WeaponForm = nameof(WeaponForm);
         public const string HitTrigger = nameof(HitTrigger);
         public const string StaggerTrigger = nameof(StaggerTrigger);
         public const string DeadTrigger = nameof(DeadTrigger);
@@ -31,6 +32,7 @@ namespace EndLink.Core
         public static readonly int ActionIdHash = Animator.StringToHash(ActionId);
         public static readonly int ActionTypeHash = Animator.StringToHash(ActionType);
         public static readonly int ActionTriggerHash = Animator.StringToHash(ActionTrigger);
+        public static readonly int WeaponFormHash = Animator.StringToHash(WeaponForm);
         public static readonly int HitTriggerHash = Animator.StringToHash(HitTrigger);
         public static readonly int StaggerTriggerHash = Animator.StringToHash(StaggerTrigger);
         public static readonly int DeadTriggerHash = Animator.StringToHash(DeadTrigger);

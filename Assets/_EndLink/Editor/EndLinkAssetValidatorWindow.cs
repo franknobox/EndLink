@@ -15,7 +15,7 @@ namespace EndLink.Editor
     {
         private const string MenuPath = "EndLink/Validation/Asset Validator";
 
-        private readonly string[] _scopeNames = { "_Incoming", "All Art" };
+        private readonly string[] _scopeNames = { "_Incoming", "全部 Art" };
 
         private Vector2 _scrollPosition;
         private int _selectedScope;
@@ -98,9 +98,9 @@ namespace EndLink.Editor
 
             GUILayout.FlexibleSpace();
             EditorGUILayout.LabelField(
-                "Auto Incoming: On",
+                "自动检查 _Incoming：开启",
                 EditorStyles.miniLabel,
-                GUILayout.Width(112f));
+                GUILayout.Width(145f));
             EditorGUILayout.EndHorizontal();
         }
 
@@ -119,12 +119,12 @@ namespace EndLink.Editor
                 : "--:--:--";
 
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField($"Errors: {errors}", GUILayout.Width(90f));
-            EditorGUILayout.LabelField($"Warnings: {warnings}", GUILayout.Width(105f));
-            EditorGUILayout.LabelField($"Info: {information}", GUILayout.Width(80f));
+            EditorGUILayout.LabelField($"错误：{errors}", GUILayout.Width(82f));
+            EditorGUILayout.LabelField($"警告：{warnings}", GUILayout.Width(82f));
+            EditorGUILayout.LabelField($"提示：{information}", GUILayout.Width(82f));
             GUILayout.FlexibleSpace();
             EditorGUILayout.LabelField(
-                $"Last Scan: {scanTime}",
+                $"上次扫描：{scanTime}",
                 EditorStyles.miniLabel,
                 GUILayout.Width(125f));
             EditorGUILayout.EndHorizontal();
@@ -138,7 +138,7 @@ namespace EndLink.Editor
             else
             {
                 EditorGUILayout.HelpBox(
-                    "Error 应在资源转入正式目录前解决；Warning 需要人工确认后再决定是否接受。",
+                    "错误应在资源转入正式目录前解决；警告需要人工确认后再决定是否接受。",
                     errors > 0 ? MessageType.Error : MessageType.Warning);
             }
         }
@@ -146,11 +146,11 @@ namespace EndLink.Editor
         private void DrawFilters()
         {
             EditorGUILayout.BeginHorizontal();
-            _showErrors = GUILayout.Toggle(_showErrors, "Error", GUILayout.Width(68f));
-            _showWarnings = GUILayout.Toggle(_showWarnings, "Warning", GUILayout.Width(82f));
-            _showInfo = GUILayout.Toggle(_showInfo, "Info", GUILayout.Width(62f));
+            _showErrors = GUILayout.Toggle(_showErrors, "错误", GUILayout.Width(68f));
+            _showWarnings = GUILayout.Toggle(_showWarnings, "警告", GUILayout.Width(68f));
+            _showInfo = GUILayout.Toggle(_showInfo, "提示", GUILayout.Width(68f));
             GUILayout.Space(10f);
-            EditorGUILayout.LabelField("Search", GUILayout.Width(45f));
+            EditorGUILayout.LabelField("搜索", GUILayout.Width(36f));
             _searchText = EditorGUILayout.TextField(_searchText);
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space(3f);
@@ -264,7 +264,7 @@ namespace EndLink.Editor
             }
 
             EditorGUIUtility.systemCopyBuffer = report.ToString();
-            ShowNotification(new GUIContent("Validation report copied"));
+            ShowNotification(new GUIContent("校验报告已复制"));
         }
 
         private void HandleIssuesChanged()

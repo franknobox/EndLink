@@ -21,6 +21,7 @@ E:\Unity_repo\Engine\6000.3.15f1\Editor\Data\Documentation
 Assets/_EndLink/
 ├─ EndLink.Runtime.asmdef  EndLink 运行时代码程序集
 ├─ Ally/                 队友状态机、助战、跟随和队友战斗执行
+│  └─ Party/             固定三人小队、小队上下文和战斗路由
 ├─ Combat/               战斗通用系统
 │  ├─ Damage/            伤害上下文、伤害结果和伤害计算
 │  ├─ Events/            战斗事件总线和事件数据
@@ -28,7 +29,8 @@ Assets/_EndLink/
 │  ├─ Hitbox/            Hitbox、Projectile、命中信息和受击接口
 │  ├─ Stats/             角色战斗数值
 │  ├─ Tags/              战斗标签、标签容器和反应规则
-│  └─ Target/            Combat Target 标准化
+│  ├─ Target/            Combat Target 标准化
+│  └─ Weapon/            主角固定武器形态与动作组切换
 ├─ Control/              输入读取、玩家移动、相机输入和外部位移接口
 ├─ Data/                 游戏数据资产目录
 │  ├─ CombatData/        战斗动作、标签定义和标签反应规则数据
@@ -38,7 +40,6 @@ Assets/_EndLink/
 │  ├─ Abilities/         敌人感知、移动和战斗执行能力
 │  ├─ Anime/             敌人 Animator 桥接与动画接线
 │  └─ StateMachine/      敌人大状态机
-├─ Party/                固定三人小队、小队上下文和战斗路由
 ├─ Player/               玩家战斗、生命、索敌和状态机
 │  ├─ ActCombat/         玩家连段、攻击位移、格挡弹反和战斗执行
 │  └─ StateMachine/      玩家状态机
@@ -86,7 +87,6 @@ Assets/Docs/
 Feature 子文档：
 - `Features/PLAYER.md`
 - `Features/COMBAT.md`
-- `Features/PARTY.md`
 - `Features/ALLY.md`
 - `Features/ENEMIES.md`
 - `Features/WORLD.md`

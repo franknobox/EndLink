@@ -9,8 +9,7 @@
 - 功能详情按模块拆到 `Assets/Docs/Features`，更新时只改对应子文档。
 - [PLAYER](Features/PLAYER.md)：玩家、3C、玩家状态机和玩家侧战斗接线。
 - [COMBAT](Features/COMBAT.md)：战斗数据、目标、伤害、受击、Hitbox、标签和事件系统。
-- [PARTY](Features/PARTY.md)：小队管理、小队战斗上下文和连携窗口。
-- [ALLY](Features/ALLY.md)：队友状态机、助战和跟随表现。
+- [ALLY](Features/ALLY.md)：队友状态机、助战、跟随表现、小队管理、战斗上下文和连携窗口。
 - [ENEMIES](Features/ENEMIES.md)：正式敌人身份、生命、感知、状态机和基础移动。
 - [WORLD](Features/WORLD.md)：灰盒地图中的门、电梯、机关等世界交互底座。
 - [UI](Features/UI.md)：运行时 HUD、动作槽位和通用 UI 组件。
@@ -20,7 +19,7 @@
 
 ### 当前情况概览
 
-项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Party`、`Assets/_EndLink/Enemies`、`Assets/_EndLink/World` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，固定小队管理使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，世界交互代码使用 `EndLink.World`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、统一 Combat Target、统一 Action 执行接口、玩家与敌人 Animator 桥接、动画事件动作时序第一版、基础攻击驱动、基础 Hitbox 配置、通用战斗反馈调度基础、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动与动态站位第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架、世界交互底座和战斗 UI 基础。
+项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Enemies`、`Assets/_EndLink/World` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，队友目录下的小队管理代码使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，世界交互代码使用 `EndLink.World`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、统一 Combat Target、统一 Action 执行接口、玩家与敌人 Animator 桥接、动画事件动作时序第一版、基础攻击驱动、基础 Hitbox 配置、通用战斗反馈调度基础、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动与动态站位第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架、世界交互底座和战斗 UI 基础。
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
@@ -48,21 +47,14 @@
 | [统一 Combat Target](Features/COMBAT.md#feature-combat-target) | 已完成第一版 | 为玩家、队友和敌人统一提供唯一根身份、存活/可选状态、锁定点、Collider 表面点和水平表面距离。 |
 | [角色战斗数值基础](Features/COMBAT.md#feature-character-stats) | 已完成第一版 | 提供玩家、队友和敌人共用的攻击力与承受击退倍率，并支持动作按固定伤害与攻击力倍率组合计算伤害。 |
 | [战斗动作配置](Features/COMBAT.md#feature-combat-action) | 已完成命中反馈配置版 | 使用 `CombatActionDefinition` 描述伤害、冷却、Hitbox、标签、协同率、动画根位移和命中反馈，并支持数据时间或动画事件驱动动作。 |
+| [三种武器形态基础](Features/COMBAT.md#feature-player-weapon-forms) | 已完成动作组接线版 | 固定提供 A、B、C 三种形态，分别配置独立普攻连段与主动技能，并向战斗执行、Animator 和后续 UI 暴露统一切换接口。 |
 | [通用战斗反馈](Features/COMBAT.md#feature-combat-feedback) | 已完成调度基础版 | 通过可复用反馈资产与场景调度器，统一提供 Hitstop、Cinemachine Impulse、手柄震动、音效和 VFX 请求入口。 |
 | [统一 Action 执行接口](Features/COMBAT.md#feature-combat-action-executor) | 已完成多判定窗口版 | 统一玩家、队友和敌人的动作检查、执行、冷却和目标传入，并支持动画事件动作在一次执行中开启多个判定窗口。 |
 | [伤害结算管线基础](Features/COMBAT.md#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
 | [受击规则基础](Features/COMBAT.md#feature-hit-response) | 已完成动态拦截版 | Hitbox 造成伤害后统一计算击退，并允许格挡、弹反、临时护盾等规则动态接入生命结算，修改伤害与击退结果。 |
 | [战斗标签系统](Features/COMBAT.md#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和协议反应规则。 |
-| [战斗事件总栈](Features/COMBAT.md#feature-combat-events-bus) | 已完成基础接线版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和 Editor 战斗事件监视窗口，当前已接入攻击、命中、受伤、死亡和标签变化。 |
+| [战斗事件总栈](Features/COMBAT.md#feature-combat-events-bus) | 已完成监视增强版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和可筛选复制的 Editor 监视窗口，当前已接入攻击、命中、受伤、死亡、标签变化和协议反应。 |
 | [基础 Hitbox 配置](Features/COMBAT.md#feature-hitbox) | 已完成动画窗口接线版 | 提供通用与远程 Hitbox；普通判定支持数据有效段或动画事件关闭，弹体始终使用自身寿命规则。 |
-
-#### PARTY
-
-| 功能名 | 当前状态 | 内容说明 |
-| --- | --- | --- |
-| [连携触发与窗口](Features/PARTY.md#feature-party-link-context) | 已完成奥义充能接线版 | 协议反应触发后为三人小队开启 4 秒共享连携窗口，允许玩家释放一个连携技，并按连携动作配置提升全队协同率。 |
-| [小队战斗状态上下文](Features/PARTY.md#feature-party-combat-context) | 已完成基础版 | 监听战斗事件，记录小队是否处于战斗、当前主目标和已知敌人，供队友目标选择、战斗 UI 和后续连携系统读取。 |
-| [固定三人小队管理](Features/PARTY.md#feature-party-manager) | 已完成动态槽位版 | 负责保存固定主控和 2 个队友槽位，统一分配跟随目标、动态队形、小队查询和战斗命令，并支持暂时禁用单个队友。 |
 
 #### ALLY
 
@@ -71,6 +63,9 @@
 | [队友助战基础组件](Features/ALLY.md#feature-ally-assist) | 已完成持续助战第一版 | 提供队友事件响应大脑和队友战斗执行器，用于主控命中敌人后让队友自动接近目标并持续攻击。 |
 | [队友有限状态机](Features/ALLY.md#feature-ally-state-machine) | 已完成动作打断版 | 提供 Idle、Follow、Assist、Action、Hit、LinkDown 外层状态，并在受击、离开助战或链接中断时清理当前动作判定。 |
 | [队友跟随移动](Features/ALLY.md#feature-ally-follow-motor) | 已完成 NavMesh 接线版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持 NavMesh 寻路、按路径高度移动、高低差脱离死区、坡道贴地、平滑减速、追赶、远距离归位和简易避让。 |
+| [连携触发与窗口](Features/ALLY.md#feature-party-link-context) | 已完成奥义充能接线版 | 协议反应触发后为三人小队开启 4 秒共享连携窗口，允许玩家释放一个连携技，并按连携动作配置提升全队协同率。 |
+| [小队战斗状态上下文](Features/ALLY.md#feature-party-combat-context) | 已完成基础版 | 监听战斗事件，记录小队是否处于战斗、当前主目标和已知敌人，供队友目标选择、战斗 UI 和后续连携系统读取。 |
+| [固定三人小队管理](Features/ALLY.md#feature-party-manager) | 已完成动态槽位版 | 负责保存固定主控和 2 个队友槽位，统一分配跟随目标、动态队形、小队查询和战斗命令，并支持暂时禁用单个队友。 |
 
 #### ENEMIES
 
@@ -103,8 +98,8 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [战斗数据编辑工具](Features/TOOLS.md#feature-combat-data-tool) | 已完成字段同步版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则数据资产，并显示伤害、倍率、类型和连携协同率等关键字段摘要。 |
-| [战斗 HUD 生成工具](Features/TOOLS.md#feature-combat-hud-generator) | 已完成 Panel 生成版 | 提供 Editor 菜单入口生成基础 UGUI 战斗 HUD Panel Prefab，默认去掉可见英文占位文案，主角/队友状态条使用绿色、奥义条使用黄色，作为后续由 Agent 或人工扩展 HUD 的稳定通道。 |
+| [战斗数据编辑工具](Features/TOOLS.md#feature-combat-data-tool) | 已完成校验摘要版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则，并同步显示命中、平衡、动作时序、反馈及基础合法性状态。 |
+| [战斗 HUD 生成工具](Features/TOOLS.md#feature-combat-hud-generator) | 已收束当前组件版 | 只生成仍在使用的运行时调试面板和敌人头顶血条；旧版小队状态、动作槽和奥义面板不再由工具生成。 |
 | [EndLink Combat Lab](Features/TOOLS.md#feature-combat-lab) | 已完成新模型实验版 | 提供浏览器端战斗实验工具，用于快速验证标签定义、层数、持续时间、反应效果、基础伤害和连携窗口。 |
-| [队友调试监视窗口](Features/TOOLS.md#feature-ally-monitor) | 已完成第一版 | 提供 Editor 窗口集中查看队友状态快照和队友行为日志，辅助排查助战、冷却、距离和目标问题。 |
 | [美术资源校验工具](Features/TOOLS.md#feature-art-asset-validator) | 已完成自动校验第一版 | 自动检查 `_Incoming` 中的 Shader、材质、Prefab、FBX、贴图和临时命名问题，并提供完整结果窗口与资源定位。 |
+| [场景配置体检](Features/TOOLS.md#feature-scene-doctor) | 已完成只读第一版 | 扫描当前活动场景中的缺失引用、关键组件接线、Layer、NavMesh、敌人和战斗动作配置，支持筛选、定位与复制报告，不自动修改场景。 |

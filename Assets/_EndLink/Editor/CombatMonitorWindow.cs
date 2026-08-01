@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 using EndLink.Combat;
 using UnityEditor;
 using UnityEngine;
@@ -13,7 +14,7 @@ namespace EndLink.Editor
     {
         public const int DefaultCapacity = 100;
 
-        public static readonly Vector2 DefaultMinSize = new(760f, 360f);
+        public static readonly Vector2 DefaultMinSize = new(920f, 380f);
 
         private readonly List<CombatEventRecord> _records = new(DefaultCapacity);
         private Vector2 _scrollPosition;
@@ -24,6 +25,7 @@ namespace EndLink.Editor
         private bool _showDamaged = true;
         private bool _showDead = true;
         private bool _showTagEvents = true;
+        private bool _showReactionEvents = true;
         private int _capacity = DefaultCapacity;
 
         [MenuItem("EndLink/Debug/Combat Monitor")]
@@ -57,16 +59,25 @@ namespace EndLink.Editor
         {
             using (new EditorGUILayout.HorizontalScope(EditorStyles.toolbar))
             {
-                _isPaused = GUILayout.Toggle(_isPaused, "Pause", EditorStyles.toolbarButton, GUILayout.Width(64f));
-                _autoScroll = GUILayout.Toggle(_autoScroll, "Auto Scroll", EditorStyles.toolbarButton, GUILayout.Width(88f));
+                _isPaused = GUILayout.Toggle(_isPaused, "暂停", EditorStyles.toolbarButton, GUILayout.Width(56f));
+                _autoScroll = GUILayout.Toggle(_autoScroll, "自动滚动", EditorStyles.toolbarButton, GUILayout.Width(72f));
 
-                if (GUILayout.Button("Clear", EditorStyles.toolbarButton, GUILayout.Width(56f)))
+                if (GUILayout.Button("清空", EditorStyles.toolbarButton, GUILayout.Width(52f)))
                 {
                     _records.Clear();
                 }
 
+                using (new EditorGUI.DisabledScope(_records.Count == 0))
+                {
+                    if (GUILayout.Button("复制", EditorStyles.toolbarButton, GUILayout.Width(52f)))
+                    {
+                        EditorGUIUtility.systemCopyBuffer = BuildReport();
+                        ShowNotification(new GUIContent("战斗事件已复制"));
+                    }
+                }
+
                 GUILayout.FlexibleSpace();
-                EditorGUILayout.LabelField("Capacity", GUILayout.Width(52f));
+                EditorGUILayout.LabelField("容量", GUILayout.Width(32f));
                 _capacity = EditorGUILayout.IntSlider(_capacity, 20, 500, GUILayout.Width(180f));
                 TrimToCapacity();
             }
@@ -76,12 +87,13 @@ namespace EndLink.Editor
         {
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField("Filters", EditorStyles.boldLabel, GUILayout.Width(52f));
-                _showActionStarted = GUILayout.Toggle(_showActionStarted, "Action", EditorStyles.miniButtonLeft);
-                _showHitLanded = GUILayout.Toggle(_showHitLanded, "Hit", EditorStyles.miniButtonMid);
-                _showDamaged = GUILayout.Toggle(_showDamaged, "Damage", EditorStyles.miniButtonMid);
-                _showDead = GUILayout.Toggle(_showDead, "Dead", EditorStyles.miniButtonMid);
-                _showTagEvents = GUILayout.Toggle(_showTagEvents, "Tags", EditorStyles.miniButtonRight);
+                EditorGUILayout.LabelField("筛选", EditorStyles.boldLabel, GUILayout.Width(40f));
+                _showActionStarted = GUILayout.Toggle(_showActionStarted, "动作", EditorStyles.miniButtonLeft);
+                _showHitLanded = GUILayout.Toggle(_showHitLanded, "命中", EditorStyles.miniButtonMid);
+                _showDamaged = GUILayout.Toggle(_showDamaged, "伤害", EditorStyles.miniButtonMid);
+                _showDead = GUILayout.Toggle(_showDead, "死亡", EditorStyles.miniButtonMid);
+                _showTagEvents = GUILayout.Toggle(_showTagEvents, "标签", EditorStyles.miniButtonMid);
+                _showReactionEvents = GUILayout.Toggle(_showReactionEvents, "协议反应", EditorStyles.miniButtonRight);
             }
         }
 
@@ -89,14 +101,15 @@ namespace EndLink.Editor
         {
             using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
             {
-                DrawColumn("Time", 58f, EditorStyles.boldLabel);
-                DrawColumn("Type", 112f, EditorStyles.boldLabel);
-                DrawColumn("Source", 150f, EditorStyles.boldLabel);
-                DrawColumn("Target", 150f, EditorStyles.boldLabel);
-                DrawColumn("Action", 150f, EditorStyles.boldLabel);
-                DrawColumn("Tag", 120f, EditorStyles.boldLabel);
-                DrawColumn("Damage", 64f, EditorStyles.boldLabel);
-                DrawColumn("Dmg Type", 112f, EditorStyles.boldLabel);
+                DrawHeaderColumn("时间", 52f);
+                DrawHeaderColumn("类型", 112f);
+                DrawHeaderColumn("来源", 130f);
+                DrawHeaderColumn("目标", 130f);
+                DrawHeaderColumn("动作 / 规则", 150f);
+                DrawHeaderColumn("标签", 105f);
+                DrawHeaderColumn("层数", 44f);
+                DrawHeaderColumn("伤害", 58f);
+                DrawHeaderColumn("伤害类型", 105f);
             }
         }
 
@@ -106,7 +119,7 @@ namespace EndLink.Editor
 
             if (_records.Count == 0)
             {
-                EditorGUILayout.HelpBox("No combat events captured. Enter Play Mode and trigger combat actions.", MessageType.Info);
+                EditorGUILayout.HelpBox("尚未捕获战斗事件。进入 Play Mode 并触发战斗行为后会显示。", MessageType.Info);
             }
 
             foreach (CombatEventRecord record in _records)
@@ -118,14 +131,15 @@ namespace EndLink.Editor
 
                 using (new EditorGUILayout.HorizontalScope())
                 {
-                    DrawColumn(record.TimeText, 58f);
+                    DrawColumn(record.TimeText, 52f);
                     DrawColumn(record.EventType.ToString(), 112f);
-                    DrawColumn(record.SourceName, 150f);
-                    DrawColumn(record.TargetName, 150f);
+                    DrawColumn(record.SourceName, 130f);
+                    DrawColumn(record.TargetName, 130f);
                     DrawColumn(record.ActionId, 150f);
-                    DrawColumn(record.TagId, 120f);
-                    DrawColumn(record.DamageText, 64f);
-                    DrawColumn(record.DamageTypeText, 112f);
+                    DrawColumn(record.TagId, 105f);
+                    DrawColumn(record.StackText, 44f);
+                    DrawColumn(record.DamageText, 58f);
+                    DrawColumn(record.DamageTypeText, 105f);
                 }
             }
 
@@ -139,12 +153,16 @@ namespace EndLink.Editor
 
         private static void DrawColumn(string text, float width)
         {
-            DrawColumn(text, width, EditorStyles.label);
+            EditorGUILayout.SelectableLabel(
+                text,
+                EditorStyles.label,
+                GUILayout.Width(width),
+                GUILayout.Height(EditorGUIUtility.singleLineHeight));
         }
 
-        private static void DrawColumn(string text, float width, GUIStyle style)
+        private static void DrawHeaderColumn(string text, float width)
         {
-            EditorGUILayout.LabelField(text, style, GUILayout.Width(width));
+            EditorGUILayout.LabelField(text, EditorStyles.boldLabel, GUILayout.Width(width));
         }
 
         private void OnCombatEventRaised(CombatEvent eventData)
@@ -182,9 +200,38 @@ namespace EndLink.Editor
                 CombatEventType.TagAdded => _showTagEvents,
                 CombatEventType.TagRemoved => _showTagEvents,
                 CombatEventType.TagExpired => _showTagEvents,
-                CombatEventType.ReactionTriggered => _showTagEvents,
+                CombatEventType.ReactionTriggered => _showReactionEvents,
                 _ => true
             };
+        }
+
+        private string BuildReport()
+        {
+            StringBuilder builder = new();
+            builder.AppendLine("EndLink Combat Monitor");
+            foreach (CombatEventRecord record in _records)
+            {
+                builder.Append('[')
+                    .Append(record.TimeText)
+                    .Append("] ")
+                    .Append(record.EventType)
+                    .Append(" | ")
+                    .Append(record.SourceName)
+                    .Append(" -> ")
+                    .Append(record.TargetName)
+                    .Append(" | Action/Rule=")
+                    .Append(record.ActionId)
+                    .Append(" | Tag=")
+                    .Append(record.TagId)
+                    .Append(" x")
+                    .Append(record.StackText)
+                    .Append(" | Damage=")
+                    .Append(record.DamageText)
+                    .Append(' ')
+                    .AppendLine(record.DamageTypeText);
+            }
+
+            return builder.ToString();
         }
 
         private readonly struct CombatEventRecord
@@ -201,6 +248,9 @@ namespace EndLink.Editor
                         ? eventData.ReactionRule.name
                         : "None";
                 TagId = eventData.CombatTag != null ? eventData.CombatTag.TagId : "None";
+                StackText = eventData.CombatTagStackCount > 0
+                    ? eventData.CombatTagStackCount.ToString()
+                    : "-";
                 DamageText = eventData.DamageAmount > 0f ? eventData.DamageAmount.ToString("0.#") : "-";
                 DamageTypeText = eventData.DamageAmount > 0f ? eventData.DamageType.ToString() : "-";
             }
@@ -216,6 +266,8 @@ namespace EndLink.Editor
             public string ActionId { get; }
 
             public string TagId { get; }
+
+            public string StackText { get; }
 
             public string DamageText { get; }
 

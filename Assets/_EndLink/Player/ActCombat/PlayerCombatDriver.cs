@@ -6,7 +6,7 @@ namespace EndLink.Combat
 {
     /// <summary>
     /// 玩家战斗驱动器。
-    /// 只保存玩家可释放的动作槽位，并按照 CombatActionDefinition 执行动作表现和 Hitbox 判定。
+    /// 保存未启用武器形态时的回退动作槽位，并按照 CombatActionDefinition 执行动作表现和 Hitbox 判定。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class PlayerCombatDriver : MonoBehaviour, ICombatActionExecutor, ICombatAnimationEventListener
@@ -14,11 +14,11 @@ namespace EndLink.Combat
         private const float AnimationEventTimeoutPadding = 1f;
 
         [Header("动作槽位")]
-        [Tooltip("玩家普攻动作。鼠标左键会由玩家状态机触发该动作。")]
+        [Tooltip("未挂 PlayerWeaponController 时使用的玩家普攻回退动作。")]
         [SerializeField]
         private CombatActionDefinition basicAttackAction;
 
-        [Tooltip("玩家主动技能动作。由 PartyCombatRouter 的主控技能命令触发。")]
+        [Tooltip("未挂 PlayerWeaponController 时使用的玩家主动技能回退动作。")]
         [SerializeField]
         private CombatActionDefinition skillAction;
 
@@ -28,6 +28,7 @@ namespace EndLink.Combat
 
         private PlayerTargeting _targeting;
         private PlayerController _playerController;
+        private PlayerWeaponController _weaponController;
         private ICombatActionLockReceiver _actionLockReceiver;
         private readonly Dictionary<CombatActionDefinition, float> _nextReadyTimes = new();
         private CombatActionDefinition _lastExecutedAction;
@@ -48,16 +49,20 @@ namespace EndLink.Combat
         public event System.Action<CombatActionDefinition> ActionStarted;
 
         /// <summary>玩家普攻动作。</summary>
-        public CombatActionDefinition BasicAttackAction => basicAttackAction;
+        public CombatActionDefinition BasicAttackAction => _weaponController != null
+            ? _weaponController.CurrentBasicAttackAction
+            : basicAttackAction;
 
         /// <summary>玩家主动技能动作。</summary>
-        public CombatActionDefinition SkillAction => skillAction;
+        public CombatActionDefinition SkillAction => _weaponController != null
+            ? _weaponController.CurrentSkillAction
+            : skillAction;
 
         /// <summary>玩家连携技动作配置。实际释放必须由连携窗口授权。</summary>
         public CombatActionDefinition LinkAction => linkAction;
 
         /// <summary>当前是否可以释放下一次动作。</summary>
-        public bool CanAttack => CanExecute(basicAttackAction);
+        public bool CanAttack => CanExecute(BasicAttackAction);
 
         /// <summary>当前动作冷却剩余时间，单位秒。</summary>
         public float ActionCooldownRemaining => GetCooldownRemaining(_lastExecutedAction);
@@ -115,6 +120,7 @@ namespace EndLink.Combat
         {
             TryGetComponent(out _targeting);
             TryGetComponent(out _playerController);
+            TryGetComponent(out _weaponController);
             _actionLockReceiver = GetComponent<ICombatActionLockReceiver>();
         }
 
@@ -133,7 +139,7 @@ namespace EndLink.Combat
         /// </summary>
         public bool ExecuteAttack()
         {
-            return TryExecute(basicAttackAction);
+            return TryExecute(BasicAttackAction);
         }
 
         /// <summary>

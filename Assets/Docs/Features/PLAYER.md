@@ -245,7 +245,7 @@
 <summary>展开详情</summary>
 
 功能说明：
-- `PlayerComboController` 统一管理普攻段数、每段 Action、下一段输入窗口和每段攻击踏步；默认三个空槽会重复使用现有基础普攻，方便先验证三段节奏。
+- `PlayerComboController` 统一管理普攻段数、每段 Action、下一段输入窗口和每段攻击踏步；挂载 `PlayerWeaponController` 后优先读取当前武器形态的独立连段，未挂载时继续使用原有本地配置。
 - 下一段已经排队但因配置、冷却或执行条件无法启动时，只会短暂重试；超过等待上限后结束连段并返回移动状态，避免永久停留在 Attack。
 - 每一段可单独配置 `CombatActionDefinition`，后续可以逐步替换成不同伤害、Hitbox、前摇和后摇。
 - 每段普攻开始时由 `PlayerComboController` 执行短距离前快后慢踏步；有软锁目标时按 Collider 表面距离停止，目标过远时只沿角色正前方移动。
@@ -260,6 +260,7 @@
 对应脚本：
 - `Assets/_EndLink/Player/ActCombat/PlayerComboController.cs`
 - `Assets/_EndLink/Player/ActCombat/PlayerGuardController.cs`
+- `Assets/_EndLink/Combat/Weapon/PlayerWeaponController.cs`
 - `Assets/_EndLink/Combat/Hitbox/IHitInterceptor.cs`
 - `Assets/_EndLink/Combat/Hitbox/ICombatParryReceiver.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerAttackState.cs`
@@ -269,9 +270,10 @@
 - 玩家根物体
   - `PlayerComboController`
   - `PlayerGuardController`
+  - 可选 `PlayerWeaponController`
 
 关键配置：
-- `comboActions`：按顺序执行的普攻 Action 列表
+- `comboActions`：未挂武器形态控制器时按顺序执行的普攻 Action 回退列表
 - `inputWindowStart` / `inputWindowEnd`：下一段输入窗口
 - `queuedStepTimeout`：下一段已排队但无法执行时的最长等待时间，默认 `0.15` 秒
 - `stepDistance` / `stepDuration`：每段攻击踏步距离与持续时间
@@ -415,7 +417,7 @@
 功能说明：
 - `PlayerCombatDriver` 不读取输入，不决定是否能进入攻击状态。
 - 状态机决定能否攻击，`PlayerCombatDriver` 只负责执行攻击表现和判定。
-- 支持通过 `CombatActionDefinition` 配置普攻、主动技能、连携技的伤害、击退、`CombatTagDefinition` 标签、标签持续时间、冷却、Hitbox 和生成参数。
+- 支持通过 `CombatActionDefinition` 配置普攻、主动技能、连携技的伤害、击退、`CombatTagDefinition` 标签、标签持续时间、冷却、Hitbox 和生成参数；挂载 `PlayerWeaponController` 后，普攻与主动技能自动读取当前形态动作组。
 - `PlayerCombatDriver` 执行的动作必须来自 `CombatActionDefinition`。
 - 支持 `DataDriven` 和 `AnimationEventDriven` 两种动作时序；后者由动画事件决定普通 Hitbox 的有效窗口和状态退出。
 - 动画事件动作可以重复配置多组 `HitboxStart / HitboxEnd`，用于一招多段命中；每个窗口生成独立 Hitbox，整套动作仍只进入一次状态并记录一次冷却。
@@ -429,11 +431,12 @@
 - 成功执行攻击后会通过 `CombatEventsBus` 广播 `ActionStarted`。
 对应脚本：
 - `Assets/_EndLink/Player/ActCombat/PlayerCombatDriver.cs`
+- `Assets/_EndLink/Combat/Weapon/PlayerWeaponController.cs`
 - `Assets/_EndLink/Combat/ICombatActionExecutor.cs`
 - `Assets/_EndLink/Combat/CombatActionDefinition.cs`
 - `Assets/_EndLink/Combat/Hitbox/HitboxBase.cs`
 相关物体/资产：
-- 玩家根物体：挂载 `PlayerCombatDriver`
+- 玩家根物体：挂载 `PlayerCombatDriver`，启用三形态时再挂 `PlayerWeaponController`
 - `CombatActionDefinition` 数据资产：可通过 `Create > EndLink > Combat > Combat Action Definition` 创建
 - `Assets/_EndLink/Combat/Hitbox_Base.prefab`
 - `Assets/_EndLink/Combat/Hitbox_MeleeWave.prefab`

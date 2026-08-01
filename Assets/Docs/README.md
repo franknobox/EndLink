@@ -20,8 +20,7 @@
 |---|---|
 | `Features/PLAYER.md` | 玩家、3C、玩家状态机和玩家侧战斗接线。 |
 | `Features/COMBAT.md` | 战斗数据、目标、伤害、受击、Hitbox、标签和事件系统。 |
-| `Features/PARTY.md` | 小队管理、小队战斗上下文和连携窗口。 |
-| `Features/ALLY.md` | 队友状态机、助战和跟随表现。 |
+| `Features/ALLY.md` | 队友状态机、助战、跟随表现、小队管理、战斗上下文和连携窗口。 |
 | `Features/ENEMIES.md` | 敌人身份与生命目标、敌人感知与大状态机、敌人移动与战斗能力。 |
 | `Features/WORLD.md` | 灰盒地图中的门、电梯、机关等世界交互底座。 |
 | `Features/UI.md` | 运行时 HUD、动作槽位和通用 UI 组件。 |

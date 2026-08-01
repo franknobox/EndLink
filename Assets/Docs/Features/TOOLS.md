@@ -13,12 +13,13 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 
 功能说明：
 - 通过菜单 `EndLink > Combat Data Tool` 打开。
-- 提供 `Actions`、`Tag Definitions`、`Combination Rules` 和 `Asset List` 四个标签页。
+- 提供“动作”“标签定义”“组合规则”和“资源列表”四个标签页。
 - 前三个标签页分别用于快捷创建 `CombatActionDefinition`、`CombatTagDefinition` 和 `CombatTagCombinationRule`。
 - `Actions` 页支持选择动作类型，创建时会同步初始化 Action Id 和显示名称。
 - `Tag Definitions` 页支持创建时填写 Tag Id、显示名称、等级、默认持续时间和最大层数。
-- `Combination Rules` 页支持创建时填写输入标签、所需层数、优先级和第一条反应效果。
-- `Asset List` 标签页会列出三个数据目录下已有的数据资产，并显示动作类型、伤害类型、固定伤害、攻击力倍率、连携协同率、Tag 等级、规则优先级和效果数量等摘要。
+- `Combination Rules` 页支持创建时填写输入标签、所需层数、优先级和第一条反应效果，并同步显示控制、资源、自定义效果所需的数值、半径或效果 ID 字段。
+- `Asset List` 标签页会列出三个数据目录下已有的数据资产；动作摘要覆盖伤害类型、固定伤害、攻击倍率、命中强度、平衡伤害、动作时序、Root Motion、反馈、Hitbox 和连携协同率。
+- 资源列表会提示重复 Action Id、重复 Tag Id、缺失 Hitbox 和无效组合规则，但不会自动修改数据资产。
 - 创建资产后会自动选中并 Ping 到 Project 窗口，复杂字段继续在 Inspector 中编辑。
 - 工具会确保目标目录存在，当前固定使用项目约定的数据路径。
 
@@ -42,38 +43,27 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 功能说明：
 - 通过菜单 `EndLink > UI > Combat HUD` 下的入口执行。
 - 工具使用 Unity Editor API 生成 UGUI Panel Prefab，不手写 `.prefab` 文本。
-- `Create All Panels` 会一次生成全部战斗 HUD 面板；也可以分别生成单个 Panel，方便手动拖到 Canvas 下调整位置。
-- Panel Prefab 本身只保留推荐锚点和尺寸，根 RectTransform 的位置与 Z 会在生成时归零，拖到 Canvas 后再手动调整摆放。
-- 左上生成 `PF_PartyStatusPanel`，包含生命条占位、主控头像和两个队友头像。
-- 成员头像挂载 `UIPartyMemberPortrait`，用于显示 1/2/3 连携键位、连携窗口高亮和 Link Down 灰化。
-- 左下生成 `PF_SkillPanel`，挂载 `UIPartyCombatAction`；主控技能槽显示 Q，两个队友技能槽保留但键位文本留空。
-- 右下生成 `PF_UltimatePanel`，挂载 `UIPartyUltimateBar`，显示当前奥义键位、协同率和终链奥义就绪颜色。
-- 右上生成 `PF_DebugPanel`，挂载 `HUDDebugLogPanel`，用于按分类筛选显示运行时战斗、队友和小队命令日志。
-- 生成的可见占位文案默认不放英文说明文字，只保留键位和运行时动态内容，避免白模阶段默认 HUD 出现无用英文标签。
-- 生成的主角/队友状态条默认采用 `#659F67` 一档绿色；头像占位保持中性灰，技能槽保留区分配色，奥义条默认使用黄色充能。
-- 工具会在缺失时创建基础圆形和方形 UI Sprite，便于白模阶段直接看到 HUD 结构。
-- 工具只生成 Panel Prefab 资产，不直接修改当前场景。
+- `Create Current Prefabs` 会生成当前仍在使用的运行时调试面板和敌人头顶血条，也可以分别生成单个 Prefab。
+- `PF_DebugPanel` 挂载 `HUDDebugLogPanel`，用于显示运行时战斗、队友和小队命令日志。
+- `PF_EnemyHealthBar` 使用 World Space Canvas、`UIEnemyHealthBar` 和 `UIHealthBar`，生成后可挂到正式敌人视觉层级。
+- 旧版小队状态、动作槽和终链奥义 UI 已归档在 `UI/PartyUI`，生成器不再创建或覆盖对应 Prefab。
+- 工具只生成 Prefab 资产，不直接修改当前场景；缺失基础方形 Sprite 时才会补建。
 
 对应脚本：
 - `Assets/_EndLink/Editor/CombatHUDPrefabGenerator.cs`
-- `Assets/_EndLink/UI/UIPartyMemberPortrait.cs`
-- `Assets/_EndLink/UI/UIPartyUltimateBar.cs`
 - `Assets/_EndLink/UI/HUDDebugLogPanel.cs`
+- `Assets/_EndLink/UI/UIEnemyHealthBar.cs`
+- `Assets/_EndLink/UI/UIHealthBar.cs`
 
 生成路径：
-- `Assets/_EndLink/UI/Prefabs/PF_PartyStatusPanel.prefab`
-- `Assets/_EndLink/UI/Prefabs/PF_SkillPanel.prefab`
-- `Assets/_EndLink/UI/Prefabs/PF_UltimatePanel.prefab`
 - `Assets/_EndLink/UI/Prefabs/PF_DebugPanel.prefab`
-- `Assets/_EndLink/UI/Generated/UI_Circle64.png`
+- `Assets/_EndLink/UI/Prefabs/PF_EnemyHealthBar.prefab`
 - `Assets/_EndLink/UI/Generated/UI_Square64.png`
 
 相关 Editor 工具：
-- `EndLink > UI > Combat HUD > Create All Panels`
-- `EndLink > UI > Combat HUD > Create Party Status Panel`
-- `EndLink > UI > Combat HUD > Create Skill Panel`
-- `EndLink > UI > Combat HUD > Create Ultimate Panel`
+- `EndLink > UI > Combat HUD > Create Current Prefabs`
 - `EndLink > UI > Combat HUD > Create Debug Panel`
+- `EndLink > UI > Combat HUD > Create Enemy Health Bar`
 
 </details>
 
@@ -108,33 +98,6 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 
 </details>
 
-<a id="feature-ally-monitor"></a>
-
-### Feature：队友调试监视窗口
-
-<details>
-<summary>展开详情</summary>
-
-功能说明：
-- `AllyDebugLog` 是队友专用调试事件流，运行时代码只负责上报状态切换、事件响应、助战阶段、冷却等待和攻击执行等关键行为。
-- `AllyMonitorWindow` 是 Editor 队友监视窗口，通过 `EndLink > Debug > Ally Monitor` 打开。
-- 窗口上半部分显示当前场景所有 `AllyStateMachine` 的状态快照，包括状态、跟随目标、助战目标、到目标 Collider 表面的距离、攻击距离、重接近距离、冷却和当前 Action。
-- 窗口下半部分显示队友行为日志，可以按队友对象和 `State / Brain / Assist / Combat / Follow` 分类过滤。
-- `Capture` 控制是否采集队友调试事件，`Console` 控制是否同时镜像到 Unity Console，默认建议只看窗口避免刷屏。
-
-对应脚本：
-- `Assets/_EndLink/Ally/AllyDebugLog.cs`
-- `Assets/_EndLink/Editor/AllyMonitorWindow.cs`
-- `Assets/_EndLink/Ally/AllyStateMachine.cs`
-- `Assets/_EndLink/Ally/AllyBrain.cs`
-- `Assets/_EndLink/Ally/AllyAssistState.cs`
-- `Assets/_EndLink/Ally/AllyCombatDriver.cs`
-
-相关 Editor 工具：
-- `EndLink > Debug > Ally Monitor`
-
-</details>
-
 <a id="feature-art-asset-validator"></a>
 
 ### Feature：美术资源校验工具
@@ -161,5 +124,31 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 
 相关 Editor 工具：
 - `EndLink > Validation > Asset Validator`
+
+</details>
+
+<a id="feature-scene-doctor"></a>
+
+### Feature：场景配置体检
+
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- 通过 `EndLink > Validation > Scene Doctor` 打开，只扫描当前活动场景。
+- 第一版只报告问题，不会添加组件、修改 Layer、重写引用或标记场景为已修改。
+- 通用检查覆盖 Missing Script、已丢失的序列化对象引用，以及违反 `DisallowMultipleComponent` 的重复组件。
+- 玩家与镜头检查覆盖固定主控关键组件、生命/索敌/连段/格挡/Animator 桥接、三种武器形态动作组、世界交互接线、Main Camera、Cinemachine Brain 和视角模式入口。
+- 战斗与敌人检查覆盖场景反馈调度器、正式敌人生命/平衡/标签/目标/状态/感知/移动/动作接线、视觉根和敌人 Collider Layer。
+- 数据与导航检查覆盖场景实际引用的 Action Id、Hitbox Prefab、重复 Action Id、推荐 Layer、NavMesh 数据和启用但未落在 NavMesh 上的 Agent。
+- 窗口支持按严重程度、类别和关键字筛选，问题对象可直接定位，并可复制完整文本报告。
+
+对应脚本：
+- `Assets/_EndLink/Editor/SceneValidationIssue.cs`
+- `Assets/_EndLink/Editor/SceneValidator.cs`
+- `Assets/_EndLink/Editor/SceneDoctorWindow.cs`
+
+相关 Editor 工具：
+- `EndLink > Validation > Scene Doctor`
 
 </details>

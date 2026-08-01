@@ -33,9 +33,8 @@
 - `UIHealthBar` 和 `UIEnemyHealthBar` 不会在 `Awake` / `OnValidate` 里修改 `CanvasGroup` 显隐，首次显示刷新延后到 `Start`，避免编辑器生命周期 warning。
 - `UIEnemyHealthBar` 是敌人头顶血条控制器，负责 World Space 跟随、面向相机、绑定 `EnemyHealth` 和套用默认半透明暗红色样式。
 - 敌人头顶血条预制体使用小尺寸世界单位 RectTransform，避免拖入场景时因为缩放重置变成巨大半透明面片；显隐刷新只在运行期改 `CanvasGroup`。
-- `CombatHUDPrefabGenerator` 提供 `EndLink > UI > Combat HUD` 菜单入口，可以一键生成所有面板，也可以单独生成某个 Panel Prefab。
-- 生成的 HUD 面板当前包含左上小队状态区、头像连携区、左下主动技能区、右下终链奥义条和右上临时调试信息区；主控技能显示 Q，队友技能槽当前不显示键位；生成器也可单独生成敌人头顶血条 World UI 预制体。
-- 生成器默认不再写入可见英文说明文字；主角/队友状态条使用 `#659F67` 一档绿色，头像占位保持中性灰，技能槽保留区分配色，奥义条默认使用黄色充能；键位与运行时动态文本仍正常保留。
+- `CombatHUDPrefabGenerator` 提供 `EndLink > UI > Combat HUD` 菜单入口，当前只生成仍在使用的运行时调试面板和敌人头顶血条。
+- 旧版小队状态、动作槽与奥义 Prefab 继续作为归档资产保留，但不会再被生成工具创建或覆盖；新版单人战斗 UI 后续使用新的接口和生成流程。
 
 对应脚本：
 - `Assets/_EndLink/UI/HUDCombatController.cs`
@@ -85,12 +84,8 @@
   - `UIHealthBar`
   - 半透明暗红色背景与填充 `Image`
 - 生成工具产物
-  - `Assets/_EndLink/UI/Prefabs/PF_PartyStatusPanel.prefab`
-  - `Assets/_EndLink/UI/Prefabs/PF_SkillPanel.prefab`
-  - `Assets/_EndLink/UI/Prefabs/PF_UltimatePanel.prefab`
   - `Assets/_EndLink/UI/Prefabs/PF_DebugPanel.prefab`
   - `Assets/_EndLink/UI/Prefabs/PF_EnemyHealthBar.prefab`，运行生成菜单后创建
-  - `Assets/_EndLink/UI/Generated/UI_Circle64.png`
   - `Assets/_EndLink/UI/Generated/UI_Square64.png`
 
 关键配置：

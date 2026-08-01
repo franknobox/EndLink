@@ -13,7 +13,7 @@ namespace EndLink.Combat
     public sealed class PlayerComboController : MonoBehaviour
     {
         [Header("普攻连段")]
-        [Tooltip("按顺序执行的普攻动作。空槽会回退使用 PlayerCombatDriver 的基础普攻，默认三个空槽即三段同动作连段。")]
+        [Tooltip("未挂 PlayerWeaponController 时使用的普攻连段。空槽会回退使用 PlayerCombatDriver 的基础普攻。")]
         [SerializeField]
         private List<CombatActionDefinition> comboActions = new() { null, null, null };
 
@@ -48,7 +48,9 @@ namespace EndLink.Combat
 
         private readonly PlayerComboSequence _sequence = new();
         private CombatActionDefinition _fallbackAction;
+        private IReadOnlyList<CombatActionDefinition> _activeComboActions;
         private PlayerController _controller;
+        private PlayerWeaponController _weaponController;
         private Transform _motionTarget;
         private Vector3 _fallbackDirection;
         private float _motionElapsedTime;
@@ -82,6 +84,7 @@ namespace EndLink.Combat
         private void Awake()
         {
             _controller = GetComponent<PlayerController>();
+            TryGetComponent(out _weaponController);
         }
 
         private void OnDisable()
@@ -104,7 +107,10 @@ namespace EndLink.Combat
         public CombatActionDefinition BeginCombo(CombatActionDefinition fallbackAction)
         {
             _fallbackAction = fallbackAction;
-            int stepCount = comboActions != null && comboActions.Count > 0 ? comboActions.Count : 1;
+            _activeComboActions = ResolveConfiguredComboActions();
+            int stepCount = _activeComboActions != null && _activeComboActions.Count > 0
+                ? _activeComboActions.Count
+                : 1;
             _sequence.Begin(stepCount);
             return CurrentAction;
         }
@@ -112,9 +118,10 @@ namespace EndLink.Combat
         /// <summary>在不改变连段运行时状态的情况下，解析第一段将使用的动作。</summary>
         public CombatActionDefinition GetFirstAction(CombatActionDefinition fallbackAction)
         {
-            if (comboActions != null && comboActions.Count > 0 && comboActions[0] != null)
+            IReadOnlyList<CombatActionDefinition> configuredActions = ResolveConfiguredComboActions();
+            if (configuredActions != null && configuredActions.Count > 0 && configuredActions[0] != null)
             {
-                return comboActions[0];
+                return configuredActions[0];
             }
 
             return fallbackAction;
@@ -142,6 +149,7 @@ namespace EndLink.Combat
         public void ResetCombo()
         {
             _fallbackAction = null;
+            _activeComboActions = null;
             _sequence.Reset();
             CancelMotion();
         }
@@ -229,15 +237,23 @@ namespace EndLink.Combat
 
         private CombatActionDefinition ResolveAction(int stepIndex)
         {
-            if (comboActions != null
+            IReadOnlyList<CombatActionDefinition> actions = _activeComboActions ?? ResolveConfiguredComboActions();
+            if (actions != null
                 && stepIndex >= 0
-                && stepIndex < comboActions.Count
-                && comboActions[stepIndex] != null)
+                && stepIndex < actions.Count
+                && actions[stepIndex] != null)
             {
-                return comboActions[stepIndex];
+                return actions[stepIndex];
             }
 
             return _fallbackAction;
+        }
+
+        private IReadOnlyList<CombatActionDefinition> ResolveConfiguredComboActions()
+        {
+            return _weaponController != null
+                ? _weaponController.CurrentComboActions
+                : comboActions;
         }
 
         private Transform ResolveUsableTarget(Transform target)

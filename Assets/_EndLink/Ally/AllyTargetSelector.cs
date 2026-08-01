@@ -28,7 +28,7 @@ namespace EndLink.Ally
         private float primaryTargetScoreBonus = 10000f;
 
         [Header("调试")]
-        [Tooltip("开启后会向 Ally Monitor 播报目标选择结果，方便排查队友为什么换目标或没有目标。")]
+        [Tooltip("开启后会写入队友调试日志，方便排查队友为什么换目标或没有目标。")]
         [SerializeField]
         private bool logSelection;
 

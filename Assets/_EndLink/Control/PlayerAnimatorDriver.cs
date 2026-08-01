@@ -6,7 +6,7 @@ namespace EndLink.Core
 {
     /// <summary>
     /// 玩家 Animator 桥接层。
-    /// 只负责把玩家状态机和移动速度同步到 Animator 参数，不读取输入，不决定状态切换。
+    /// 只负责把玩家状态机、移动速度和武器形态同步到 Animator 参数，不读取输入，不决定状态切换。
     /// 胶囊白模阶段可以先挂着观察参数，后续接真实 Animator Controller 时不需要改状态机。
     /// </summary>
     [DisallowMultipleComponent]
@@ -48,6 +48,10 @@ namespace EndLink.Core
         [SerializeField]
         private string actionTriggerParameter = CombatAnimatorParams.ActionTrigger;
 
+        [Tooltip("当前武器形态 Int 参数名。0=A，1=B，2=C；当前设计定位分别为标准、射击、重刃。为空则不写入。")]
+        [SerializeField]
+        private string weaponFormParameter = CombatAnimatorParams.WeaponForm;
+
         [Header("状态触发器")]
         [Tooltip("进入 Attack 状态时触发的 Trigger 参数名。为空则不触发。")]
         [SerializeField]
@@ -78,6 +82,7 @@ namespace EndLink.Core
         private readonly HashSet<int> _warnedMissingParameterHashes = new();
         private PlayerStateMachine _stateMachine;
         private PlayerCombatDriver _combatDriver;
+        private PlayerWeaponController _weaponController;
         private CharacterController _characterController;
         private PlayerStateId _lastStateId = PlayerStateId.None;
 
@@ -91,6 +96,7 @@ namespace EndLink.Core
         {
             _stateMachine = GetComponent<PlayerStateMachine>();
             _combatDriver = GetComponent<PlayerCombatDriver>();
+            TryGetComponent(out _weaponController);
             _characterController = GetComponent<CharacterController>();
 
             if (animator == null)
@@ -165,6 +171,10 @@ namespace EndLink.Core
             SetBoolIfExists(isMovingParameter, planarSpeed > 0.05f);
             SetIntegerIfExists(stateIdParameter, (int)currentStateId);
             SetBoolIfExists(isDeadParameter, currentStateId == PlayerStateId.Dead);
+            if (_weaponController != null)
+            {
+                SetIntegerIfExists(weaponFormParameter, (int)_weaponController.CurrentForm);
+            }
 
             if (currentStateId != _lastStateId)
             {
