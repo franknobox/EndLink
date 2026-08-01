@@ -23,11 +23,12 @@ namespace EndLink.World
 
     /// <summary>
     /// 两层电梯移动平台。
-    /// 使用运动学 Rigidbody 驱动物理平台，并给 CharacterController 类乘客补充同帧平台位移。
+    /// 使用运动学 Rigidbody 驱动物理平台，给 CharacterController 类乘客补充同帧平台位移，
+    /// 并作为 IObjFunction 接收交互子物体提交的运行请求。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody))]
-    public sealed class ElevatorPlatform : MonoBehaviour
+    public sealed class ElevatorPlatform : MonoBehaviour, IObjFunction
     {
         private const float MinTravelSpeed = 0.01f;
         private const float MinTravelDistanceSqr = 0.000001f;
@@ -206,6 +207,17 @@ namespace EndLink.World
                 : ElevatorPlatformState.MovingDown;
             onTravelStarted?.Invoke();
             return true;
+        }
+
+        /// <summary>
+        /// 接收通用 ObjInteractable 提交的武器交互请求。
+        /// 玩家必须处于平台乘客范围内，且平台已经停靠并可接受新的运行请求。
+        /// </summary>
+        public bool TryExecute(ObjInteractionContext context)
+        {
+            return context.Interactor != null
+                && IsPassenger(context.Interactor)
+                && TryStartTravel();
         }
 
         /// <summary>判断指定交互者当前是否位于平台乘客 Trigger 内。</summary>

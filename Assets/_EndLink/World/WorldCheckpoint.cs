@@ -3,11 +3,12 @@ using UnityEngine;
 namespace EndLink.World
 {
     /// <summary>
-    /// 可交互的检查点入口。
-    /// 负责把关联的 WorldSpawnPoint 激活为当前复活点，实际恢复与复活流程交给 WorldRespawnManager。
+    /// 检查点功能入口。
+    /// 负责把关联的 WorldSpawnPoint 激活为当前复活点，实际恢复与复活流程交给 WorldRespawnManager；
+    /// 当前同时兼容旧版按键交互和子物体 ObjInteractable 提交的武器交互。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class WorldCheckpoint : WorldInteractable
+    public sealed class WorldCheckpoint : WorldInteractable, IObjFunction
     {
         [Header("检查点")]
         [Tooltip("该检查点对应的通用出生位置。为空时读取同物体的 WorldSpawnPoint。")]
@@ -72,6 +73,15 @@ namespace EndLink.World
         {
             WorldRespawnManager manager = ResolveManager();
             return manager != null && manager.ActivateCheckpoint(spawnPoint, interactor);
+        }
+
+        /// <summary>
+        /// 接收通用 ObjInteractable 提交的武器交互请求。
+        /// 复用原交互入口，使战斗限制、休整逻辑和通用交互事件保持一致。
+        /// </summary>
+        public bool TryExecute(ObjInteractionContext context)
+        {
+            return TryInteract(context.Interactor);
         }
 
         protected override void OnValidate()

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using EndLink.Core;
+using EndLink.World;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -59,9 +60,11 @@ namespace EndLink.Combat
 
         private readonly HashSet<Collider> _hitColliders = new();
         private readonly HashSet<Transform> _hitTargets = new();
+        private readonly HashSet<ObjInteractable> _interactedObjects = new();
         private Collider _triggerCollider;
         private GameObject _owner;
         private CharacterStats _ownerStats;
+        private PlayerWeaponController _ownerWeaponController;
         private CombatActionDefinition _actionDefinition;
         private float _enabledTime;
         private float _runtimeLifetime = -1f;
@@ -92,6 +95,9 @@ namespace EndLink.Combat
 
         /// <summary>成功命中事件。</summary>
         public HitboxUnityEvent OnHit => onHit;
+
+        /// <summary>最近一次 Trigger 回调是否被世界物体交互系统接受，供 Projectile 判断是否结束飞行。</summary>
+        protected bool ObjectInteractionAcceptedOnLastTrigger { get; private set; }
 
         protected virtual void Awake()
         {
@@ -147,6 +153,9 @@ namespace EndLink.Combat
         {
             _owner = owner;
             _ownerStats = owner != null ? owner.GetComponentInParent<CharacterStats>() : null;
+            _ownerWeaponController = owner != null
+                ? owner.GetComponentInParent<PlayerWeaponController>()
+                : null;
             _runtimeLifetime = -1f;
         }
 
@@ -181,6 +190,7 @@ namespace EndLink.Combat
         {
             _hitColliders.Clear();
             _hitTargets.Clear();
+            _interactedObjects.Clear();
         }
 
         /// <summary>
@@ -219,6 +229,8 @@ namespace EndLink.Combat
 
         protected virtual void OnTriggerEnter(Collider other)
         {
+            ObjectInteractionAcceptedOnLastTrigger = TryHandleObjectInteraction(other);
+
             if (!CanHit(other))
             {
                 return;
@@ -247,6 +259,46 @@ namespace EndLink.Combat
                 hitTarget);
             ApplyCombatTag(other);
             onHit.Invoke(other);
+        }
+
+        /// <summary>
+        /// 把玩家武器命中独立提交给世界交互系统。
+        /// 该分支不受战斗目标 Layer 与 IHitReceiver 限制；若对象同时也是战斗目标，后续伤害流程仍会继续执行。
+        /// </summary>
+        private bool TryHandleObjectInteraction(Collider other)
+        {
+            if (other == null || _owner == null || _ownerWeaponController == null)
+            {
+                return false;
+            }
+
+            ObjInteractable interactable = other.GetComponentInParent<ObjInteractable>();
+            if (interactable == null || _interactedObjects.Contains(interactable))
+            {
+                return false;
+            }
+
+            // 同一个 Hitbox 即使碰到交互物的多个 Collider，也只向该交互组件提交一次。
+            _interactedObjects.Add(interactable);
+
+            Vector3 targetPoint = other.bounds.center;
+            Vector3 hitPoint = other.bounds.ClosestPoint(transform.position);
+            Vector3 hitDirection = Vector3.ProjectOnPlane(
+                targetPoint - _owner.transform.position,
+                Vector3.up);
+            if (hitDirection.sqrMagnitude <= 0.0001f)
+            {
+                hitDirection = transform.forward;
+            }
+
+            ObjInteractionContext context = new(
+                _owner,
+                _ownerWeaponController.CurrentForm,
+                other,
+                hitPoint,
+                hitDirection,
+                knockbackForce);
+            return interactable.TryReceive(context);
         }
 
         /// <summary>

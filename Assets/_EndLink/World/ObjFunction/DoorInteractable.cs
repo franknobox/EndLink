@@ -23,13 +23,13 @@ namespace EndLink.World
     }
 
     /// <summary>
-    /// 通用门交互组件。
+    /// 通用门功能组件。
     /// 组件应挂在稳定的门根物体上，通过 Moving Part 驱动门板平移或旋转，
-    /// 并复用现有世界交互系统响应玩家的交互输入。
+    /// 可同时接收旧版按键交互和子物体 ObjInteractable 提交的武器交互。
     /// </summary>
     [DisallowMultipleComponent]
     [MovedFrom(true, sourceNamespace: "EndLink.World", sourceAssembly: "EndLink.Runtime", sourceClassName: "WorldDoor")]
-    public sealed class DoorInteractable : WorldInteractable
+    public sealed class DoorInteractable : WorldInteractable, IObjFunction
     {
         private const float MinMoveDuration = 0.01f;
         private const float EndpointTolerance = 0.0001f;
@@ -165,6 +165,15 @@ namespace EndLink.World
 
             SetOpen(!_targetOpen);
             return true;
+        }
+
+        /// <summary>
+        /// 接收通用 ObjInteractable 提交的武器交互请求。
+        /// 复用现有 TryInteract 入口，确保启用状态、门体状态和通用交互事件保持一致。
+        /// </summary>
+        public bool TryExecute(ObjInteractionContext context)
+        {
+            return TryInteract(context.Interactor);
         }
 
         /// <summary>请求开门。</summary>

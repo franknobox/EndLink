@@ -439,6 +439,7 @@
 - 动画驱动的标准 Hitbox 由 `HitboxEnd` 或 `ActionEnd` 主动关闭，同时保留动作总时长后的防泄漏超时。
 - `HitboxProjectile` 不读取动作 `ActiveTime`，仍使用 prefab 自身的 `lifetime` 与 `maxDistance` 控制飞行寿命。
 - 没有动作上下文时，Hitbox 仍回退使用 prefab 自身的 `lifetime`，方便独立测试和特殊用法。
+- 玩家 Hitbox 会把当前 A/B/C 武器形态独立提交给 `ObjInteractable`，该世界交互分支不占用战斗目标 Layer 和伤害接口；远程弹体成功触发物体交互后也会遵循 `Destroy On Hit`。
 
 功能说明：
 - `HitboxBase` 是大多数攻击判定的基础组件。

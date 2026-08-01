@@ -23,10 +23,10 @@
 - 普通机关可直接挂 `WorldInteractable` 用事件测试；专用机关通过继承基类扩展具体行为。
 
 ### 对应脚本
-- `Assets/_EndLink/World/IWorldInteractable.cs`
-- `Assets/_EndLink/World/WorldInteractable.cs`
-- `Assets/_EndLink/World/WorldInteractor.cs`
-- `Assets/_EndLink/World/PlayerInteractor.cs`
+- `Assets/_EndLink/World/Interactable/IWorldInteractable.cs`
+- `Assets/_EndLink/World/Interactable/WorldInteractable.cs`
+- `Assets/_EndLink/World/Interactable/WorldInteractor.cs`
+- `Assets/_EndLink/World/Interactable/PlayerInteractor.cs`
 - `Assets/_EndLink/Control/PlayerInputReader.cs`
 
 ### 相关物体 / 配置
@@ -34,6 +34,36 @@
 - 可交互机关根物体可直接挂 `WorldInteractable`、继承它的专用机关脚本，或挂直接实现 `IWorldInteractable` 的组件，并需要有可被扫描到的 Collider。
 - `WorldInteractor` 的 `Interactable Layers` 后续建议指向专用 Interactable Layer，避免扫描无关碰撞体。
 - `Player/Interact` 已存在于 Input Actions 中，当前默认绑定键盘 `F` 单击和手柄 `buttonNorth`；系统只消费输入，不手工维护生成文件。
+
+<a id="feature-weapon-object-interaction"></a>
+
+## Feature: 武器物体交互
+
+### 当前状态
+已完成第一版。
+
+### 功能说明
+- `ObjInteractable` 作为通用武器交互入口，推荐挂在具体功能物体的交互子物体上，与接收 Hitbox 的 Collider 配合使用。
+- 固定提供触发装置、网络结构、远程节点、可破坏物、重型物体和受力机关六种类型，并分别固定对应 A、A、B、C、C、C 武器形态。
+- 网络结构和可破坏物支持配置累计命中次数；其余类型在单次合法命中后尝试执行功能。
+- 交互组件只负责形态检查、命中进度、最短命中间隔和一次性触发，具体功能统一交给父级 `IObjFunction`。
+- 玩家 Hitbox 会独立检测 `ObjInteractable`，不要求对象属于战斗目标 Layer 或实现 `IHitReceiver`；同一对象如果也是战斗目标，仍会继续进入正常伤害流程。
+- 门、电梯平台和检查点已接入 `IObjFunction`；原有 F 键交互入口继续保留，便于场景逐步迁移。
+
+### 对应脚本
+- `Assets/_EndLink/World/Interactable/ObjInteractionType.cs`
+- `Assets/_EndLink/World/Interactable/ObjInteractionContext.cs`
+- `Assets/_EndLink/World/Interactable/IObjFunction.cs`
+- `Assets/_EndLink/World/Interactable/ObjInteractable.cs`
+- `Assets/_EndLink/Combat/Hitbox/HitboxBase.cs`
+- `Assets/_EndLink/Combat/Hitbox/HitboxProjectile.cs`
+
+### 相关物体 / 配置
+- 功能组件挂在稳定父物体上；交互子物体挂 Collider 和 `ObjInteractable`，`Function Target` 可留空自动向父级查找。
+- `Required Hit Count` 只对网络结构和可破坏物生效；`Min Hit Interval` 用于避免同一段攻击的重叠判定被重复累计。
+- 触发后不应再次使用的物体可开启 `Trigger Once`，需要在机关或场景重置时调用 `ResetInteraction()` 恢复。
+- 交互 Collider 所在 Layer 必须允许与武器 Hitbox 所在 Layer 产生 Trigger 回调；世界交互分支不读取 Hitbox 的战斗目标 LayerMask。
+- 当前未自动修改场景，门、电梯或检查点需要按“功能父物体 + 交互子物体”结构手动添加 `ObjInteractable`。
 
 <a id="feature-world-spawn-checkpoint"></a>
 
@@ -54,7 +84,7 @@
 
 ### 对应脚本
 - `Assets/_EndLink/World/WorldSpawnPoint.cs`
-- `Assets/_EndLink/World/Interactable/WorldCheckpoint.cs`
+- `Assets/_EndLink/World/WorldCheckpoint.cs`
 - `Assets/_EndLink/World/WorldRespawnManager.cs`
 - `Assets/_EndLink/Control/PlayerController.cs`
 - `Assets/_EndLink/Player/StateMachine/PlayerStateMachine.cs`
@@ -83,8 +113,8 @@
 - 提供开始运行、抵达下层和抵达上层事件，后续可以接电梯门、音效、灯光或关卡逻辑。
 
 ### 对应脚本
-- `Assets/_EndLink/World/Interactable/ElevatorPlatform.cs`
-- `Assets/_EndLink/World/Interactable/ElevatorInteractable.cs`
+- `Assets/_EndLink/World/ObjFunction/ElevatorPlatform.cs`
+- `Assets/_EndLink/World/ObjFunction/ElevatorInteractable.cs`
 - `Assets/_EndLink/Control/IExternalDisplacementReceiver.cs`
 
 ### 相关物体 / 配置
@@ -109,7 +139,7 @@
 - 提供开门开始、完全开启、关门开始和完全关闭事件。
 
 ### 对应脚本
-- `Assets/_EndLink/World/Interactable/DoorInteractable.cs`
+- `Assets/_EndLink/World/ObjFunction/DoorInteractable.cs`
 
 ### 相关物体 / 配置
 - 推荐使用稳定的门根物体挂 `DoorInteractable` 和交互 Trigger，独立门板子物体拖入 `Moving Part`。

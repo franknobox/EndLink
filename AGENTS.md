@@ -45,7 +45,8 @@ Assets/_EndLink/
 │  └─ StateMachine/      玩家状态机
 ├─ Tests/                测试脚本和可复用的 EndLink.Tests.asmdef
 ├─ World/                灰盒地图中的世界交互、出生与复活底座
-│  └─ Interactable/      门、电梯、检查点等具体交互实现
+│  ├─ Interactable/      世界交互接口、通用基类、扫描与玩家交互桥接
+│  └─ ObjFunction/       门、电梯等具体交互物功能
 └─ UI/                   运行时 HUD、动作槽位和血条组件
    └─ PartyUI/           暂时归档的小队战斗 UI 组件
 ```

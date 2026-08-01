@@ -81,7 +81,7 @@ namespace EndLink.Combat
 
             base.OnTriggerEnter(other);
 
-            if (shouldDestroyAfterHit)
+            if (shouldDestroyAfterHit || (destroyOnHit && ObjectInteractionAcceptedOnLastTrigger))
             {
                 Destroy(gameObject);
             }
