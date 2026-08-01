@@ -3,6 +3,7 @@
     "rootNamespace": "EndLink.Editor",
     "references": [
         "EndLink.Runtime",
+        "Unity.InputSystem",
         "Unity.TextMeshPro",
         "UnityEngine.UI"
     ],

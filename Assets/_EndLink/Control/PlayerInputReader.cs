@@ -22,7 +22,7 @@ namespace EndLink.Core
         public bool SprintHeld { get; private set; }
 
         /// <summary>
-        /// 当前是否按住防御输入。默认绑定为鼠标右键，手柄为左扳机。
+        /// 当前是否按住防御输入。默认绑定为鼠标右键，手柄为 LB / L1。
         /// </summary>
         public bool GuardHeld { get; private set; }
 

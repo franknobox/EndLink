@@ -33,6 +33,33 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 
 </details>
 
+<a id="feature-input-binding-tool"></a>
+
+### Feature：输入绑定工具
+
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- 通过 `EndLink > Input > Binding Tool` 打开，直接读取 `InputSystem_Actions.inputactions` 中的项目默认绑定。
+- 提供“键盘与鼠标”和“手柄”两个子页面，按游戏操作与界面操作分组，以中文操作名和按键槽展示绑定。
+- 点击按键槽即可监听修改；移动、界面导航等复合绑定会拆成上、下、左、右四行，并保留同一方向的主副绑定。
+- 普通绑定和复合绑定的具体方向支持监听与清除；跨键鼠/手柄共用的系统默认槽位保持只读，避免单页修改同时破坏另一设备。
+- 原始 Input System Path 默认隐藏，可通过“高级路径”展开并直接编辑普通槽位。
+- 监听时只接收当前槽位对应的设备类型，鼠标点击不会误写到手柄槽位，特殊轴输入仍可通过原始路径编辑。
+- 自动检查同一控制方案中的完全重复路径和父子路径占用，例如右摇杆整体与右摇杆方向同时绑定。
+- 每个设备页分别显示冲突摘要，同时区分“冲突关系组数”和“受影响绑定槽位数”，黄色图标数量对应当前页受影响槽位。
+- 修改先保存在窗口内存副本中，支持 Undo、放弃修改和未保存提示；只有点击“应用到 Input Actions”后才写回源资产并触发重导入。
+- Play Mode 中只允许查看；工具不修改生成的 `InputSystem_Actions.cs`，也不负责未来玩家运行时改键的本地持久化。
+
+对应脚本：
+- `Assets/_EndLink/Editor/InputBindingToolWindow.cs`
+
+相关 Editor 工具：
+- `EndLink > Input > Binding Tool`
+
+</details>
+
 <a id="feature-combat-hud-generator"></a>
 
 ### Feature：战斗 HUD 生成工具

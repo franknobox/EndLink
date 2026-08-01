@@ -19,15 +19,16 @@
 - 跳跃输入读取 `Player/Jump`，默认键位为键盘 `Space`、手柄 `buttonSouth`。
 - 世界交互输入读取 `Player/Interact`，当前默认键位为键盘 `F` 单击和手柄 `buttonNorth`。
 - 攻击输入读取 `Player/Attack`，由状态机统一捕获并写入短时攻击缓冲，再决定是否进入攻击状态。
-- 防御输入读取 `Player/Guard`，默认键位为鼠标右键、手柄左扳机，只缓存当前是否按住。
+- 攻击输入读取 `Player/Attack`，默认键位为鼠标左键、手柄 `RB / R1`。
+- 防御输入读取 `Player/Guard`，默认键位为鼠标右键、手柄 `LB / L1`，只缓存当前是否按住。
 - 目标锁定输入读取 `Player/TargetLock`，默认键位为鼠标中键、手柄右摇杆按下；输入层只缓存按下事件，是否建立硬锁由视角模式决定。
 - 硬锁目标切换复用 `Player/Look`：键鼠按鼠标横向滑动方向切换，手柄按右摇杆左右推动方向切换；输入层只提供原始方向，候选目标仍由索敌系统选择。
 - 闪避输入读取 `Player/Dodge`，默认键位为键盘 `Left Ctrl`、手柄 `buttonEast`。
 - 主控主动技能读取 `Player/PlayerSkill`，默认键位 Q。
-- 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`；当前不绑定键盘，路由配置入口和手柄绑定继续保留。
+- 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`；当前不绑定键盘，队友 A 手柄槽位也暂时留空，队友 B 暂用 `RT / R2`。
 - 主控和队友连携请求读取 `Player/PlayerLinkAttack`、`Player/AllySlotALinkAttack`、`Player/AllySlotBLinkAttack`，默认键位 1 / 2 / 3；这些输入不会绕过连携机制直接释放动作。
 - 全队终链奥义读取 `Player/PartyUltimate`，默认键位 V，可由 `PartyCombatRouter` 在运行时覆盖。
-- 手柄第一版临时绑定：主控技能 `rightShoulder`，队友 A 技能 `leftShoulder`，队友 B 技能 `rightTrigger`，主控/队友连携为 D-Pad 上/左/右，全队极限技为 D-Pad 下；后续可根据实际手柄手感统一调整。
+- 手柄当前绑定：攻击 `RB / R1`，格挡 `LB / L1`，队友 B 技能暂为 `RT / R2`，主控/队友连携为 D-Pad 上/左/右，全队极限技为 D-Pad 下；主控技能和队友 A 技能的手柄槽位暂时留空，后续通过输入绑定工具确定。
 - 相机旋转读取 `Player/Look`。
 
 对应脚本：

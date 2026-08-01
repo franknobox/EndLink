@@ -29,7 +29,7 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成方向切换输入版 | 负责读取玩家移动、攻击、防御、目标锁定、世界交互和 Look 等输入，并把输入缓存为控制层可使用的数据。 |
+| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成方向切换输入版 | 负责读取玩家移动、攻击、防御、目标锁定、世界交互和 Look 等输入；当前手柄攻击/格挡为 `RB / LB`，不保留蹲伏 Action。 |
 | [玩家 CharacterController 移动](Features/PLAYER.md#feature-player-movement) | 已完成锁定移动版 | 负责玩家平滑移动、基础跳跃、重力贴地、转向、目标相对移动，以及战斗击退的短时衰减后退。 |
 | [第三人称视角模式](Features/PLAYER.md#feature-third-person-camera) | 已完成锁定操控版 | 独立保存高速自由与魂类近距两套镜头预设；魂类硬锁会统一驱动镜头、玩家朝向、锁定移动和定向闪避。 |
 | [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成动作取消策略版 | 负责八个玩家状态，并承接普攻缓冲、动作锁、取消窗口、普攻/技能派生、闪避/格挡取消和强制打断。 |
@@ -104,3 +104,4 @@
 | [EndLink Combat Lab](Features/TOOLS.md#feature-combat-lab) | 已完成新模型实验版 | 提供浏览器端战斗实验工具，用于快速验证标签定义、层数、持续时间、反应效果、基础伤害和连携窗口。 |
 | [美术资源校验工具](Features/TOOLS.md#feature-art-asset-validator) | 已完成自动校验第一版 | 自动检查 `_Incoming` 中的 Shader、材质、Prefab、FBX、贴图和临时命名问题，并提供完整结果窗口与资源定位。 |
 | [场景配置体检](Features/TOOLS.md#feature-scene-doctor) | 已完成只读第一版 | 扫描当前活动场景中的缺失引用、关键组件接线、Layer、NavMesh、敌人和战斗动作配置，支持筛选、定位与复制报告，不自动修改场景。 |
+| [输入绑定工具](Features/TOOLS.md#feature-input-binding-tool) | 已完成双页面版 | 使用接近游戏键位设置的键鼠/手柄双页面展示默认绑定，支持点击槽位监听修改、清除、冲突检查、Undo 和手动应用。 |
