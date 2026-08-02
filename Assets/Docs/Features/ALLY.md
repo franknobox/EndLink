@@ -19,9 +19,9 @@
 - 目标死亡时，`AllyBrain` 会监听 `Dead` 事件并请求状态机取消当前助战。
 - `AllyBrain` 不直接生成 Hitbox，不写伤害数据，只把事件目标交给 `AllyStateMachine.RequestAssist(...)`。
 - `AllyCombatDriver` 是队友战斗执行器，职责类似 `PlayerCombatDriver`，但不读取输入，也不决定什么时候出手。
-- `AllyCombatDriver` 保存队友的自动助战、主动技能、连携技动作槽位，并根据 `CombatActionDefinition` 生成 Hitbox、写入伤害、击退、战斗标签和标签持续时间。
+- `AllyCombatDriver` 当前使用自动助战与连携技动作槽位，并根据 `CombatActionDefinition` 生成 Hitbox、写入伤害、击退、战斗标签和标签持续时间；旧主动技能槽暂不配置。
 - 队友进入助战流程只要求配置了 `Assist Action`；动作冷却只影响实际出手时间，冷却未结束时会在 Assist 内等待，而不是放弃助战。
-- `AllyCombatDriver` 按 `CombatActionDefinition` 分别记录冷却，自动助战动作不会占用主动技能冷却，主动技能也不会重置助战动作冷却。
+- `AllyCombatDriver` 按 `CombatActionDefinition` 分别记录动作冷却，自动助战和连携动作互不覆盖冷却。
 - `AllyCombatDriver` 支持数据或动画事件时序，并在助战取消、受击、链接中断或组件禁用时关闭当前普通判定；Projectile 继续独立运行。
 - 动画事件动作可以在一次执行中重复开启多组独立 Hitbox 窗口，用于队友的多段攻击；整套动作仍只记录一次动作冷却。
 - `AllyCombatDriver` 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 或调试窗口读取。
@@ -163,10 +163,9 @@
 - `PartyManager` 持有 `PartyCombatRouter` 引用，供战斗 UI 和后续小队系统读取当前键位路由。
 - `PartyCombatContext` 作为小队战斗状态上下文，供队友目标选择、战斗 UI 和后续连携系统读取当前主目标、已知敌人和战斗状态。
 - `PartyCombatRouter` 负责把 `PlayerInputReader` 中的战斗输入翻译成主控、队友 A、队友 B 或全队的命令请求。
-- `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害或标签；它只校验连携窗口并把技能/连携请求转发给对应角色状态机。
-- 当前第一版中，主控 `Skill` 命令会由 `PartyCombatRouter` 转发给 `PlayerStateMachine.RequestSkill()`，由玩家状态机决定能否进入 `Skill` 状态并执行动作。
-- 队友 `Skill` 命令会由 `PartyCombatRouter` 转发给对应 `AllyStateMachine.RequestAction(...)`，进入 `Action` 状态后再由 `AllyCombatDriver` 执行 `SkillAction`。
-- `PartyCombatRouter` Inspector 中可以覆盖主控/队友主动技能、1/2/3 连携和全队终链奥义键位；当前队友主动技能键盘配置留空。
+- `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害或标签；它只校验连携窗口并把合法请求转发给对应角色状态机。
+- 旧主控/队友 `Skill` 命令、动作引用和键位当前均停用；路由代码壳暂时保留，供后续单人技能方案或小队实验重新设计时评估。
+- `PartyCombatRouter` Inspector 当前主要配置 1/2/3 连携和全队终链奥义键位。
 - `LinkAttack` 命令只有在 `PartyLinkContext` 窗口开启时才会被接受；请求成功后由对应角色状态机执行 `LinkAction` 并消费共享窗口。
 - `PartyUltimateContext` 维护全队协同率；成功释放连携技会按 `CombatActionDefinition.SynergyGainOnLink` 充能，奥义键在满值后消耗奥义就绪状态。
 - 后续队友 AI、连携规则或调试工具需要知道“谁是主控，谁是队友”时，可以从 `PartyManager` 查询。
@@ -203,7 +202,7 @@
 - `formationEvaluateInterval`：动态站位重新评估间隔
 - `formationSwitchMinImprovement`：交换后至少减少多少移动代价才允许换位
 - `formationSwitchCooldown`：站位交换冷却，避免频繁来回抢位
-- `playerSkillKey` / `allySlotASkillKey` / `allySlotBSkillKey`：主控和两个队友主动技能键位；主控默认 Q，两个队友当前默认不绑定键盘
+- `playerSkillKey` / `allySlotASkillKey` / `allySlotBSkillKey`：旧主动技能键位，当前全部为 `None`
 - `playerLinkAttackKey` / `allySlotALinkAttackKey` / `allySlotBLinkAttackKey`：主控和两个队友连携请求键位，默认 1 / 2 / 3
 - `partyUltimateKey`：全队终链奥义键位，默认 V
 - `PartyUltimateContext.maxSynergyRate`：终链奥义协同率上限，默认 100
@@ -227,7 +226,7 @@
 - `Follow` 在有跟随目标时每帧调用 `AllyFollowMotor.TickFollow(deltaTime)`，实际移动由跟随移动组件负责。
 - `Assist` 是队友助战大状态，内部先接近目标，进入攻击距离后持续攻击；目标拉开距离后在 Assist 内部回到接近阶段。
 - `Assist` 当前内部使用轻量 `Approach / Attack` 阶段，后续可以替换为行为树。
-- `Action` 是队友通用动作状态，用于承接队友主动技能；当前不绑定键盘，进入时执行一次 `CombatActionDefinition`，动作窗口结束后回到 Assist 或 Follow / Idle。
+- `Action` 是队友通用单次动作状态，当前主要为连携等非自动助战动作保留；队友主动技能暂时停用，动作窗口结束后回到 Assist 或 Follow / Idle。
 - 目标死亡、目标丢失或主控距离过远时，助战流程会取消并回到 Follow / Idle。
 - `Hit` 表示队友受击硬直状态，可打断 Follow、Assist 和 Action；结束后优先恢复被打断前的 Assist，目标失效或主控过远时回到 Follow / Idle。
 - 离开 `Assist` / `Action`、进入 `Hit` 或 `LinkDown` 时会取消当前动作，避免状态切换后残留 Hitbox。

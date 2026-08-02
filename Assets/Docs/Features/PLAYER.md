@@ -24,11 +24,10 @@
 - 目标锁定输入读取 `Player/TargetLock`，默认键位为鼠标中键、手柄右摇杆按下；输入层只缓存按下事件，是否建立硬锁由视角模式决定。
 - 硬锁目标切换复用 `Player/Look`：键鼠按鼠标横向滑动方向切换，手柄按右摇杆左右推动方向切换；输入层只提供原始方向，候选目标仍由索敌系统选择。
 - 闪避输入读取 `Player/Dodge`，默认键位为键盘 `Left Ctrl`、手柄 `buttonEast`。
-- 主控主动技能读取 `Player/PlayerSkill`，默认键位 Q。
-- 队友主动技能读取 `Player/AllySlotASkill` 和 `Player/AllySlotBSkill`；当前不绑定键盘，队友 A 手柄槽位也暂时留空，队友 B 暂用 `RT / R2`。
+- 旧 `PlayerSkill`、`AllySlotASkill` 和 `AllySlotBSkill` 输入动作当前保留为空壳，但没有键鼠或手柄绑定，也不接入当前三形态攻击流程。
 - 主控和队友连携请求读取 `Player/PlayerLinkAttack`、`Player/AllySlotALinkAttack`、`Player/AllySlotBLinkAttack`，默认键位 1 / 2 / 3；这些输入不会绕过连携机制直接释放动作。
 - 全队终链奥义读取 `Player/PartyUltimate`，默认键位 V，可由 `PartyCombatRouter` 在运行时覆盖。
-- 手柄当前绑定：攻击 `RB / R1`，格挡 `LB / L1`，队友 B 技能暂为 `RT / R2`，主控/队友连携为 D-Pad 上/左/右，全队极限技为 D-Pad 下；主控技能和队友 A 技能的手柄槽位暂时留空，后续通过输入绑定工具确定。
+- 手柄当前绑定：攻击 `RB / R1`，格挡 `LB / L1`，主控/队友连携为 D-Pad 上/左/右，全队极限技为 D-Pad 下；旧主动技能输入当前不绑定。
 - 相机旋转读取 `Player/Look`。
 
 对应脚本：

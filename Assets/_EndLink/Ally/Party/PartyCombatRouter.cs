@@ -89,16 +89,16 @@ namespace EndLink.Party
         [SerializeField]
         private PartyUltimateContext ultimateContext;
 
-        [Header("主动技能键位")]
-        [Tooltip("主控主动技能键位。默认 Q。")]
+        [Header("旧主动技能键位（当前停用）")]
+        [Tooltip("旧主控主动技能入口。当前默认不绑定，后续技能键位由新版单人战斗方案重新确定。")]
         [SerializeField]
-        private Key playerSkillKey = Key.Q;
+        private Key playerSkillKey = Key.None;
 
-        [Tooltip("队友 A 主动技能键位。当前默认不绑定键盘；需要时可在此重新指定。")]
+        [Tooltip("旧队友 A 主动技能入口。当前默认不绑定。")]
         [SerializeField]
         private Key allySlotASkillKey = Key.None;
 
-        [Tooltip("队友 B 主动技能键位。当前默认不绑定键盘；需要时可在此重新指定。")]
+        [Tooltip("旧队友 B 主动技能入口。当前默认不绑定。")]
         [SerializeField]
         private Key allySlotBSkillKey = Key.None;
 

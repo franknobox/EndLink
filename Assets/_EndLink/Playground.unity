@@ -180,7 +180,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Ally.AllyCombatDriver
   assistAction: {fileID: 11400000, guid: 333519e5bab8ee1488b9061cf7710c60, type: 2}
-  skillAction: {fileID: 11400000, guid: bd19f0735bc84f84389cecf9cf0cd519, type: 2}
+  skillAction: {fileID: 0}
   linkAction: {fileID: 11400000, guid: c64f9df7cb4f54546bcb993ce0b22096, type: 2}
   faceTargetBeforeAttack: 1
   fallbackForward: {x: 0, y: 0, z: 1}
@@ -4964,7 +4964,7 @@ MonoBehaviour:
   partyManager: {fileID: 163565087}
   linkContext: {fileID: 0}
   ultimateContext: {fileID: 0}
-  playerSkillKey: 31
+  playerSkillKey: 0
   allySlotASkillKey: 0
   allySlotBSkillKey: 0
   playerLinkAttackKey: 41
@@ -8809,6 +8809,7 @@ GameObject:
   - component: {fileID: 417825189}
   - component: {fileID: 175536839}
   - component: {fileID: 175536838}
+  - component: {fileID: 2102770643}
   m_Layer: 3
   m_Name: Player_Root
   m_TagString: Untagged
@@ -8934,7 +8935,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Combat.PlayerCombatDriver
   basicAttackAction: {fileID: 11400000, guid: 5aad972d3b43ae1408e5aeb62b6f8bd4, type: 2}
-  skillAction: {fileID: 11400000, guid: c41052575e1541f1940a105596abc2e9, type: 2}
+  skillAction: {fileID: 0}
   linkAction: {fileID: 11400000, guid: c64f9df7cb4f54546bcb993ce0b22096, type: 2}
 --- !u!114 &509600062
 MonoBehaviour:
@@ -10041,7 +10042,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EndLink.Ally.AllyCombatDriver
   assistAction: {fileID: 11400000, guid: 333519e5bab8ee1488b9061cf7710c60, type: 2}
-  skillAction: {fileID: 11400000, guid: bd19f0735bc84f84389cecf9cf0cd519, type: 2}
+  skillAction: {fileID: 0}
   linkAction: {fileID: 11400000, guid: c64f9df7cb4f54546bcb993ce0b22096, type: 2}
   faceTargetBeforeAttack: 1
   fallbackForward: {x: 0, y: 0, z: 1}
@@ -21847,6 +21848,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: PF_SkillPanel
       objectReference: {fileID: 0}
+    - target: {fileID: 8960763168584833064, guid: eae40ae041b4699489ab06250a9372c2, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
     - {fileID: 8860743295396933012, guid: eae40ae041b4699489ab06250a9372c2, type: 3}
@@ -30549,6 +30554,7 @@ MonoBehaviour:
   viewMode: 1
   playerTargeting: {fileID: 0}
   playerInputReader: {fileID: 0}
+  cameraInputReader: {fileID: 0}
   playerController: {fileID: 0}
   fastActionSettings:
     targetWorldOffset: {x: 0, y: 1, z: -0.1}
@@ -30585,6 +30591,10 @@ MonoBehaviour:
     damping: {x: 0.15, y: 0.2, z: 0.16}
     fieldOfView: 48
   hardLockRotationSmoothTime: 0.12
+  mouseTargetSwitchThreshold: 36
+  gamepadTargetSwitchThreshold: 0.65
+  gamepadTargetSwitchResetThreshold: 0.25
+  targetSwitchCooldown: 0.18
   fastActionSettingsInitialized: 1
 --- !u!114 &2084252740
 MonoBehaviour:
@@ -30610,6 +30620,33 @@ MonoBehaviour:
     FrequencyGain: 1
     Duration: 1
     m_NoiseOffsets: {x: 0, y: 0, z: 0}
+--- !u!114 &2102770643
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 509600055}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 121d34f7b23d43658265e8e7a89c775c, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: EndLink.Runtime::EndLink.Combat.PlayerWeaponController
+  initialForm: 0
+  formA:
+    comboActions:
+    - {fileID: 11400000, guid: 5aad972d3b43ae1408e5aeb62b6f8bd4, type: 2}
+    - {fileID: 11400000, guid: 5aad972d3b43ae1408e5aeb62b6f8bd4, type: 2}
+    - {fileID: 11400000, guid: 5aad972d3b43ae1408e5aeb62b6f8bd4, type: 2}
+    skillAction: {fileID: 0}
+  formB:
+    comboActions:
+    - {fileID: 11400000, guid: c41052575e1541f1940a105596abc2e9, type: 2}
+    skillAction: {fileID: 0}
+  formC:
+    comboActions:
+    - {fileID: 11400000, guid: bd19f0735bc84f84389cecf9cf0cd519, type: 2}
+    skillAction: {fileID: 0}
 --- !u!1 &2112096919
 GameObject:
   m_ObjectHideFlags: 0

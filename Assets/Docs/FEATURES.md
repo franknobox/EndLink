@@ -47,7 +47,7 @@
 | [统一 Combat Target](Features/COMBAT.md#feature-combat-target) | 已完成第一版 | 为玩家、队友和敌人统一提供唯一根身份、存活/可选状态、锁定点、Collider 表面点和水平表面距离。 |
 | [角色战斗数值基础](Features/COMBAT.md#feature-character-stats) | 已完成第一版 | 提供玩家、队友和敌人共用的攻击力与承受击退倍率，并支持动作按固定伤害与攻击力倍率组合计算伤害。 |
 | [战斗动作配置](Features/COMBAT.md#feature-combat-action) | 已完成命中反馈配置版 | 使用 `CombatActionDefinition` 描述伤害、冷却、Hitbox、标签、协同率、动画根位移和命中反馈，并支持数据时间或动画事件驱动动作。 |
-| [三种武器形态基础](Features/COMBAT.md#feature-player-weapon-forms) | 已完成动作组接线版 | 固定提供 A、B、C 三种形态，分别配置独立普攻连段与主动技能，并向战斗执行、Animator 和后续 UI 暴露统一切换接口。 |
+| [三种武器形态基础](Features/COMBAT.md#feature-player-weapon-forms) | 已完成初版动作配置 | 固定提供 A、B、C 三种形态，当前分别使用默认近战普攻、远程弹体和原近战技能动作，并向战斗执行、Animator 和后续 UI 暴露统一切换接口。 |
 | [通用战斗反馈](Features/COMBAT.md#feature-combat-feedback) | 已完成调度基础版 | 通过可复用反馈资产与场景调度器，统一提供 Hitstop、Cinemachine Impulse、手柄震动、音效和 VFX 请求入口。 |
 | [统一 Action 执行接口](Features/COMBAT.md#feature-combat-action-executor) | 已完成多判定窗口版 | 统一玩家、队友和敌人的动作检查、执行、冷却和目标传入，并支持动画事件动作在一次执行中开启多个判定窗口。 |
 | [伤害结算管线基础](Features/COMBAT.md#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
@@ -61,7 +61,7 @@
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [队友助战基础组件](Features/ALLY.md#feature-ally-assist) | 已完成持续助战第一版 | 提供队友事件响应大脑和队友战斗执行器，用于主控命中敌人后让队友自动接近目标并持续攻击。 |
-| [队友有限状态机](Features/ALLY.md#feature-ally-state-machine) | 已完成动作打断版 | 提供 Idle、Follow、Assist、Action、Hit、LinkDown 外层状态，并在受击、离开助战或链接中断时清理当前动作判定。 |
+| [队友有限状态机](Features/ALLY.md#feature-ally-state-machine) | 已完成动作打断版 | 提供 Idle、Follow、Assist、Action、Hit、LinkDown 外层状态；当前停用队友主动技能，Action 仅保留为连携等通用单次动作承载层。 |
 | [队友跟随移动](Features/ALLY.md#feature-ally-follow-motor) | 已完成 NavMesh 接线版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持 NavMesh 寻路、按路径高度移动、高低差脱离死区、坡道贴地、平滑减速、追赶、远距离归位和简易避让。 |
 | [连携触发与窗口](Features/ALLY.md#feature-party-link-context) | 已完成奥义充能接线版 | 协议反应触发后为三人小队开启 4 秒共享连携窗口，允许玩家释放一个连携技，并按连携动作配置提升全队协同率。 |
 | [小队战斗状态上下文](Features/ALLY.md#feature-party-combat-context) | 已完成基础版 | 监听战斗事件，记录小队是否处于战斗、当前主目标和已知敌人，供队友目标选择、战斗 UI 和后续连携系统读取。 |
@@ -84,7 +84,7 @@
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [世界交互底座](Features/WORLD.md#feature-world-interaction) | 已完成接口一致性版 | 提供统一接口扫描、交互点距离判断、执行前范围复检和玩家输入桥接，用于门、电梯、开关等灰盒机关扩展。 |
-| [武器物体交互](Features/WORLD.md#feature-weapon-object-interaction) | 已完成第一版 | 通过通用 `ObjInteractable` 按固定六类规则接收 A/B/C 武器命中，并与门、电梯、检查点等具体物体功能解耦。 |
+| [武器物体交互](Features/WORLD.md#feature-weapon-object-interaction) | 已完成第一版 | 通过通用 `ObjInteractable` 按固定六类规则接收 A/B/C 武器命中，并提供可挂到门、电梯和检查点下的测试交互子物体 Prefab。 |
 | [通用出生点与检查点](Features/WORLD.md#feature-world-spawn-checkpoint) | 已完成坠落死亡版 | 提供世界出生锚点、开场出生、检查点休整、玩家死亡复活和默认 `Y=-50` 坠落出界判定，并为未来存档与敌人生成保留稳定位置身份。 |
 | [两层移动电梯](Features/WORLD.md#feature-elevator-platform) | 已完成第一版 | 提供可交互的上下层往返平台，通过运动学 Rigidbody 驱动物理实体，并为 CharacterController 乘客补偿平台三维位移。 |
 | [通用开关门](Features/WORLD.md#feature-world-door) | 已完成第一版 | 提供接入世界交互系统的平移门和旋转门，支持平滑开关、运行中反向、动态提示和开关事件。 |

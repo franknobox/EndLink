@@ -60,6 +60,7 @@
 
 ### 相关物体 / 配置
 - 功能组件挂在稳定父物体上；交互子物体挂 Collider 和 `ObjInteractable`，`Function Target` 可留空自动向父级查找。
+- `Assets/_EndLink/World/PF_ObjInteractable_Test.prefab` 是测试用通用交互子物体，使用低模视觉、`Interactable` Layer、Trigger CapsuleCollider 和 `ObjInteractable`；拖到功能物体下后再按需求选择交互类型。
 - `Required Hit Count` 只对网络结构和可破坏物生效；`Min Hit Interval` 用于避免同一段攻击的重叠判定被重复累计。
 - 触发后不应再次使用的物体可开启 `Trigger Once`，需要在机关或场景重置时调用 `ResetInteraction()` 恢复。
 - 交互 Collider 所在 Layer 必须允许与武器 Hitbox 所在 Layer 产生 Trigger 回调；世界交互分支不读取 Hitbox 的战斗目标 LayerMask。

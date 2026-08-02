@@ -322,17 +322,7 @@ namespace EndLink.Editor
                     referencedActions.Add(comboAction);
                 }
 
-                if (actionSet.SkillAction == null)
-                {
-                    Add(
-                        issues,
-                        SceneValidationSeverity.Warning,
-                        "WEAPON_SKILL_MISSING",
-                        "战斗",
-                        $"武器 {form} 形态尚未配置主动技能。",
-                        controller);
-                }
-                else
+                if (actionSet.SkillAction != null)
                 {
                     referencedActions.Add(actionSet.SkillAction);
                 }

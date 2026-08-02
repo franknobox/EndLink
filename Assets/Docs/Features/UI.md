@@ -14,7 +14,7 @@
 功能说明：
 - `HUDCombatController` 是战斗 HUD 总入口，负责绑定 `PartyManager`、控制 HUD 显隐，并驱动下属 UI 模块刷新。
 - 旧版小队动作槽、成员头像和终链奥义显示组件暂时归档在 `UI/PartyUI`，供后续恢复小队战斗 UI 时复用；新版单人战斗 UI 不继续依赖这些组件。
-- `UIPartyCombatAction` 是小队动作栏管理器，当前负责绑定主控、队友 A、队友 B 的主动技能槽。
+- `UIPartyCombatAction` 是旧小队主动技能动作栏管理器；队友主动技能停用后仅作为归档组件保留。
 - `UICombatActionSlot` 是单个动作槽位组件，槽位绑定的是小队命令槽，例如 `PlayerSkill`、`AllySlotASkill`、`AllySlotBSkill`，而不是固定动作资产。
 - `UICombatActionSlot` 通过 `PartyManager` 解析当前角色，通过角色 CombatDriver 读取当前槽位动作和该动作自己的冷却。
 - `UICombatActionSlot` 通过 `PartyManager.CombatRouter` 读取该槽位当前键位显示文本。
