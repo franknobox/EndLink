@@ -11,7 +11,7 @@
 - [COMBAT](Features/COMBAT.md)：战斗数据、目标、伤害、受击、Hitbox、标签和事件系统。
 - [ALLY](Features/ALLY.md)：队友状态机、助战、跟随表现、小队管理、战斗上下文和连携窗口。
 - [ENEMIES](Features/ENEMIES.md)：正式敌人身份、生命、感知、状态机和基础移动。
-- [WORLD](Features/WORLD.md)：灰盒地图中的门、电梯、机关等世界交互底座。
+- [WORLD](Features/WORLD.md)：灰盒地图中的武器物体交互、门、电梯和检查点。
 - [UI](Features/UI.md)：运行时 HUD、动作槽位和通用 UI 组件。
 - [TOOLS](Features/TOOLS.md)：Editor 工具、数据创建工具和调试监视窗口。
 
@@ -19,7 +19,7 @@
 
 ### 当前情况概览
 
-项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Enemies`、`Assets/_EndLink/World` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，队友目录下的小队管理代码使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，世界交互代码使用 `EndLink.World`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、统一 Combat Target、统一 Action 执行接口、玩家与敌人 Animator 桥接、动画事件动作时序第一版、基础攻击驱动、基础 Hitbox 配置、通用战斗反馈调度基础、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动与动态站位第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架、世界交互底座和战斗 UI 基础。
+项目使用 Unity 6，当前核心代码集中在 `Assets/_EndLink/Control`、`Assets/_EndLink/Player`、`Assets/_EndLink/Combat`、`Assets/_EndLink/Ally`、`Assets/_EndLink/Enemies`、`Assets/_EndLink/World` 和 `Assets/_EndLink/UI`。控制与玩家状态机代码主要使用命名空间 `EndLink.Core`，战斗相关代码使用 `EndLink.Combat`，队友相关代码使用 `EndLink.Ally`，队友目录下的小队管理代码使用 `EndLink.Party`，敌人相关代码使用 `EndLink.Enemies`，世界交互代码使用 `EndLink.World`，运行时 UI 使用 `EndLink.UI`。目前已经完成了玩家输入读取、CharacterController 移动控制、Cinemachine 第三人称相机控制、玩家有限状态机最小战斗骨架、通用生命值与角色受击接线、统一 Combat Target、统一 Action 执行接口、玩家与敌人 Animator 桥接、动画事件动作时序第一版、基础攻击驱动、基础 Hitbox 配置、通用战斗反馈调度基础、战斗标签系统、战斗事件总栈基础版、事件接线、队友助战基础组件、队友目标选择、小队战斗状态上下文、队友状态机骨架、队友跟随移动与动态站位第一版、固定三人小队管理第一版、正式敌人通用基底、敌人大状态机骨架、武器物体交互和战斗 UI 基础。
 
 项目仍处于白模阶段，角色以胶囊体为主，当前重点是验证控制手感和后续架构边界。
 
@@ -29,7 +29,7 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成方向切换输入版 | 负责读取玩家移动、攻击、防御、目标锁定、世界交互和 Look 等输入；当前手柄攻击/格挡为 `RB / LB`，不保留蹲伏 Action。 |
+| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成三形态输入版 | 负责读取玩家移动、攻击、防御、瞄准、目标锁定、武器形态切换和 Look 等输入；当前手柄攻击/格挡为 `RB / LB`，不保留蹲伏与按键交互 Action。 |
 | [玩家 CharacterController 移动](Features/PLAYER.md#feature-player-movement) | 已完成锁定移动版 | 负责玩家平滑移动、基础跳跃、重力贴地、转向、目标相对移动，以及战斗击退的短时衰减后退。 |
 | [第三人称视角模式](Features/PLAYER.md#feature-third-person-camera) | 已完成锁定操控版 | 独立保存高速自由与魂类近距两套镜头预设；魂类硬锁会统一驱动镜头、玩家朝向、锁定移动和定向闪避。 |
 | [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成动作取消策略版 | 负责八个玩家状态，并承接普攻缓冲、动作锁、取消窗口、普攻/技能派生、闪避/格挡取消和强制打断。 |
@@ -83,11 +83,10 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [世界交互底座](Features/WORLD.md#feature-world-interaction) | 已完成接口一致性版 | 提供统一接口扫描、交互点距离判断、执行前范围复检和玩家输入桥接，用于门、电梯、开关等灰盒机关扩展。 |
-| [武器物体交互](Features/WORLD.md#feature-weapon-object-interaction) | 已完成第一版 | 通过通用 `ObjInteractable` 按固定六类规则接收 A/B/C 武器命中，并提供可挂到门、电梯和检查点下的测试交互子物体 Prefab。 |
+| [武器物体交互](Features/WORLD.md#feature-weapon-object-interaction) | 已完成场景接线版 | 通过通用 `ObjInteractable` 接收 A/B/C 武器命中，统一驱动 `IObjFunction`，并在功能生效时提供闪白反馈。 |
 | [通用出生点与检查点](Features/WORLD.md#feature-world-spawn-checkpoint) | 已完成坠落死亡版 | 提供世界出生锚点、开场出生、检查点休整、玩家死亡复活和默认 `Y=-50` 坠落出界判定，并为未来存档与敌人生成保留稳定位置身份。 |
-| [两层移动电梯](Features/WORLD.md#feature-elevator-platform) | 已完成第一版 | 提供可交互的上下层往返平台，通过运动学 Rigidbody 驱动物理实体，并为 CharacterController 乘客补偿平台三维位移。 |
-| [通用开关门](Features/WORLD.md#feature-world-door) | 已完成第一版 | 提供接入世界交互系统的平移门和旋转门，支持平滑开关、运行中反向、动态提示和开关事件。 |
+| [两层移动电梯](Features/WORLD.md#feature-elevator-platform) | 已完成武器交互版 | 提供由交互子物体触发的上下层往返平台，通过运动学 Rigidbody 驱动物理实体，并为 CharacterController 乘客补偿平台三维位移。 |
+| [通用开关门](Features/WORLD.md#feature-world-door) | 已完成武器交互版 | 提供由交互子物体触发的平移门和旋转门，支持平滑开关、运行中反向和开关事件。 |
 
 #### UI
 

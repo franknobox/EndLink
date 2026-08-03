@@ -171,7 +171,7 @@ namespace EndLink.World
         /// </summary>
         public bool CanUseCheckpoint(GameObject interactor, bool allowDuringCombat)
         {
-            if (!IsPlayerInteractor(interactor))
+            if (!IsPlayerObject(interactor))
             {
                 return false;
             }
@@ -185,7 +185,7 @@ namespace EndLink.World
         /// </summary>
         public bool ActivateCheckpoint(WorldSpawnPoint spawnPoint, GameObject interactor)
         {
-            if (spawnPoint == null || !IsPlayerInteractor(interactor))
+            if (spawnPoint == null || !IsPlayerObject(interactor))
             {
                 return false;
             }
@@ -303,7 +303,7 @@ namespace EndLink.World
             partyCombatContext?.ClearCombatContext();
         }
 
-        private bool IsPlayerInteractor(GameObject interactor)
+        private bool IsPlayerObject(GameObject interactor)
         {
             if (playerRoot == null || interactor == null)
             {

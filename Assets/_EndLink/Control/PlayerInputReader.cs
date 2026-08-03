@@ -44,7 +44,6 @@ namespace EndLink.Core
         private InputAction _previousAction;
         private InputAction _nextAction;
         private InputAction _jumpAction;
-        private InputAction _interactAction;
         private InputAction _playerSkillAction;
         private InputAction _allySlotASkillAction;
         private InputAction _allySlotBSkillAction;
@@ -58,7 +57,6 @@ namespace EndLink.Core
         private bool _previousPressed;
         private bool _nextPressed;
         private bool _jumpPressed;
-        private bool _interactPressed;
         private bool _playerSkillPressed;
         private bool _allySlotASkillPressed;
         private bool _allySlotBSkillPressed;
@@ -112,7 +110,6 @@ namespace EndLink.Core
             _previousAction.performed -= OnPreviousPerformed;
             _nextAction.performed -= OnNextPerformed;
             _jumpAction.performed -= OnJumpPerformed;
-            _interactAction.performed -= OnInteractPerformed;
             _playerSkillAction.performed -= OnPlayerSkillPerformed;
             _allySlotASkillAction.performed -= OnAllySlotASkillPerformed;
             _allySlotBSkillAction.performed -= OnAllySlotBSkillPerformed;
@@ -176,15 +173,6 @@ namespace EndLink.Core
         public bool ConsumeJumpPressed()
         {
             return ConsumePressed(ref _jumpPressed);
-        }
-
-        /// <summary>
-        /// 消费一次世界交互输入。
-        /// 当前 Input Actions 中已存在 Player/Interact，具体按键由 inputactions 资产管理。
-        /// </summary>
-        public bool ConsumeInteractPressed()
-        {
-            return ConsumePressed(ref _interactPressed);
         }
 
         /// <summary>
@@ -325,11 +313,6 @@ namespace EndLink.Core
             SetPressedIfButton(context, ref _jumpPressed);
         }
 
-        private void OnInteractPerformed(InputAction.CallbackContext context)
-        {
-            SetPressedIfButton(context, ref _interactPressed);
-        }
-
         private void OnPlayerSkillPerformed(InputAction.CallbackContext context)
         {
             SetPressedIfButton(context, ref _playerSkillPressed);
@@ -390,7 +373,6 @@ namespace EndLink.Core
             _previousPressed = false;
             _nextPressed = false;
             _jumpPressed = false;
-            _interactPressed = false;
             _playerSkillPressed = false;
             _allySlotASkillPressed = false;
             _allySlotBSkillPressed = false;
@@ -418,7 +400,6 @@ namespace EndLink.Core
             _previousAction = _inputActions.asset.FindAction("Player/Previous", true);
             _nextAction = _inputActions.asset.FindAction("Player/Next", true);
             _jumpAction = _inputActions.asset.FindAction("Player/Jump", true);
-            _interactAction = _inputActions.asset.FindAction("Player/Interact", true);
             _playerSkillAction = _inputActions.asset.FindAction("Player/PlayerSkill", true);
             _allySlotASkillAction = _inputActions.asset.FindAction("Player/AllySlotASkill", true);
             _allySlotBSkillAction = _inputActions.asset.FindAction("Player/AllySlotBSkill", true);
@@ -442,7 +423,6 @@ namespace EndLink.Core
             _previousAction.performed += OnPreviousPerformed;
             _nextAction.performed += OnNextPerformed;
             _jumpAction.performed += OnJumpPerformed;
-            _interactAction.performed += OnInteractPerformed;
             _playerSkillAction.performed += OnPlayerSkillPerformed;
             _allySlotASkillAction.performed += OnAllySlotASkillPerformed;
             _allySlotBSkillAction.performed += OnAllySlotBSkillPerformed;

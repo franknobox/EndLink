@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using EndLink.Combat;
 using UnityEngine;
 using UnityEngine.Events;
@@ -14,6 +15,9 @@ namespace EndLink.World
     [RequireComponent(typeof(Collider))]
     public sealed class ObjInteractable : MonoBehaviour
     {
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
+
         [Header("交互规则")]
         [Tooltip("固定的环境交互类型。类型会直接决定允许触发的 A、B、C 武器形态。")]
         [SerializeField]
@@ -40,6 +44,15 @@ namespace EndLink.World
         [SerializeField]
         private bool triggerOnce;
 
+        [Header("成功反馈")]
+        [Tooltip("功能成功执行时覆盖到交互物视觉上的闪白颜色。")]
+        [SerializeField]
+        private Color flashColor = Color.white;
+
+        [Tooltip("成功闪白持续时间，使用非缩放时间，因此不会被 Hitstop 截断。")]
+        [SerializeField, Min(0f)]
+        private float flashDuration = 0.12f;
+
         [Header("事件")]
         [Tooltip("接受一次合法形态命中并更新进度后触发。参数依次为当前进度和所需进度。")]
         [SerializeField]
@@ -53,6 +66,9 @@ namespace EndLink.World
         private int _currentHitCount;
         private float _nextAcceptedHitTime;
         private bool _hasTriggered;
+        private Renderer[] _feedbackRenderers = Array.Empty<Renderer>();
+        private MaterialPropertyBlock[] _originalPropertyBlocks = Array.Empty<MaterialPropertyBlock>();
+        private Coroutine _flashRoutine;
 
         /// <summary>当前配置的六类交互类型。</summary>
         public ObjInteractionType InteractionType => interactionType;
@@ -80,6 +96,7 @@ namespace EndLink.World
         private void Awake()
         {
             CacheFunction();
+            CacheFeedbackRenderers();
             if (_function == null)
             {
                 Debug.LogError(
@@ -93,13 +110,27 @@ namespace EndLink.World
             requiredHitCount = 1;
             minHitInterval = 0.1f;
             CacheFunction();
+            CacheFeedbackRenderers();
         }
 
         private void OnValidate()
         {
             requiredHitCount = Mathf.Max(1, requiredHitCount);
             minHitInterval = Mathf.Max(0f, minHitInterval);
+            flashDuration = Mathf.Max(0f, flashDuration);
             CacheFunction();
+        }
+
+        private void OnDisable()
+        {
+            if (_flashRoutine == null)
+            {
+                return;
+            }
+
+            StopCoroutine(_flashRoutine);
+            _flashRoutine = null;
+            RestoreFeedbackColors();
         }
 
         /// <summary>判断指定武器形态是否符合当前交互类型的固定规则。</summary>
@@ -144,6 +175,7 @@ namespace EndLink.World
 
             _currentHitCount = 0;
             _hasTriggered = true;
+            PlaySuccessFlash();
             onProgressChanged?.Invoke(0, RequiredHitCount);
             onTriggered?.Invoke(context.Interactor);
             return true;
@@ -185,6 +217,79 @@ namespace EndLink.World
                 functionTarget = candidate;
                 _function = function;
                 return;
+            }
+        }
+
+        private void CacheFeedbackRenderers()
+        {
+            _feedbackRenderers = GetComponentsInChildren<Renderer>(true);
+            _originalPropertyBlocks = new MaterialPropertyBlock[_feedbackRenderers.Length];
+        }
+
+        private void PlaySuccessFlash()
+        {
+            if (flashDuration <= 0f || _feedbackRenderers.Length == 0)
+            {
+                return;
+            }
+
+            if (_flashRoutine != null)
+            {
+                StopCoroutine(_flashRoutine);
+                RestoreFeedbackColors();
+            }
+
+            ApplyFlashColor();
+            _flashRoutine = StartCoroutine(RestoreFeedbackAfterDelay());
+        }
+
+        private void ApplyFlashColor()
+        {
+            for (int i = 0; i < _feedbackRenderers.Length; i++)
+            {
+                Renderer targetRenderer = _feedbackRenderers[i];
+                if (targetRenderer == null)
+                {
+                    continue;
+                }
+
+                MaterialPropertyBlock originalBlock = new();
+                targetRenderer.GetPropertyBlock(originalBlock);
+                _originalPropertyBlocks[i] = originalBlock;
+
+                MaterialPropertyBlock flashBlock = new();
+                targetRenderer.GetPropertyBlock(flashBlock);
+                flashBlock.SetColor(BaseColorId, flashColor);
+                flashBlock.SetColor(ColorId, flashColor);
+                targetRenderer.SetPropertyBlock(flashBlock);
+            }
+        }
+
+        private IEnumerator RestoreFeedbackAfterDelay()
+        {
+            float elapsed = 0f;
+            while (elapsed < flashDuration)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            RestoreFeedbackColors();
+            _flashRoutine = null;
+        }
+
+        private void RestoreFeedbackColors()
+        {
+            for (int i = 0; i < _feedbackRenderers.Length; i++)
+            {
+                Renderer targetRenderer = _feedbackRenderers[i];
+                if (targetRenderer == null)
+                {
+                    continue;
+                }
+
+                targetRenderer.SetPropertyBlock(_originalPropertyBlocks[i]);
+                _originalPropertyBlocks[i] = null;
             }
         }
     }

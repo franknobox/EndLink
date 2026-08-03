@@ -1,14 +1,15 @@
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace EndLink.World
 {
     /// <summary>
     /// 检查点功能入口。
     /// 负责把关联的 WorldSpawnPoint 激活为当前复活点，实际恢复与复活流程交给 WorldRespawnManager；
-    /// 当前同时兼容旧版按键交互和子物体 ObjInteractable 提交的武器交互。
+    /// 由子物体 ObjInteractable 通过 IObjFunction 提交武器交互。
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class WorldCheckpoint : WorldInteractable, IObjFunction
+    public sealed class WorldCheckpoint : MonoBehaviour, IObjFunction
     {
         [Header("检查点")]
         [Tooltip("该检查点对应的通用出生位置。为空时读取同物体的 WorldSpawnPoint。")]
@@ -19,17 +20,14 @@ namespace EndLink.World
         [SerializeField]
         private WorldRespawnManager respawnManager;
 
-        [Tooltip("首次或切换到该检查点时显示的提示。")]
-        [SerializeField]
-        private string activatePrompt = "激活检查点";
-
-        [Tooltip("该检查点已经是当前复活点时显示的提示。再次交互仍会恢复玩家状态。")]
-        [SerializeField]
-        private string restPrompt = "休整";
-
         [Tooltip("是否允许在小队战斗上下文仍处于战斗状态时使用。魂类检查点建议保持关闭。")]
         [SerializeField]
         private bool allowDuringCombat;
+
+        [Header("事件")]
+        [Tooltip("检查点成功激活或休整时触发，参数为发起交互的对象。可用于点亮篝火、播放音效或特效。")]
+        [SerializeField]
+        private UnityEvent<GameObject> onActivated = new();
 
         /// <summary>该检查点对应的通用出生位置。</summary>
         public WorldSpawnPoint SpawnPoint => spawnPoint;
@@ -44,9 +42,6 @@ namespace EndLink.World
             }
         }
 
-        /// <inheritdoc />
-        public override string InteractionPrompt => IsCurrentCheckpoint ? restPrompt : activatePrompt;
-
         private void Awake()
         {
             CacheSpawnPoint();
@@ -58,37 +53,33 @@ namespace EndLink.World
             EnsureCheckpointRole();
         }
 
-        /// <inheritdoc />
-        public override bool CanInteract(GameObject interactor)
-        {
-            WorldRespawnManager manager = ResolveManager();
-            return base.CanInteract(interactor)
-                && spawnPoint != null
-                && manager != null
-                && manager.CanUseCheckpoint(interactor, allowDuringCombat);
-        }
-
-        /// <inheritdoc />
-        protected override bool OnInteract(GameObject interactor)
-        {
-            WorldRespawnManager manager = ResolveManager();
-            return manager != null && manager.ActivateCheckpoint(spawnPoint, interactor);
-        }
-
         /// <summary>
         /// 接收通用 ObjInteractable 提交的武器交互请求。
-        /// 复用原交互入口，使战斗限制、休整逻辑和通用交互事件保持一致。
         /// </summary>
         public bool TryExecute(ObjInteractionContext context)
         {
-            return TryInteract(context.Interactor);
+            GameObject interactor = context.Interactor;
+            WorldRespawnManager manager = ResolveManager();
+            if (!isActiveAndEnabled
+                || interactor == null
+                || spawnPoint == null
+                || manager == null
+                || !manager.CanUseCheckpoint(interactor, allowDuringCombat))
+            {
+                return false;
+            }
+
+            if (!manager.ActivateCheckpoint(spawnPoint, interactor))
+            {
+                return false;
+            }
+
+            onActivated?.Invoke(interactor);
+            return true;
         }
 
-        protected override void OnValidate()
+        private void OnValidate()
         {
-            base.OnValidate();
-            activatePrompt ??= string.Empty;
-            restPrompt ??= string.Empty;
             CacheSpawnPoint();
             EnsureCheckpointRole();
         }

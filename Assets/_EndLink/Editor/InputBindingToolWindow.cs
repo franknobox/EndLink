@@ -894,7 +894,6 @@ namespace EndLink.Editor
                 "Move" => "移动",
                 "Look" => "视角移动",
                 "Attack" => "攻击",
-                "Interact" => "交互",
                 "Jump" => "跳跃",
                 "Previous" => "切换目标（左）",
                 "Next" => "切换目标（右）",

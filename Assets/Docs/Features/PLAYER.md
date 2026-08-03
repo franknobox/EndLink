@@ -17,7 +17,6 @@
 - 玩家移动输入和相机输入分开读取，避免输入读取器承担移动或相机逻辑。
 - 移动输入读取 `Player/Move`。
 - 跳跃输入读取 `Player/Jump`，默认键位为键盘 `Space`、手柄 `buttonSouth`。
-- 世界交互输入读取 `Player/Interact`，当前默认键位为键盘 `F` 单击和手柄 `buttonNorth`。
 - 攻击输入读取 `Player/Attack`，由状态机统一捕获并写入短时攻击缓冲，再决定是否进入攻击状态。
 - 攻击输入读取 `Player/Attack`，默认键位为鼠标左键、手柄 `RB / R1`。
 - 防御输入读取 `Player/Guard`，默认键位为鼠标右键、手柄 `LB / L1`，只缓存当前是否按住。

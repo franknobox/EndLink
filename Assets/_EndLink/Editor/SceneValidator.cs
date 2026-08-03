@@ -255,19 +255,6 @@ namespace EndLink.Editor
                     ValidateWeaponActions(weaponController, issues, referencedActions);
                 }
 
-                PlayerInteractor playerInteractor = root.GetComponent<PlayerInteractor>();
-                WorldInteractor worldInteractor = root.GetComponent<WorldInteractor>();
-                if ((playerInteractor == null) != (worldInteractor == null))
-                {
-                    Add(
-                        issues,
-                        SceneValidationSeverity.Warning,
-                        "PLAYER_INTERACTION_INCOMPLETE",
-                        "玩家",
-                        "PlayerInteractor 与 WorldInteractor 需要成对接入。",
-                        root);
-                }
-
                 if (playerLayer >= 0 && root.layer != playerLayer)
                 {
                     Add(

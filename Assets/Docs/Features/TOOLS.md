@@ -173,7 +173,7 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 - 通过 `EndLink > Validation > Scene Doctor` 打开，只扫描当前活动场景。
 - 第一版只报告问题，不会添加组件、修改 Layer、重写引用或标记场景为已修改。
 - 通用检查覆盖 Missing Script、已丢失的序列化对象引用，以及违反 `DisallowMultipleComponent` 的重复组件。
-- 玩家与镜头检查覆盖固定主控关键组件、生命/索敌/连段/射击瞄准/格挡/Animator 桥接、三种武器形态动作组、世界交互接线、Main Camera、Cinemachine Brain 和视角模式入口。
+- 玩家与镜头检查覆盖固定主控关键组件、生命/索敌/连段/射击瞄准/格挡/Animator 桥接、三种武器形态动作组、Main Camera、Cinemachine Brain 和视角模式入口；不再检查旧按键交互组件。
 - 战斗与敌人检查覆盖场景反馈调度器、正式敌人生命/平衡/标签/目标/状态/感知/移动/动作接线、视觉根和敌人 Collider Layer。
 - 数据与导航检查覆盖场景实际引用的 Action Id、Hitbox Prefab、重复 Action Id、推荐 Layer、NavMesh 数据和启用但未落在 NavMesh 上的 Agent。
 - 窗口支持按严重程度、类别和关键字筛选，问题对象可直接定位，并可复制完整文本报告。
