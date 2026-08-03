@@ -252,6 +252,27 @@ namespace EndLink.Core
         [SerializeField]
         private PlayerViewSettings soulsLikeSettings = PlayerViewSettings.CreateSoulsLikeDefault();
 
+        [Header("射击瞄准")]
+        [Tooltip("瞄准期间的镜头距离。该值只作为临时覆盖，不会修改高速或魂类视角预设。")]
+        [SerializeField, Min(0.01f)]
+        private float aimDistance = 2.6f;
+
+        [Tooltip("瞄准期间的相机垂直视场角。数值越小，目标在画面中越大。")]
+        [SerializeField, Range(1f, 179f)]
+        private float aimFieldOfView = 44f;
+
+        [Tooltip("瞄准期间的越肩支点偏移。X 控制左右肩位，Y 控制瞄准视点高度。")]
+        [SerializeField]
+        private Vector3 aimShoulderOffset = new(0.9f, 1.25f, 0f);
+
+        [Tooltip("进入瞄准时镜头拉近所用的平滑时间。")]
+        [SerializeField, Min(0.01f)]
+        private float aimEnterSmoothTime = 0.12f;
+
+        [Tooltip("退出瞄准时镜头恢复所用的平滑时间。")]
+        [SerializeField, Min(0.01f)]
+        private float aimExitSmoothTime = 0.22f;
+
         [Tooltip("硬锁时镜头平滑转向目标所用的阻尼时间。越小跟随越紧，越大越柔和。")]
         [SerializeField, Min(0.01f)]
         private float hardLockRotationSmoothTime = 0.12f;
@@ -282,6 +303,7 @@ namespace EndLink.Core
         private float _mouseTargetSwitchAccumulator;
         private float _nextTargetSwitchTime;
         private bool _gamepadTargetSwitchArmed = true;
+        private bool _aimViewActive;
 
         /// <summary>当前选择的视角模式。</summary>
         public PlayerViewMode ViewMode => viewMode;
@@ -293,6 +315,9 @@ namespace EndLink.Core
 
         /// <summary>当前硬锁目标；没有硬锁时返回 null。</summary>
         public Transform LockedTarget => IsHardLocked ? playerTargeting.HardLockedTarget : null;
+
+        /// <summary>当前是否由射击瞄准临时覆盖镜头构图。</summary>
+        public bool IsAimViewActive => _aimViewActive;
 
         private void Reset()
         {
@@ -306,6 +331,11 @@ namespace EndLink.Core
             gamepadTargetSwitchThreshold = 0.65f;
             gamepadTargetSwitchResetThreshold = 0.25f;
             targetSwitchCooldown = 0.18f;
+            aimDistance = 2.6f;
+            aimFieldOfView = 44f;
+            aimShoulderOffset = new Vector3(0.9f, 1.25f, 0f);
+            aimEnterSmoothTime = 0.12f;
+            aimExitSmoothTime = 0.22f;
             fastActionSettingsInitialized = true;
         }
 
@@ -336,6 +366,14 @@ namespace EndLink.Core
             if (_appliedMode != viewMode)
             {
                 ApplyMode(viewMode, false);
+            }
+
+            if (_aimViewActive)
+            {
+                playerInputReader?.ConsumeTargetLockPressed();
+                ResetTargetSwitchInput();
+                _cameraController.ClearLockTarget();
+                return;
             }
 
             bool handledTargetLockInput = false;
@@ -376,6 +414,8 @@ namespace EndLink.Core
             playerTargeting?.ClearHardLock();
             playerController?.ClearFacingTarget();
             _cameraController.ClearLockTarget();
+            _cameraController.ClearTemporaryViewOverride();
+            _aimViewActive = false;
             _cameraController.ApplyViewSettings(fastActionSettings, false);
         }
 
@@ -392,10 +432,18 @@ namespace EndLink.Core
                 0f,
                 Mathf.Max(0f, gamepadTargetSwitchThreshold - 0.05f));
             targetSwitchCooldown = Mathf.Max(0f, targetSwitchCooldown);
+            aimDistance = Mathf.Max(0.01f, aimDistance);
+            aimFieldOfView = Mathf.Clamp(aimFieldOfView, 1f, 179f);
+            aimEnterSmoothTime = Mathf.Max(0.01f, aimEnterSmoothTime);
+            aimExitSmoothTime = Mathf.Max(0.01f, aimExitSmoothTime);
 
             if (Application.isPlaying && _initialized && isActiveAndEnabled)
             {
                 ApplyMode(viewMode, false);
+                if (_aimViewActive)
+                {
+                    ApplyAimViewOverride();
+                }
             }
         }
 
@@ -431,6 +479,37 @@ namespace EndLink.Core
             {
                 ApplyMode(mode, false);
             }
+        }
+
+        /// <summary>
+        /// 开关射击瞄准镜头。瞄准只临时覆盖构图；退出后继续使用当前 Fast Action / Souls Like 预设。
+        /// </summary>
+        public void SetAimView(bool active)
+        {
+            Initialize();
+            if (_cameraController == null)
+            {
+                return;
+            }
+
+            if (active)
+            {
+                _aimViewActive = true;
+                playerTargeting?.ClearHardLock();
+                _cameraController.ClearLockTarget();
+                ResetTargetSwitchInput();
+                ApplyAimViewOverride();
+                return;
+            }
+
+            if (!_aimViewActive)
+            {
+                return;
+            }
+
+            _aimViewActive = false;
+            _cameraController.ClearTemporaryViewOverride();
+            RefreshCameraLockTarget();
         }
 
         private void Initialize()
@@ -469,7 +548,10 @@ namespace EndLink.Core
             if (mode == PlayerViewMode.FastAction)
             {
                 playerTargeting?.ClearHardLock();
-                playerController?.ClearFacingTarget();
+                if (!_aimViewActive)
+                {
+                    playerController?.ClearFacingTarget();
+                }
                 _cameraController.ClearLockTarget();
                 _cameraController.ApplyViewSettings(fastActionSettings, snapDistance);
                 return;
@@ -481,6 +563,12 @@ namespace EndLink.Core
 
         private void RefreshCameraLockTarget()
         {
+            if (_aimViewActive)
+            {
+                _cameraController.ClearLockTarget();
+                return;
+            }
+
             if (viewMode != PlayerViewMode.SoulsLike || playerTargeting == null || !playerTargeting.IsHardLocked)
             {
                 _cameraController.ClearLockTarget();
@@ -493,6 +581,16 @@ namespace EndLink.Core
                 lockPoint,
                 hardLockRotationSmoothTime);
             playerController?.SetFacingTarget(lockPoint);
+        }
+
+        private void ApplyAimViewOverride()
+        {
+            _cameraController.SetTemporaryViewOverride(
+                aimDistance,
+                aimFieldOfView,
+                aimShoulderOffset,
+                aimEnterSmoothTime,
+                aimExitSmoothTime);
         }
 
         private void HandleTargetSwitchInput()

@@ -5,8 +5,8 @@ namespace EndLink.UI
 {
     /// <summary>
     /// 小队战斗动作 UI 管理器。
-    /// 负责把 HUD 上的技能槽、连携槽和终链奥义槽绑定到固定三人小队的战斗命令槽位。
-    /// 它只刷新 UI，不执行技能、不判断连携是否合法。
+    /// 负责把 HUD 上归档的技能槽和终链奥义槽绑定到固定三人小队的战斗命令槽位。
+    /// 它只刷新 UI，不执行技能或判断战斗规则。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class UIPartyCombatAction : MonoBehaviour
@@ -21,30 +21,17 @@ namespace EndLink.UI
         private bool autoCollectChildSlots = true;
 
         [Header("主动技能槽")]
-        [Tooltip("主控主动技能 UI 槽，默认对应 Q。")]
+        [Tooltip("归档的主控主动技能 UI 槽，当前没有输入绑定。")]
         [SerializeField]
         private UICombatActionSlot playerSkillSlot;
 
-        [Tooltip("队友 A 主动技能 UI 槽，默认对应 E。")]
+        [Tooltip("归档的队友 A 主动技能 UI 槽，当前没有输入绑定。")]
         [SerializeField]
         private UICombatActionSlot allySlotASkillSlot;
 
-        [Tooltip("队友 B 主动技能 UI 槽，默认对应 F。")]
+        [Tooltip("归档的队友 B 主动技能 UI 槽，当前没有输入绑定。")]
         [SerializeField]
         private UICombatActionSlot allySlotBSkillSlot;
-
-        [Header("连携槽")]
-        [Tooltip("主控连携请求 UI 槽，默认对应 1。")]
-        [SerializeField]
-        private UICombatActionSlot playerLinkAttackSlot;
-
-        [Tooltip("队友 A 连携请求 UI 槽，默认对应 2。")]
-        [SerializeField]
-        private UICombatActionSlot allySlotALinkAttackSlot;
-
-        [Tooltip("队友 B 连携请求 UI 槽，默认对应 3。")]
-        [SerializeField]
-        private UICombatActionSlot allySlotBLinkAttackSlot;
 
         [Header("终链奥义槽")]
         [Tooltip("全队终链奥义 UI 槽，默认对应 V。")]
@@ -122,9 +109,6 @@ namespace EndLink.UI
             RefreshSlot(playerSkillSlot);
             RefreshSlot(allySlotASkillSlot);
             RefreshSlot(allySlotBSkillSlot);
-            RefreshSlot(playerLinkAttackSlot);
-            RefreshSlot(allySlotALinkAttackSlot);
-            RefreshSlot(allySlotBLinkAttackSlot);
             RefreshSlot(partyUltimateSlot);
         }
 
@@ -137,9 +121,6 @@ namespace EndLink.UI
             RefreshSlotCooldown(playerSkillSlot);
             RefreshSlotCooldown(allySlotASkillSlot);
             RefreshSlotCooldown(allySlotBSkillSlot);
-            RefreshSlotCooldown(playerLinkAttackSlot);
-            RefreshSlotCooldown(allySlotALinkAttackSlot);
-            RefreshSlotCooldown(allySlotBLinkAttackSlot);
             RefreshSlotCooldown(partyUltimateSlot);
         }
 
@@ -151,9 +132,6 @@ namespace EndLink.UI
             RefreshSlotKeyLabel(playerSkillSlot);
             RefreshSlotKeyLabel(allySlotASkillSlot);
             RefreshSlotKeyLabel(allySlotBSkillSlot);
-            RefreshSlotKeyLabel(playerLinkAttackSlot);
-            RefreshSlotKeyLabel(allySlotALinkAttackSlot);
-            RefreshSlotKeyLabel(allySlotBLinkAttackSlot);
             RefreshSlotKeyLabel(partyUltimateSlot);
         }
 
@@ -168,9 +146,6 @@ namespace EndLink.UI
                 UICombatActionSlotId.PlayerSkill => playerSkillSlot,
                 UICombatActionSlotId.AllySlotASkill => allySlotASkillSlot,
                 UICombatActionSlotId.AllySlotBSkill => allySlotBSkillSlot,
-                UICombatActionSlotId.PlayerLinkAttack => playerLinkAttackSlot,
-                UICombatActionSlotId.AllySlotALinkAttack => allySlotALinkAttackSlot,
-                UICombatActionSlotId.AllySlotBLinkAttack => allySlotBLinkAttackSlot,
                 UICombatActionSlotId.PartyUltimate => partyUltimateSlot,
                 _ => null
             };
@@ -212,15 +187,6 @@ namespace EndLink.UI
                 case UICombatActionSlotId.AllySlotBSkill:
                     allySlotBSkillSlot ??= childSlot;
                     break;
-                case UICombatActionSlotId.PlayerLinkAttack:
-                    playerLinkAttackSlot ??= childSlot;
-                    break;
-                case UICombatActionSlotId.AllySlotALinkAttack:
-                    allySlotALinkAttackSlot ??= childSlot;
-                    break;
-                case UICombatActionSlotId.AllySlotBLinkAttack:
-                    allySlotBLinkAttackSlot ??= childSlot;
-                    break;
                 case UICombatActionSlotId.PartyUltimate:
                     partyUltimateSlot ??= childSlot;
                     break;
@@ -237,9 +203,6 @@ namespace EndLink.UI
             ConfigureSlot(playerSkillSlot, UICombatActionSlotId.PlayerSkill);
             ConfigureSlot(allySlotASkillSlot, UICombatActionSlotId.AllySlotASkill);
             ConfigureSlot(allySlotBSkillSlot, UICombatActionSlotId.AllySlotBSkill);
-            ConfigureSlot(playerLinkAttackSlot, UICombatActionSlotId.PlayerLinkAttack);
-            ConfigureSlot(allySlotALinkAttackSlot, UICombatActionSlotId.AllySlotALinkAttack);
-            ConfigureSlot(allySlotBLinkAttackSlot, UICombatActionSlotId.AllySlotBLinkAttack);
             ConfigureSlot(partyUltimateSlot, UICombatActionSlotId.PartyUltimate);
         }
 

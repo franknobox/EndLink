@@ -19,9 +19,9 @@
 - 目标死亡时，`AllyBrain` 会监听 `Dead` 事件并请求状态机取消当前助战。
 - `AllyBrain` 不直接生成 Hitbox，不写伤害数据，只把事件目标交给 `AllyStateMachine.RequestAssist(...)`。
 - `AllyCombatDriver` 是队友战斗执行器，职责类似 `PlayerCombatDriver`，但不读取输入，也不决定什么时候出手。
-- `AllyCombatDriver` 当前使用自动助战与连携技动作槽位，并根据 `CombatActionDefinition` 生成 Hitbox、写入伤害、击退、战斗标签和标签持续时间；旧主动技能槽暂不配置。
+- `AllyCombatDriver` 当前使用自动助战动作槽位，并根据 `CombatActionDefinition` 生成 Hitbox、写入伤害、击退、战斗标签和标签持续时间；旧主动技能与连携动作槽暂不配置。
 - 队友进入助战流程只要求配置了 `Assist Action`；动作冷却只影响实际出手时间，冷却未结束时会在 Assist 内等待，而不是放弃助战。
-- `AllyCombatDriver` 按 `CombatActionDefinition` 分别记录动作冷却，自动助战和连携动作互不覆盖冷却。
+- `AllyCombatDriver` 按 `CombatActionDefinition` 分别记录动作冷却。
 - `AllyCombatDriver` 支持数据或动画事件时序，并在助战取消、受击、链接中断或组件禁用时关闭当前普通判定；Projectile 继续独立运行。
 - 动画事件动作可以在一次执行中重复开启多组独立 Hitbox 窗口，用于队友的多段攻击；整套动作仍只记录一次动作冷却。
 - `AllyCombatDriver` 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 或调试窗口读取。
@@ -73,11 +73,10 @@
 - 标签组合规则成功执行后会广播 `ReactionTriggered`，事件携带触发来源、反应目标、主要结果标签和对应的 `CombatTagCombinationRule`。
 - `PartyLinkContext` 监听协议反应事件，并为主控和两个队友同时开启一个全队共享的 4 秒连携窗口。
 - 窗口期内再次触发协议反应会把剩余时间刷新为完整 4 秒，并继续记录新的反应目标。
-- 玩家可以按 `1`、`2`、`3` 从主控、队友 A、队友 B 的连携技中选择一个释放；任意一个请求成功后会消费整个窗口，另外两个槽位同时锁定。
+- 当前主动释放入口已停用：`PlayerInputReader` 不再读取连携请求，`PartyCombatRouter` 不再配置 1/2/3 或手柄连携键位。
 - 只有一个有效反应目标时默认攻击该目标；记录了多个反应目标时优先攻击主控当前软锁目标。
 - 反应目标死亡或失效不会关闭窗口；没有有效反应目标时会回退到当前软锁目标，没有任何有效目标时保留窗口但拒绝本次释放。
-- 主控连携技通过玩家通用技能状态执行；队友连携技通过 `AllyActionState` 执行，不绕过角色状态机。
-- 成功释放连携技后，`PartyUltimateContext` 会读取本次 `LinkAction` 的 `SynergyGainOnLink`，增加全队协同率。
+- 主控和队友 CombatDriver 上的 `LinkAction` 配置已移除；窗口、目标解析和协同率数据接口仅作为后续恢复连携机制的基础保留。
 - 协同率达到 100% 后，`PartyUltimateContext` 标记终链奥义可释放；当前第一版按 `PartyCombatRouter` 配置的奥义键只消耗就绪状态并广播事件，不要求目标，也不执行具体奥义表现。
 - `PartyLinkContext` 暴露窗口是否开启、剩余时间、归一化剩余时间和目标解析接口，供后续连携 UI 使用。
 - `PartyUltimateContext` 暴露当前协同率、协同率上限、归一化进度、奥义就绪事件和奥义消耗事件，供后续 UI、镜头和奥义表现接入。
@@ -103,9 +102,6 @@
 - `PartyLinkContext.linkWindowDuration`：协议反应触发后的共享连携窗口，默认 4 秒
 - `PartyUltimateContext.maxSynergyRate`：协同率上限，默认 100
 - `CombatActionDefinition.SynergyGainOnLink`：连携动作成功释放后增加的协同率，只对 `LinkAttack` 类型动作生效
-- `PlayerCombatDriver.LinkAction`：主控连携技动作
-- `AllyCombatDriver.LinkAction`：对应队友连携技动作
-- `PartyCombatRouter` 的 `1` / `2` / `3` 键位：分别选择主控、队友 A、队友 B 的连携技
 - `PartyCombatRouter.partyUltimateKey`：尝试释放全队终链奥义，默认 V
 
 </details>
@@ -163,11 +159,10 @@
 - `PartyManager` 持有 `PartyCombatRouter` 引用，供战斗 UI 和后续小队系统读取当前键位路由。
 - `PartyCombatContext` 作为小队战斗状态上下文，供队友目标选择、战斗 UI 和后续连携系统读取当前主目标、已知敌人和战斗状态。
 - `PartyCombatRouter` 负责把 `PlayerInputReader` 中的战斗输入翻译成主控、队友 A、队友 B 或全队的命令请求。
-- `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害或标签；它只校验连携窗口并把合法请求转发给对应角色状态机。
+- `PartyCombatRouter` 不直接生成 Hitbox，不处理伤害或标签；当前命令类型中已移除连携入口。
 - 旧主控/队友 `Skill` 命令、动作引用和键位当前均停用；路由代码壳暂时保留，供后续单人技能方案或小队实验重新设计时评估。
-- `PartyCombatRouter` Inspector 当前主要配置 1/2/3 连携和全队终链奥义键位。
-- `LinkAttack` 命令只有在 `PartyLinkContext` 窗口开启时才会被接受；请求成功后由对应角色状态机执行 `LinkAction` 并消费共享窗口。
-- `PartyUltimateContext` 维护全队协同率；成功释放连携技会按 `CombatActionDefinition.SynergyGainOnLink` 充能，奥义键在满值后消耗奥义就绪状态。
+- `PartyCombatRouter` Inspector 当前只保留旧技能空键位和全队终链奥义键位；连携键位配置已移除。
+- `PartyUltimateContext` 继续保留协同率数据能力，但当前没有连携释放入口为其充能。
 - 后续队友 AI、连携规则或调试工具需要知道“谁是主控，谁是队友”时，可以从 `PartyManager` 查询。
 
 对应脚本：
@@ -203,7 +198,6 @@
 - `formationSwitchMinImprovement`：交换后至少减少多少移动代价才允许换位
 - `formationSwitchCooldown`：站位交换冷却，避免频繁来回抢位
 - `playerSkillKey` / `allySlotASkillKey` / `allySlotBSkillKey`：旧主动技能键位，当前全部为 `None`
-- `playerLinkAttackKey` / `allySlotALinkAttackKey` / `allySlotBLinkAttackKey`：主控和两个队友连携请求键位，默认 1 / 2 / 3
 - `partyUltimateKey`：全队终链奥义键位，默认 V
 - `PartyUltimateContext.maxSynergyRate`：终链奥义协同率上限，默认 100
 - `CombatActionDefinition.SynergyGainOnLink`：各连携技自己的协同率收益

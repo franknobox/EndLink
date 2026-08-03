@@ -57,7 +57,7 @@ namespace EndLink.Combat
 
     /// <summary>
     /// 主角三种武器形态的唯一运行时入口。
-    /// 负责保存当前形态、提供对应动作组并校验安全切换；不读取输入，也不直接执行攻击。
+    /// 负责保存当前形态、提供对应动作组，并消费输入层提供的上一/下一形态请求；不直接执行攻击。
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PlayerCombatDriver))]
@@ -90,6 +90,7 @@ namespace EndLink.Combat
         private PlayerCombatDriver _combatDriver;
         private PlayerComboController _comboController;
         private PlayerStateMachine _stateMachine;
+        private PlayerInputReader _inputReader;
 
         /// <summary>武器形态实际发生变化后触发，参数为新的形态。</summary>
         public event Action<PlayerWeaponForm> FormChanged;
@@ -145,6 +146,30 @@ namespace EndLink.Combat
         private void OnValidate()
         {
             EnsureActionSets();
+        }
+
+        private void Update()
+        {
+            if (_inputReader == null)
+            {
+                return;
+            }
+
+            bool previousRequested = _inputReader.ConsumePreviousWeaponFormPressed();
+            bool nextRequested = _inputReader.ConsumeNextWeaponFormPressed();
+            if (previousRequested == nextRequested)
+            {
+                return;
+            }
+
+            if (previousRequested)
+            {
+                RequestPreviousForm();
+            }
+            else
+            {
+                RequestNextForm();
+            }
         }
 
         private void EnsureActionSets()
@@ -224,6 +249,7 @@ namespace EndLink.Combat
             _combatDriver ??= GetComponent<PlayerCombatDriver>();
             _comboController ??= GetComponent<PlayerComboController>();
             _stateMachine ??= GetComponent<PlayerStateMachine>();
+            _inputReader ??= GetComponent<PlayerInputReader>();
         }
     }
 }

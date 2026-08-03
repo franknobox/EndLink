@@ -235,6 +235,7 @@ namespace EndLink.Editor
                 Require<PlayerHealth>(root, issues, "PLAYER_HEALTH_BRIDGE_MISSING", "主角缺少 PlayerHealth 状态机桥接。", false);
                 Require<PlayerTargeting>(root, issues, "PLAYER_TARGETING_MISSING", "主角缺少 PlayerTargeting，软锁与硬锁不会工作。", false);
                 Require<PlayerComboController>(root, issues, "PLAYER_COMBO_MISSING", "主角缺少 PlayerComboController，连段与攻击位移不会工作。", false);
+                Require<PlayerAimController>(root, issues, "PLAYER_AIM_MISSING", "主角缺少 PlayerAimController，B 形态无法进入射击瞄准。", false);
                 Require<PlayerGuardController>(root, issues, "PLAYER_GUARD_MISSING", "主角缺少 PlayerGuardController，格挡与弹反不会工作。", false);
                 Require<PlayerAnimatorDriver>(root, issues, "PLAYER_ANIMATOR_MISSING", "主角缺少 PlayerAnimatorDriver，动作与 Animator 无法接线。", false);
 

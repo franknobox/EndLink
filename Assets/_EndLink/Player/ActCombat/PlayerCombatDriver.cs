@@ -22,13 +22,10 @@ namespace EndLink.Combat
         [SerializeField]
         private CombatActionDefinition skillAction;
 
-        [Tooltip("玩家连携技动作配置。不能被普通输入直接释放，必须由连携窗口确认后调用。")]
-        [SerializeField]
-        private CombatActionDefinition linkAction;
-
         private PlayerTargeting _targeting;
         private PlayerController _playerController;
         private PlayerWeaponController _weaponController;
+        private PlayerAimController _aimController;
         private ICombatActionLockReceiver _actionLockReceiver;
         private readonly Dictionary<CombatActionDefinition, float> _nextReadyTimes = new();
         private CombatActionDefinition _lastExecutedAction;
@@ -42,6 +39,8 @@ namespace EndLink.Combat
         private bool _hasTriggeredActionEffect;
         private bool _hasEndedHitboxWindow;
         private bool _hasLoggedAnimationTimeout;
+        private bool _hasCurrentAimPoint;
+        private Vector3 _currentAimPoint;
 
         /// <summary>
         /// 动作成功开始时触发。供 Animator 桥接层写入 ActionId、ActionType 并触发对应动画。
@@ -57,9 +56,6 @@ namespace EndLink.Combat
         public CombatActionDefinition SkillAction => _weaponController != null
             ? _weaponController.CurrentSkillAction
             : skillAction;
-
-        /// <summary>玩家连携技动作配置。实际释放必须由连携窗口授权。</summary>
-        public CombatActionDefinition LinkAction => linkAction;
 
         /// <summary>当前是否可以释放下一次动作。</summary>
         public bool CanAttack => CanExecute(BasicAttackAction);
@@ -88,6 +84,20 @@ namespace EndLink.Combat
 
         /// <summary>当前是否仍有动作时序正在推进。</summary>
         public bool IsExecutingAction => _currentActionDefinition != null;
+
+        /// <summary>当前形态的基础攻击是否满足瞄准等额外输入条件。</summary>
+        public bool CanStartBasicAttack => _aimController == null || _aimController.CanStartBasicAttack();
+
+        /// <summary>当前基础攻击是否正由 B 形态准星控制，而不是自动软锁目标。</summary>
+        public bool IsAimingBasicAttack => _aimController != null
+            && _aimController.RequiresAimForBasicAttack
+            && _aimController.IsAiming;
+
+        /// <summary>当前武器形态是否占用防御输入语义。</summary>
+        public bool BlocksGuard => _aimController != null && _aimController.BlocksGuard;
+
+        /// <summary>当前是否正在执行一发已经捕获瞄准点的射击动作。</summary>
+        public bool IsExecutingAimedShot => _currentActionDefinition != null && _hasCurrentAimPoint;
 
         /// <summary>当前动作阶段。动画事件模式会随 HitboxStart / HitboxEnd 更新。</summary>
         public CombatActionPhase CurrentActionPhase => _currentActionDefinition == null
@@ -121,6 +131,7 @@ namespace EndLink.Combat
             TryGetComponent(out _targeting);
             TryGetComponent(out _playerController);
             TryGetComponent(out _weaponController);
+            TryGetComponent(out _aimController);
             _actionLockReceiver = GetComponent<ICombatActionLockReceiver>();
         }
 
@@ -188,17 +199,33 @@ namespace EndLink.Combat
                 return false;
             }
 
-            Vector3 attackForward = ResolveAttackForward(targetOverride);
+            Vector3 capturedAimPoint = Vector3.zero;
+            bool hasAimPoint = _aimController != null
+                && _aimController.TryCaptureShotAim(actionDefinition, out capturedAimPoint);
+            Transform effectiveTarget = hasAimPoint ? null : targetOverride;
+            Vector3 attackForward = hasAimPoint
+                ? ResolvePlanarDirection(transform.position, capturedAimPoint, transform.forward)
+                : ResolveAttackForward(effectiveTarget);
             FaceAttackDirection(attackForward);
             Vector3 hitboxForward = ResolveCurrentForward(attackForward);
 
-            GameObject actionTarget = targetOverride != null
-                ? targetOverride.gameObject
+            GameObject actionTarget = effectiveTarget != null
+                ? effectiveTarget.gameObject
                 : GetCurrentTargetObject();
+            if (hasAimPoint)
+            {
+                actionTarget = null;
+            }
+
             CombatEventsBus.RaiseActionStarted(gameObject, actionTarget, actionDefinition);
             _lastExecutedAction = actionDefinition;
             _nextReadyTimes[actionDefinition] = Time.time + Mathf.Max(0f, actionDefinition.Cooldown);
-            StartActionExecution(actionDefinition, targetOverride, hitboxForward);
+            StartActionExecution(
+                actionDefinition,
+                effectiveTarget,
+                hitboxForward,
+                hasAimPoint,
+                capturedAimPoint);
             _actionLockReceiver?.NotifyActionStarted();
             ActionStarted?.Invoke(actionDefinition);
             return true;
@@ -294,6 +321,32 @@ namespace EndLink.Combat
                 : Vector3.forward;
         }
 
+        /// <summary>返回当前瞄准射击需要维持的水平朝向，供攻击状态覆盖软锁跟随。</summary>
+        public bool TryGetCurrentAimFacingDirection(out Vector3 direction)
+        {
+            direction = Vector3.zero;
+            if (!_hasCurrentAimPoint || _currentActionDefinition == null)
+            {
+                return false;
+            }
+
+            direction = ResolvePlanarDirection(transform.position, _currentAimPoint, _currentActionForward);
+            return direction.sqrMagnitude > 0.0001f;
+        }
+
+        private static Vector3 ResolvePlanarDirection(Vector3 origin, Vector3 target, Vector3 fallback)
+        {
+            Vector3 direction = target - origin;
+            direction.y = 0f;
+            if (direction.sqrMagnitude > 0.0001f)
+            {
+                return direction.normalized;
+            }
+
+            fallback.y = 0f;
+            return fallback.sqrMagnitude > 0.0001f ? fallback.normalized : Vector3.forward;
+        }
+
         private static Transform ResolveLockPoint(Transform target)
         {
             return target != null
@@ -318,13 +371,20 @@ namespace EndLink.Combat
             }
         }
 
-        private void StartActionExecution(CombatActionDefinition actionDefinition, Transform targetOverride, Vector3 hitboxForward)
+        private void StartActionExecution(
+            CombatActionDefinition actionDefinition,
+            Transform targetOverride,
+            Vector3 hitboxForward,
+            bool hasAimPoint,
+            Vector3 aimPoint)
         {
             _currentActionDefinition = actionDefinition;
             _currentActionTarget = targetOverride;
             _currentActionForward = hitboxForward.sqrMagnitude > 0.0001f
                 ? hitboxForward.normalized
                 : Vector3.forward;
+            _hasCurrentAimPoint = hasAimPoint;
+            _currentAimPoint = aimPoint;
             _animationEventElapsed = 0f;
             _animationEventPhase = CombatActionPhase.Startup;
             _hasTriggeredActionEffect = false;
@@ -469,11 +529,22 @@ namespace EndLink.Combat
             _hasTriggeredActionEffect = true;
 
             // 判定生成时读取角色实时正前方，使前摇期间的软锁跟随转向能同步影响 Hitbox 朝向。
-            Vector3 spawnForward = ResolveCurrentForward(_currentActionForward);
+            bool isProjectile = _currentActionDefinition.HitboxPrefab.TryGetComponent<HitboxProjectile>(out _);
+            Vector3 spawnForward = _hasCurrentAimPoint
+                ? ResolvePlanarDirection(transform.position, _currentAimPoint, _currentActionForward)
+                : ResolveCurrentForward(_currentActionForward);
             Vector3 spawnPosition = transform.position
                 + spawnForward * _currentActionDefinition.HitboxSpawnDistance
                 + Vector3.up * _currentActionDefinition.HitboxSpawnHeight;
-            Quaternion spawnRotation = Quaternion.LookRotation(spawnForward, Vector3.up);
+            Vector3 effectForward = isProjectile && _hasCurrentAimPoint
+                ? _currentAimPoint - spawnPosition
+                : spawnForward;
+            if (effectForward.sqrMagnitude <= 0.0001f)
+            {
+                effectForward = spawnForward;
+            }
+
+            Quaternion spawnRotation = Quaternion.LookRotation(effectForward.normalized, Vector3.up);
 
             GameObject hitboxInstance = Instantiate(_currentActionDefinition.HitboxPrefab, spawnPosition, spawnRotation);
             ConfigureHitbox(hitboxInstance, _currentActionDefinition);
@@ -526,6 +597,8 @@ namespace EndLink.Combat
             _hasTriggeredActionEffect = false;
             _hasEndedHitboxWindow = false;
             _hasLoggedAnimationTimeout = false;
+            _hasCurrentAimPoint = false;
+            _currentAimPoint = Vector3.zero;
         }
 
         private GameObject GetCurrentTargetObject()

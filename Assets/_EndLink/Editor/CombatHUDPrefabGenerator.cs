@@ -17,6 +17,8 @@ namespace EndLink.Editor
         private const string GeneratedFolder = "Assets/_EndLink/UI/Generated";
         private const string DebugPanelPath = PrefabFolder + "/PF_DebugPanel.prefab";
         private const string EnemyHealthBarPath = PrefabFolder + "/PF_EnemyHealthBar.prefab";
+        private const string AimReticlePath = PrefabFolder + "/PF_AimReticle.prefab";
+        private const string WeaponFormUIPath = PrefabFolder + "/PF_WeaponFormUI.prefab";
         private const string SquareSpritePath = GeneratedFolder + "/UI_Square64.png";
 
         [MenuItem("EndLink/UI/Combat HUD/Create Current Prefabs")]
@@ -24,12 +26,14 @@ namespace EndLink.Editor
         {
             EnsureFolder(PrefabFolder);
             bool hasExistingPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(DebugPanelPath) != null
-                || AssetDatabase.LoadAssetAtPath<GameObject>(EnemyHealthBarPath) != null;
+                || AssetDatabase.LoadAssetAtPath<GameObject>(EnemyHealthBarPath) != null
+                || AssetDatabase.LoadAssetAtPath<GameObject>(AimReticlePath) != null
+                || AssetDatabase.LoadAssetAtPath<GameObject>(WeaponFormUIPath) != null;
 
             if (hasExistingPrefab
                 && !EditorUtility.DisplayDialog(
                     "生成当前战斗 HUD",
-                    "调试面板或敌人血条 Prefab 已存在，是否覆盖？",
+                    "调试面板、敌人血条、瞄准准星或武器形态 Prefab 已存在，是否覆盖？",
                     "覆盖",
                     "取消"))
             {
@@ -38,6 +42,8 @@ namespace EndLink.Editor
 
             CreateDebugPanel(promptOverwrite: false);
             CreateEnemyHealthBar(promptOverwrite: false);
+            CreateAimReticle(promptOverwrite: false);
+            CreateWeaponFormUI(promptOverwrite: false);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log("已生成当前仍在使用的战斗 HUD Prefab。");
@@ -55,6 +61,18 @@ namespace EndLink.Editor
             CreateEnemyHealthBar(promptOverwrite: true);
         }
 
+        [MenuItem("EndLink/UI/Combat HUD/Create Aim Reticle")]
+        public static void CreateAimReticle()
+        {
+            CreateAimReticle(promptOverwrite: true);
+        }
+
+        [MenuItem("EndLink/UI/Combat HUD/Create Weapon Form UI")]
+        public static void CreateWeaponFormUI()
+        {
+            CreateWeaponFormUI(promptOverwrite: true);
+        }
+
         private static void CreateDebugPanel(bool promptOverwrite)
         {
             EnsureFolder(PrefabFolder);
@@ -69,6 +87,22 @@ namespace EndLink.Editor
             Sprite squareSprite = EnsureSquareSprite();
             GameObject healthBar = CreateEnemyHealthBarObject(squareSprite);
             SaveWorldUIPrefab(healthBar, EnemyHealthBarPath, promptOverwrite);
+        }
+
+        private static void CreateAimReticle(bool promptOverwrite)
+        {
+            EnsureFolder(PrefabFolder);
+            Sprite squareSprite = EnsureSquareSprite();
+            GameObject reticle = CreateAimReticleObject(squareSprite);
+            SavePanelPrefab(reticle, AimReticlePath, promptOverwrite);
+        }
+
+        private static void CreateWeaponFormUI(bool promptOverwrite)
+        {
+            EnsureFolder(PrefabFolder);
+            Sprite squareSprite = EnsureSquareSprite();
+            GameObject weaponFormUI = CreateWeaponFormUIObject(squareSprite);
+            SavePanelPrefab(weaponFormUI, WeaponFormUIPath, promptOverwrite);
         }
 
         private static GameObject CreateDebugPanelObject(Sprite squareSprite)
@@ -177,6 +211,152 @@ namespace EndLink.Editor
             healthBarObject.FindProperty("autoRefresh").boolValue = false;
             healthBarObject.ApplyModifiedPropertiesWithoutUndo();
             return root;
+        }
+
+        private static GameObject CreateAimReticleObject(Sprite squareSprite)
+        {
+            GameObject root = CreateUIObject("PF_AimReticle", null);
+            RectTransform rootRect = root.GetComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(0.5f, 0.5f);
+            rootRect.anchorMax = new Vector2(0.5f, 0.5f);
+            rootRect.pivot = new Vector2(0.5f, 0.5f);
+            rootRect.sizeDelta = new Vector2(40f, 40f);
+            rootRect.anchoredPosition = Vector2.zero;
+
+            CanvasGroup canvasGroup = root.AddComponent<CanvasGroup>();
+            canvasGroup.alpha = 0f;
+            canvasGroup.interactable = false;
+            canvasGroup.blocksRaycasts = false;
+
+            UIAimReticle reticle = root.AddComponent<UIAimReticle>();
+            CreateReticleLine(root.transform, "Top", squareSprite, new Vector2(0f, 10f), new Vector2(2f, 9f));
+            CreateReticleLine(root.transform, "Bottom", squareSprite, new Vector2(0f, -10f), new Vector2(2f, 9f));
+            CreateReticleLine(root.transform, "Left", squareSprite, new Vector2(-10f, 0f), new Vector2(9f, 2f));
+            CreateReticleLine(root.transform, "Right", squareSprite, new Vector2(10f, 0f), new Vector2(9f, 2f));
+
+            SerializedObject serializedReticle = new(reticle);
+            serializedReticle.FindProperty("canvasGroup").objectReferenceValue = canvasGroup;
+            serializedReticle.ApplyModifiedPropertiesWithoutUndo();
+            return root;
+        }
+
+        private static void CreateReticleLine(
+            Transform parent,
+            string name,
+            Sprite squareSprite,
+            Vector2 anchoredPosition,
+            Vector2 size)
+        {
+            GameObject lineObject = CreateUIObject(name, parent);
+            RectTransform lineRect = lineObject.GetComponent<RectTransform>();
+            lineRect.anchorMin = new Vector2(0.5f, 0.5f);
+            lineRect.anchorMax = new Vector2(0.5f, 0.5f);
+            lineRect.pivot = new Vector2(0.5f, 0.5f);
+            lineRect.anchoredPosition = anchoredPosition;
+            lineRect.sizeDelta = size;
+
+            Image lineImage = lineObject.AddComponent<Image>();
+            lineImage.sprite = squareSprite;
+            lineImage.color = new Color(1f, 1f, 1f, 0.92f);
+            lineImage.raycastTarget = false;
+
+            Outline outline = lineObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0f, 0f, 0f, 0.75f);
+            outline.effectDistance = new Vector2(1f, -1f);
+            outline.useGraphicAlpha = true;
+        }
+
+        private static GameObject CreateWeaponFormUIObject(Sprite squareSprite)
+        {
+            GameObject root = CreateUIObject("PF_WeaponFormUI", null);
+            RectTransform rootRect = root.GetComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(1f, 0f);
+            rootRect.anchorMax = new Vector2(1f, 0f);
+            rootRect.pivot = new Vector2(1f, 0f);
+            rootRect.sizeDelta = new Vector2(124f, 166f);
+            rootRect.anchoredPosition = Vector2.zero;
+
+            UIWeaponForm weaponFormUI = root.AddComponent<UIWeaponForm>();
+
+            GameObject diamondObject = CreateUIObject("Diamond", root.transform);
+            RectTransform diamondRect = diamondObject.GetComponent<RectTransform>();
+            diamondRect.anchorMin = new Vector2(0.5f, 0.5f);
+            diamondRect.anchorMax = new Vector2(0.5f, 0.5f);
+            diamondRect.pivot = new Vector2(0.5f, 0.5f);
+            diamondRect.anchoredPosition = Vector2.zero;
+            diamondRect.sizeDelta = new Vector2(72f, 72f);
+            diamondRect.localRotation = Quaternion.Euler(0f, 0f, 45f);
+
+            Image diamondImage = diamondObject.AddComponent<Image>();
+            diamondImage.sprite = squareSprite;
+            diamondImage.color = new Color(0.84f, 0.84f, 0.84f, 0.94f);
+            diamondImage.raycastTarget = false;
+
+            GameObject labelObject = CreateUIObject("FormLabel", root.transform);
+            RectTransform labelRect = labelObject.GetComponent<RectTransform>();
+            labelRect.anchorMin = new Vector2(0.5f, 0.5f);
+            labelRect.anchorMax = new Vector2(0.5f, 0.5f);
+            labelRect.pivot = new Vector2(0.5f, 0.5f);
+            labelRect.anchoredPosition = Vector2.zero;
+            labelRect.sizeDelta = new Vector2(70f, 52f);
+
+            TextMeshProUGUI formLabel = labelObject.AddComponent<TextMeshProUGUI>();
+            formLabel.text = "A";
+            formLabel.font = TMP_Settings.defaultFontAsset;
+            formLabel.fontSize = 36f;
+            formLabel.fontStyle = FontStyles.Normal;
+            formLabel.color = Color.black;
+            formLabel.alignment = TextAlignmentOptions.Center;
+            formLabel.raycastTarget = false;
+
+            CreateWeaponFormChevron(root.transform, "Previous", squareSprite, new Vector2(0f, 63f), true);
+            CreateWeaponFormChevron(root.transform, "Next", squareSprite, new Vector2(0f, -63f), false);
+
+            SerializedObject serializedWeaponFormUI = new(weaponFormUI);
+            serializedWeaponFormUI.FindProperty("formLabel").objectReferenceValue = formLabel;
+            serializedWeaponFormUI.ApplyModifiedPropertiesWithoutUndo();
+            return root;
+        }
+
+        private static void CreateWeaponFormChevron(
+            Transform parent,
+            string name,
+            Sprite squareSprite,
+            Vector2 anchoredPosition,
+            bool pointsUp)
+        {
+            GameObject chevron = CreateUIObject(name, parent);
+            RectTransform chevronRect = chevron.GetComponent<RectTransform>();
+            chevronRect.anchorMin = new Vector2(0.5f, 0.5f);
+            chevronRect.anchorMax = new Vector2(0.5f, 0.5f);
+            chevronRect.pivot = new Vector2(0.5f, 0.5f);
+            chevronRect.anchoredPosition = anchoredPosition;
+            chevronRect.sizeDelta = new Vector2(38f, 24f);
+
+            CreateChevronLine(chevron.transform, "Left", squareSprite, -8f, pointsUp ? 45f : -45f);
+            CreateChevronLine(chevron.transform, "Right", squareSprite, 8f, pointsUp ? -45f : 45f);
+        }
+
+        private static void CreateChevronLine(
+            Transform parent,
+            string name,
+            Sprite squareSprite,
+            float anchoredX,
+            float rotationZ)
+        {
+            GameObject lineObject = CreateUIObject(name, parent);
+            RectTransform lineRect = lineObject.GetComponent<RectTransform>();
+            lineRect.anchorMin = new Vector2(0.5f, 0.5f);
+            lineRect.anchorMax = new Vector2(0.5f, 0.5f);
+            lineRect.pivot = new Vector2(0.5f, 0.5f);
+            lineRect.anchoredPosition = new Vector2(anchoredX, 0f);
+            lineRect.sizeDelta = new Vector2(2.5f, 23f);
+            lineRect.localRotation = Quaternion.Euler(0f, 0f, rotationZ);
+
+            Image lineImage = lineObject.AddComponent<Image>();
+            lineImage.sprite = squareSprite;
+            lineImage.color = Color.black;
+            lineImage.raycastTarget = false;
         }
 
         private static GameObject CreateUIObject(string name, Transform parent)

@@ -8,7 +8,7 @@ namespace EndLink.Ally
     /// <summary>
     /// 队友战斗执行器。
     /// 只负责按 CombatActionDefinition 执行动作表现和 Hitbox 判定，不监听输入、不订阅事件、不决定何时出手。
-    /// 自动助战、主动技能、连携技共享执行逻辑，但各自按动作资产独立计算冷却。
+    /// 自动助战和主动技能共享执行逻辑，但各自按动作资产独立计算冷却。
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class AllyCombatDriver : MonoBehaviour, ICombatActionExecutor, ICombatAnimationEventListener
@@ -23,10 +23,6 @@ namespace EndLink.Ally
         [Tooltip("队友主动技能动作。由 PartyCombatRouter 的队友技能命令触发。")]
         [SerializeField]
         private CombatActionDefinition skillAction;
-
-        [Tooltip("队友连携技动作配置。实际释放必须由连携窗口授权。")]
-        [SerializeField]
-        private CombatActionDefinition linkAction;
 
         [Header("瞄准")]
         [Tooltip("执行动作时是否先把队友水平转向目标。关闭后会使用队友当前 Z 轴正前方生成 Hitbox。")]
@@ -61,9 +57,6 @@ namespace EndLink.Ally
 
         /// <summary>队友主动技能动作配置。</summary>
         public CombatActionDefinition SkillAction => skillAction;
-
-        /// <summary>队友连携技动作配置。</summary>
-        public CombatActionDefinition LinkAction => linkAction;
 
         /// <summary>是否已经配置自动助战动作。</summary>
         public bool HasAssistAction => assistAction != null;

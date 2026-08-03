@@ -21,7 +21,7 @@
 - `UICombatActionSlot` 不读取输入、不释放动作、不判断战斗规则。
 - 冷却中直接把图标染成配置颜色，冷却结束后恢复图标原色。
 - 动作栏每帧只刷新冷却这类连续变化显示；键位文本通过 `PartyCombatRouter.KeyBindingsChanged` 事件刷新。
-- `UIPartyMemberPortrait` 是小队成员头像 UI，负责显示主控和两个队友头像、1/2/3 连携键位、连携窗口高亮，以及队友 Link Down / 主控死亡后的灰化。
+- `UIPartyMemberPortrait` 是归档的小队成员头像 UI，当前只保留成员可用状态与 Link Down / 死亡灰化，不再包含连携键位和窗口高亮配置。
 - `UIPartyUltimateBar` 是终链奥义条 UI，负责显示协同率进度、`PartyCombatRouter` 当前奥义键位和奥义就绪颜色。
 - `HUDDebugLogPanel` 是运行时 HUD 调试日志面板，监听 `CombatEventsBus`、`AllyDebugLog` 和 `PartyCombatRouter.CommandRequested`，可按 Combat、Ally、Party、Damage、Tag 筛选显示最近日志。
 - `UIHealthBar` 是通用血条组件，支持 `CharacterHealth` 和正式敌人的 `EnemyHealth`，可用于主角、队友和敌人头顶血条。
@@ -30,10 +30,12 @@
 - `UIHealthBar` 优先监听生命事件刷新，`autoRefresh` 只作为兜底刷新开关。
 - `UIBalanceBar` 是通用平衡条组件，只依赖 `IBalanceSource`；当前可直接绑定 `EnemyBalance`，后续主角平衡组件实现同一接口后可以复用。
 - `UIBalanceBar` 显示当前剩余平衡值，优先监听 `BalanceChanged` 事件刷新，不负责削减平衡、进入失衡或判断处决。
+- `UIAimReticle` 是 B 形态射击瞄准的居中十字准星，只监听 `PlayerAimController` 的瞄准状态并控制 `CanvasGroup` 显隐，不读取输入或计算射线。
+- `UIWeaponForm` 是主角 A/B/C 武器形态显示，只监听 `PlayerWeaponController.FormChanged` 更新中央字母；上下箭头只提示 Q/E 或方向键切换关系，不承担按钮输入。
 - `UIHealthBar` 和 `UIEnemyHealthBar` 不会在 `Awake` / `OnValidate` 里修改 `CanvasGroup` 显隐，首次显示刷新延后到 `Start`，避免编辑器生命周期 warning。
 - `UIEnemyHealthBar` 是敌人头顶血条控制器，负责 World Space 跟随、面向相机、绑定 `EnemyHealth` 和套用默认半透明暗红色样式。
 - 敌人头顶血条预制体使用小尺寸世界单位 RectTransform，避免拖入场景时因为缩放重置变成巨大半透明面片；显隐刷新只在运行期改 `CanvasGroup`。
-- `CombatHUDPrefabGenerator` 提供 `EndLink > UI > Combat HUD` 菜单入口，当前只生成仍在使用的运行时调试面板和敌人头顶血条。
+- `CombatHUDPrefabGenerator` 提供 `EndLink > UI > Combat HUD` 菜单入口，当前生成运行时调试面板、敌人头顶血条、瞄准准星和武器形态显示。
 - 旧版小队状态、动作槽与奥义 Prefab 继续作为归档资产保留，但不会再被生成工具创建或覆盖；新版单人战斗 UI 后续使用新的接口和生成流程。
 
 对应脚本：
@@ -46,6 +48,8 @@
 - `Assets/_EndLink/UI/UIHealthBar.cs`
 - `Assets/_EndLink/UI/UIBalanceBar.cs`
 - `Assets/_EndLink/UI/UIEnemyHealthBar.cs`
+- `Assets/_EndLink/UI/UIAimReticle.cs`
+- `Assets/_EndLink/UI/UIWeaponForm.cs`
 - `Assets/_EndLink/Editor/CombatHUDPrefabGenerator.cs`
 
 相关物体：
@@ -60,8 +64,6 @@
 - 小队成员头像
   - `UIPartyMemberPortrait`
   - `Image` 头像
-  - `Image` 连携高亮
-  - 可选 `TextMeshProUGUI` 连携键位
 - 终链奥义条
   - `UIPartyUltimateBar`
   - `Image` 协同率填充
@@ -83,9 +85,19 @@
   - `UIEnemyHealthBar`
   - `UIHealthBar`
   - 半透明暗红色背景与填充 `Image`
+- 瞄准准星
+  - `CanvasGroup`
+  - `UIAimReticle`
+  - 居中十字线 `Image`
+- 武器形态显示
+  - `UIWeaponForm`
+  - 浅灰菱形背景与 A/B/C `TextMeshProUGUI`
+  - 上下切换提示箭头
 - 生成工具产物
   - `Assets/_EndLink/UI/Prefabs/PF_DebugPanel.prefab`
   - `Assets/_EndLink/UI/Prefabs/PF_EnemyHealthBar.prefab`，运行生成菜单后创建
+  - `Assets/_EndLink/UI/Prefabs/PF_AimReticle.prefab`
+  - `Assets/_EndLink/UI/Prefabs/PF_WeaponFormUI.prefab`
   - `Assets/_EndLink/UI/Generated/UI_Square64.png`
 
 关键配置：
@@ -120,5 +132,7 @@
 - `UIEnemyHealthBar.worldOffset`：血条相对敌人锁定点或生命组件位置的世界偏移
 - `UIEnemyHealthBar.backgroundColor` / `fillColor`：敌人血条背景和填充颜色，默认半透明暗红色
 - `UIEnemyHealthBar.hideWhenFull` / `hideWhenDead`：满血和死亡时是否隐藏敌人头顶血条
+- `UIAimReticle.aimController`：主角根物体上的 `PlayerAimController`；空时运行期查找一次
+- `UIWeaponForm.weaponController`：主角根物体上的 `PlayerWeaponController`；空时运行期查找一次
 
 </details>

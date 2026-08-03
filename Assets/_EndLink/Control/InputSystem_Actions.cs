@@ -183,6 +183,15 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": true
                 },
                 {
+                    ""name"": ""Aim"",
+                    ""type"": ""Button"",
+                    ""id"": ""23278a83-d156-411b-af16-a68ed355e0b0"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": true
+                },
+                {
                     ""name"": ""TargetLock"",
                     ""type"": ""Button"",
                     ""id"": ""a61c7469-54b0-4554-a8b4-a524e20ae993"",
@@ -219,27 +228,18 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""PlayerLinkAttack"",
+                    ""name"": ""PreviousWeaponForm"",
                     ""type"": ""Button"",
-                    ""id"": ""a796a47c-874d-4d82-989a-324a01787b01"",
+                    ""id"": ""b909906f-1ddd-4af9-b9fa-5b731d3f66d5"",
                     ""expectedControlType"": ""Button"",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""AllySlotALinkAttack"",
+                    ""name"": ""NextWeaponForm"",
                     ""type"": ""Button"",
-                    ""id"": ""d4e6927c-5cf2-42de-909c-c0bf4cdd2e68"",
-                    ""expectedControlType"": ""Button"",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
-                },
-                {
-                    ""name"": ""AllySlotBLinkAttack"",
-                    ""type"": ""Button"",
-                    ""id"": ""9135913a-b2af-4d2b-8f16-fce02abf5f54"",
+                    ""id"": ""29ffb5ab-0eab-404f-9d21-b2a51d0e581c"",
                     ""expectedControlType"": ""Button"",
                     ""processors"": """",
                     ""interactions"": """",
@@ -588,6 +588,28 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": """",
+                    ""id"": ""765dff8b-3f9d-4523-9f35-cf35da884311"",
+                    ""path"": ""<Mouse>/rightButton"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Keyboard&Mouse"",
+                    ""action"": ""Aim"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""cf3e5177-f781-4eb7-8383-65a9e2e8d4c0"",
+                    ""path"": ""<Gamepad>/leftTrigger"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": ""Gamepad"",
+                    ""action"": ""Aim"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
                     ""id"": ""eb40bb66-4559-4dfa-9a2f-820438abb426"",
                     ""path"": ""<Keyboard>/space"",
                     ""interactions"": """",
@@ -687,67 +709,45 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": """",
-                    ""id"": ""ba53037e-7d50-4864-8b26-6cea1aa35e55"",
-                    ""path"": ""<Keyboard>/1"",
+                    ""id"": ""fe240c43-72f4-4ce5-a542-336c2f23e1c4"",
+                    ""path"": ""<Keyboard>/q"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Keyboard&Mouse"",
-                    ""action"": ""PlayerLinkAttack"",
+                    ""action"": ""PreviousWeaponForm"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
                 {
                     ""name"": """",
-                    ""id"": ""fb517ab0-45f4-42d0-a95e-aad94b63d956"",
+                    ""id"": ""4d4c8ff4-fe83-4c56-80f6-6e902280b992"",
                     ""path"": ""<Gamepad>/dpad/up"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Gamepad"",
-                    ""action"": ""PlayerLinkAttack"",
+                    ""action"": ""PreviousWeaponForm"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
                 {
                     ""name"": """",
-                    ""id"": ""ac09d001-d9a1-4130-85dc-9f39ed7ca2cf"",
-                    ""path"": ""<Keyboard>/2"",
+                    ""id"": ""23b1f347-fd4e-41f4-b06e-163e416fa2ba"",
+                    ""path"": ""<Keyboard>/e"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Keyboard&Mouse"",
-                    ""action"": ""AllySlotALinkAttack"",
+                    ""action"": ""NextWeaponForm"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
                 {
                     ""name"": """",
-                    ""id"": ""1f601cc6-1641-4f57-96f9-77af7d3833ab"",
-                    ""path"": ""<Gamepad>/dpad/left"",
+                    ""id"": ""104f75f6-4b7b-4d6f-868f-f73bd71f4286"",
+                    ""path"": ""<Gamepad>/dpad/down"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Gamepad"",
-                    ""action"": ""AllySlotALinkAttack"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""136802c6-1bdb-45f9-8539-765796b614f7"",
-                    ""path"": ""<Keyboard>/3"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": ""Keyboard&Mouse"",
-                    ""action"": ""AllySlotBLinkAttack"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""c0d6ff3a-5b4d-4fe2-82ef-d1f87d935413"",
-                    ""path"": ""<Gamepad>/dpad/right"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": ""Gamepad"",
-                    ""action"": ""AllySlotBLinkAttack"",
+                    ""action"": ""NextWeaponForm"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -758,17 +758,6 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": ""Keyboard&Mouse"",
-                    ""action"": ""PartyUltimate"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""bbf41bda-bc03-48c8-8b99-4e0ec34e816e"",
-                    ""path"": ""<Gamepad>/dpad/down"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": ""Gamepad"",
                     ""action"": ""PartyUltimate"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
@@ -1367,13 +1356,13 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         m_Player_Sprint = m_Player.FindAction("Sprint", throwIfNotFound: true);
         m_Player_Dodge = m_Player.FindAction("Dodge", throwIfNotFound: true);
         m_Player_Guard = m_Player.FindAction("Guard", throwIfNotFound: true);
+        m_Player_Aim = m_Player.FindAction("Aim", throwIfNotFound: true);
         m_Player_TargetLock = m_Player.FindAction("TargetLock", throwIfNotFound: true);
         m_Player_PlayerSkill = m_Player.FindAction("PlayerSkill", throwIfNotFound: true);
         m_Player_AllySlotASkill = m_Player.FindAction("AllySlotASkill", throwIfNotFound: true);
         m_Player_AllySlotBSkill = m_Player.FindAction("AllySlotBSkill", throwIfNotFound: true);
-        m_Player_PlayerLinkAttack = m_Player.FindAction("PlayerLinkAttack", throwIfNotFound: true);
-        m_Player_AllySlotALinkAttack = m_Player.FindAction("AllySlotALinkAttack", throwIfNotFound: true);
-        m_Player_AllySlotBLinkAttack = m_Player.FindAction("AllySlotBLinkAttack", throwIfNotFound: true);
+        m_Player_PreviousWeaponForm = m_Player.FindAction("PreviousWeaponForm", throwIfNotFound: true);
+        m_Player_NextWeaponForm = m_Player.FindAction("NextWeaponForm", throwIfNotFound: true);
         m_Player_PartyUltimate = m_Player.FindAction("PartyUltimate", throwIfNotFound: true);
         // UI
         m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
@@ -1478,13 +1467,13 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_Sprint;
     private readonly InputAction m_Player_Dodge;
     private readonly InputAction m_Player_Guard;
+    private readonly InputAction m_Player_Aim;
     private readonly InputAction m_Player_TargetLock;
     private readonly InputAction m_Player_PlayerSkill;
     private readonly InputAction m_Player_AllySlotASkill;
     private readonly InputAction m_Player_AllySlotBSkill;
-    private readonly InputAction m_Player_PlayerLinkAttack;
-    private readonly InputAction m_Player_AllySlotALinkAttack;
-    private readonly InputAction m_Player_AllySlotBLinkAttack;
+    private readonly InputAction m_Player_PreviousWeaponForm;
+    private readonly InputAction m_Player_NextWeaponForm;
     private readonly InputAction m_Player_PartyUltimate;
     /// <summary>
     /// Provides access to input actions defined in input action map "Player".
@@ -1538,6 +1527,10 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @Guard => m_Wrapper.m_Player_Guard;
         /// <summary>
+        /// Provides access to the underlying input action "Player/Aim".
+        /// </summary>
+        public InputAction @Aim => m_Wrapper.m_Player_Aim;
+        /// <summary>
         /// Provides access to the underlying input action "Player/TargetLock".
         /// </summary>
         public InputAction @TargetLock => m_Wrapper.m_Player_TargetLock;
@@ -1554,17 +1547,13 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @AllySlotBSkill => m_Wrapper.m_Player_AllySlotBSkill;
         /// <summary>
-        /// Provides access to the underlying input action "Player/PlayerLinkAttack".
+        /// Provides access to the underlying input action "Player/PreviousWeaponForm".
         /// </summary>
-        public InputAction @PlayerLinkAttack => m_Wrapper.m_Player_PlayerLinkAttack;
+        public InputAction @PreviousWeaponForm => m_Wrapper.m_Player_PreviousWeaponForm;
         /// <summary>
-        /// Provides access to the underlying input action "Player/AllySlotALinkAttack".
+        /// Provides access to the underlying input action "Player/NextWeaponForm".
         /// </summary>
-        public InputAction @AllySlotALinkAttack => m_Wrapper.m_Player_AllySlotALinkAttack;
-        /// <summary>
-        /// Provides access to the underlying input action "Player/AllySlotBLinkAttack".
-        /// </summary>
-        public InputAction @AllySlotBLinkAttack => m_Wrapper.m_Player_AllySlotBLinkAttack;
+        public InputAction @NextWeaponForm => m_Wrapper.m_Player_NextWeaponForm;
         /// <summary>
         /// Provides access to the underlying input action "Player/PartyUltimate".
         /// </summary>
@@ -1625,6 +1614,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Guard.started += instance.OnGuard;
             @Guard.performed += instance.OnGuard;
             @Guard.canceled += instance.OnGuard;
+            @Aim.started += instance.OnAim;
+            @Aim.performed += instance.OnAim;
+            @Aim.canceled += instance.OnAim;
             @TargetLock.started += instance.OnTargetLock;
             @TargetLock.performed += instance.OnTargetLock;
             @TargetLock.canceled += instance.OnTargetLock;
@@ -1637,15 +1629,12 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @AllySlotBSkill.started += instance.OnAllySlotBSkill;
             @AllySlotBSkill.performed += instance.OnAllySlotBSkill;
             @AllySlotBSkill.canceled += instance.OnAllySlotBSkill;
-            @PlayerLinkAttack.started += instance.OnPlayerLinkAttack;
-            @PlayerLinkAttack.performed += instance.OnPlayerLinkAttack;
-            @PlayerLinkAttack.canceled += instance.OnPlayerLinkAttack;
-            @AllySlotALinkAttack.started += instance.OnAllySlotALinkAttack;
-            @AllySlotALinkAttack.performed += instance.OnAllySlotALinkAttack;
-            @AllySlotALinkAttack.canceled += instance.OnAllySlotALinkAttack;
-            @AllySlotBLinkAttack.started += instance.OnAllySlotBLinkAttack;
-            @AllySlotBLinkAttack.performed += instance.OnAllySlotBLinkAttack;
-            @AllySlotBLinkAttack.canceled += instance.OnAllySlotBLinkAttack;
+            @PreviousWeaponForm.started += instance.OnPreviousWeaponForm;
+            @PreviousWeaponForm.performed += instance.OnPreviousWeaponForm;
+            @PreviousWeaponForm.canceled += instance.OnPreviousWeaponForm;
+            @NextWeaponForm.started += instance.OnNextWeaponForm;
+            @NextWeaponForm.performed += instance.OnNextWeaponForm;
+            @NextWeaponForm.canceled += instance.OnNextWeaponForm;
             @PartyUltimate.started += instance.OnPartyUltimate;
             @PartyUltimate.performed += instance.OnPartyUltimate;
             @PartyUltimate.canceled += instance.OnPartyUltimate;
@@ -1690,6 +1679,9 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Guard.started -= instance.OnGuard;
             @Guard.performed -= instance.OnGuard;
             @Guard.canceled -= instance.OnGuard;
+            @Aim.started -= instance.OnAim;
+            @Aim.performed -= instance.OnAim;
+            @Aim.canceled -= instance.OnAim;
             @TargetLock.started -= instance.OnTargetLock;
             @TargetLock.performed -= instance.OnTargetLock;
             @TargetLock.canceled -= instance.OnTargetLock;
@@ -1702,15 +1694,12 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @AllySlotBSkill.started -= instance.OnAllySlotBSkill;
             @AllySlotBSkill.performed -= instance.OnAllySlotBSkill;
             @AllySlotBSkill.canceled -= instance.OnAllySlotBSkill;
-            @PlayerLinkAttack.started -= instance.OnPlayerLinkAttack;
-            @PlayerLinkAttack.performed -= instance.OnPlayerLinkAttack;
-            @PlayerLinkAttack.canceled -= instance.OnPlayerLinkAttack;
-            @AllySlotALinkAttack.started -= instance.OnAllySlotALinkAttack;
-            @AllySlotALinkAttack.performed -= instance.OnAllySlotALinkAttack;
-            @AllySlotALinkAttack.canceled -= instance.OnAllySlotALinkAttack;
-            @AllySlotBLinkAttack.started -= instance.OnAllySlotBLinkAttack;
-            @AllySlotBLinkAttack.performed -= instance.OnAllySlotBLinkAttack;
-            @AllySlotBLinkAttack.canceled -= instance.OnAllySlotBLinkAttack;
+            @PreviousWeaponForm.started -= instance.OnPreviousWeaponForm;
+            @PreviousWeaponForm.performed -= instance.OnPreviousWeaponForm;
+            @PreviousWeaponForm.canceled -= instance.OnPreviousWeaponForm;
+            @NextWeaponForm.started -= instance.OnNextWeaponForm;
+            @NextWeaponForm.performed -= instance.OnNextWeaponForm;
+            @NextWeaponForm.canceled -= instance.OnNextWeaponForm;
             @PartyUltimate.started -= instance.OnPartyUltimate;
             @PartyUltimate.performed -= instance.OnPartyUltimate;
             @PartyUltimate.canceled -= instance.OnPartyUltimate;
@@ -2085,6 +2074,13 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnGuard(InputAction.CallbackContext context);
         /// <summary>
+        /// Method invoked when associated input action "Aim" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnAim(InputAction.CallbackContext context);
+        /// <summary>
         /// Method invoked when associated input action "TargetLock" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
@@ -2113,26 +2109,19 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnAllySlotBSkill(InputAction.CallbackContext context);
         /// <summary>
-        /// Method invoked when associated input action "PlayerLinkAttack" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "PreviousWeaponForm" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnPlayerLinkAttack(InputAction.CallbackContext context);
+        void OnPreviousWeaponForm(InputAction.CallbackContext context);
         /// <summary>
-        /// Method invoked when associated input action "AllySlotALinkAttack" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "NextWeaponForm" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnAllySlotALinkAttack(InputAction.CallbackContext context);
-        /// <summary>
-        /// Method invoked when associated input action "AllySlotBLinkAttack" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
-        /// </summary>
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
-        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnAllySlotBLinkAttack(InputAction.CallbackContext context);
+        void OnNextWeaponForm(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "PartyUltimate" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>

@@ -107,6 +107,7 @@ namespace EndLink.Core
         private PlayerCombatDriver _combatDriver;
         private PlayerComboController _comboController;
         private PlayerGuardController _guardController;
+        private PlayerAimController _aimController;
         private CombatActionDefinition _currentAction;
         private Transform _currentActionTarget;
         private bool _actionRequested;
@@ -208,6 +209,7 @@ namespace EndLink.Core
             TryGetComponent(out PlayerTargeting targeting);
             TryGetComponent(out _comboController);
             TryGetComponent(out _guardController);
+            TryGetComponent(out _aimController);
 
             PlayerStateContext context = new PlayerStateContext(
                 this,
@@ -236,6 +238,12 @@ namespace EndLink.Core
 
         private void Update()
         {
+            if (_aimController == null)
+            {
+                TryGetComponent(out _aimController);
+            }
+
+            _aimController?.TickAim();
             CaptureAttackInput();
             _currentState?.Tick(Time.deltaTime);
         }
@@ -469,6 +477,7 @@ namespace EndLink.Core
 
             if (CanCancelCurrentActionTo(PlayerStateId.Guard)
                 && _guardController != null
+                && (_combatDriver == null || !_combatDriver.BlocksGuard)
                 && _inputReader.GuardHeld)
             {
                 ChangeState(PlayerStateId.Guard);
@@ -612,6 +621,11 @@ namespace EndLink.Core
         {
             if (_inputReader != null && _inputReader.ConsumeAttackPressed())
             {
+                if (_combatDriver != null && !_combatDriver.CanStartBasicAttack)
+                {
+                    return;
+                }
+
                 _attackBufferExpiresAt = Time.time + attackInputBufferDuration;
             }
         }

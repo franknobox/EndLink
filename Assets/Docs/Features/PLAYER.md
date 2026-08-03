@@ -21,13 +21,15 @@
 - 攻击输入读取 `Player/Attack`，由状态机统一捕获并写入短时攻击缓冲，再决定是否进入攻击状态。
 - 攻击输入读取 `Player/Attack`，默认键位为鼠标左键、手柄 `RB / R1`。
 - 防御输入读取 `Player/Guard`，默认键位为鼠标右键、手柄 `LB / L1`，只缓存当前是否按住。
+- 瞄准输入读取 `Player/Aim`，默认键位为鼠标右键、手柄 `LT / L2`；鼠标右键在 A/C 形态保持格挡语义，在 B 形态由瞄准系统接管。
 - 目标锁定输入读取 `Player/TargetLock`，默认键位为鼠标中键、手柄右摇杆按下；输入层只缓存按下事件，是否建立硬锁由视角模式决定。
 - 硬锁目标切换复用 `Player/Look`：键鼠按鼠标横向滑动方向切换，手柄按右摇杆左右推动方向切换；输入层只提供原始方向，候选目标仍由索敌系统选择。
 - 闪避输入读取 `Player/Dodge`，默认键位为键盘 `Left Ctrl`、手柄 `buttonEast`。
 - 旧 `PlayerSkill`、`AllySlotASkill` 和 `AllySlotBSkill` 输入动作当前保留为空壳，但没有键鼠或手柄绑定，也不接入当前三形态攻击流程。
-- 主控和队友连携请求读取 `Player/PlayerLinkAttack`、`Player/AllySlotALinkAttack`、`Player/AllySlotBLinkAttack`，默认键位 1 / 2 / 3；这些输入不会绕过连携机制直接释放动作。
-- 全队终链奥义读取 `Player/PartyUltimate`，默认键位 V，可由 `PartyCombatRouter` 在运行时覆盖。
-- 手柄当前绑定：攻击 `RB / R1`，格挡 `LB / L1`，主控/队友连携为 D-Pad 上/左/右，全队极限技为 D-Pad 下；旧主动技能输入当前不绑定。
+- 武器形态切换读取 `Player/PreviousWeaponForm` 和 `Player/NextWeaponForm`：键鼠使用 Q / E，手柄使用 D-Pad 上 / 下。
+- 主控和队友连携请求 Input Action 与全部键位绑定当前已移除，底层连携窗口只作为未来恢复用基础保留。
+- 全队终链奥义读取 `Player/PartyUltimate`，当前仅保留键盘 V；手柄方向键下已让给下一武器形态。
+- 手柄当前绑定：攻击 `RB / R1`，格挡 `LB / L1`，B 形态瞄准 `LT / L2`，上一/下一武器形态为 D-Pad 上/下；旧主动技能与连携输入当前不绑定。
 - 相机旋转读取 `Player/Look`。
 
 对应脚本：
@@ -444,7 +446,6 @@
 关键配置：
 - `Basic Attack Action`：玩家普攻动作资产，鼠标左键触发的 `Attack` 状态会执行它
 - `Skill Action`：玩家主动技能动作资产，后续由 `PartyCombatRouter` 的主角技能命令触发
-- `Link Action`：玩家连携技动作资产，后续只能由连携机制确认合法窗口后触发，不能作为普通输入动作直接释放
 - Hitbox prefab、生成距离、高度、冷却和时序来源从对应的 `CombatActionDefinition` 读取。
 </details>
 

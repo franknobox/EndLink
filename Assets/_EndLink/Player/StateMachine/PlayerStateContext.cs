@@ -148,7 +148,10 @@ namespace EndLink.Core
                 CombatActionDefinition firstAction = ComboController != null
                     ? ComboController.GetFirstAction(fallbackAction)
                     : fallbackAction;
-                return ActionExecutor != null && ActionExecutor.CanExecute(firstAction);
+                return CombatDriver != null
+                    && CombatDriver.CanStartBasicAttack
+                    && ActionExecutor != null
+                    && ActionExecutor.CanExecute(firstAction);
             }
         }
 
@@ -176,7 +179,9 @@ namespace EndLink.Core
         public bool CanStartDodge => StateMachine.CanStartDodge;
 
         /// <summary>当前是否允许进入防御状态。</summary>
-        public bool CanStartGuard => GuardController != null && InputReader.GuardHeld;
+        public bool CanStartGuard => GuardController != null
+            && InputReader.GuardHeld
+            && (CombatDriver == null || !CombatDriver.BlocksGuard);
 
         /// <summary>
         /// 当前是否允许开始基础跳跃。
@@ -198,6 +203,17 @@ namespace EndLink.Core
         /// </summary>
         public bool TickAttackTargetFacing(float deltaTime)
         {
+            if (CombatDriver != null
+                && CombatDriver.TryGetCurrentAimFacingDirection(out Vector3 aimDirection))
+            {
+                Controller.FaceDirection(
+                    aimDirection,
+                    false,
+                    deltaTime,
+                    AttackTrackingRotationSharpness);
+                return true;
+            }
+
             if (Targeting == null
                 || !Targeting.HasTarget
                 || Targeting.CurrentLockPoint == null
@@ -229,6 +245,11 @@ namespace EndLink.Core
         /// <summary>返回当前有效目标的唯一根节点；存在硬锁时优先返回硬锁目标。</summary>
         public Transform GetCurrentAttackTarget()
         {
+            if (CombatDriver != null && CombatDriver.IsAimingBasicAttack)
+            {
+                return null;
+            }
+
             return Targeting != null && Targeting.HasTarget ? Targeting.CurrentTarget : null;
         }
 

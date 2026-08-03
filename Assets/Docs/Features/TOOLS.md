@@ -70,9 +70,11 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 功能说明：
 - 通过菜单 `EndLink > UI > Combat HUD` 下的入口执行。
 - 工具使用 Unity Editor API 生成 UGUI Panel Prefab，不手写 `.prefab` 文本。
-- `Create Current Prefabs` 会生成当前仍在使用的运行时调试面板和敌人头顶血条，也可以分别生成单个 Prefab。
+- `Create Current Prefabs` 会生成当前仍在使用的运行时调试面板、敌人头顶血条、瞄准准星和武器形态显示，也可以分别生成单个 Prefab。
 - `PF_DebugPanel` 挂载 `HUDDebugLogPanel`，用于显示运行时战斗、队友和小队命令日志。
 - `PF_EnemyHealthBar` 使用 World Space Canvas、`UIEnemyHealthBar` 和 `UIHealthBar`，生成后可挂到正式敌人视觉层级。
+- `PF_AimReticle` 是不带绝对屏幕坐标的居中 UGUI Panel，挂载 `UIAimReticle` 后按 B 形态瞄准状态显隐。
+- `WeaponFormUI` 使用右下角推荐锚点，中央显示当前 A/B/C 形态，上下箭头只作切换方向提示。
 - 旧版小队状态、动作槽和终链奥义 UI 已归档在 `UI/PartyUI`，生成器不再创建或覆盖对应 Prefab。
 - 工具只生成 Prefab 资产，不直接修改当前场景；缺失基础方形 Sprite 时才会补建。
 
@@ -81,16 +83,22 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 - `Assets/_EndLink/UI/HUDDebugLogPanel.cs`
 - `Assets/_EndLink/UI/UIEnemyHealthBar.cs`
 - `Assets/_EndLink/UI/UIHealthBar.cs`
+- `Assets/_EndLink/UI/UIAimReticle.cs`
+- `Assets/_EndLink/UI/UIWeaponForm.cs`
 
 生成路径：
 - `Assets/_EndLink/UI/Prefabs/PF_DebugPanel.prefab`
 - `Assets/_EndLink/UI/Prefabs/PF_EnemyHealthBar.prefab`
+- `Assets/_EndLink/UI/Prefabs/PF_AimReticle.prefab`
+- `Assets/_EndLink/UI/Prefabs/PF_WeaponFormUI.prefab`
 - `Assets/_EndLink/UI/Generated/UI_Square64.png`
 
 相关 Editor 工具：
 - `EndLink > UI > Combat HUD > Create Current Prefabs`
 - `EndLink > UI > Combat HUD > Create Debug Panel`
 - `EndLink > UI > Combat HUD > Create Enemy Health Bar`
+- `EndLink > UI > Combat HUD > Create Aim Reticle`
+- `EndLink > UI > Combat HUD > Create Weapon Form UI`
 
 </details>
 
@@ -165,7 +173,7 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 - 通过 `EndLink > Validation > Scene Doctor` 打开，只扫描当前活动场景。
 - 第一版只报告问题，不会添加组件、修改 Layer、重写引用或标记场景为已修改。
 - 通用检查覆盖 Missing Script、已丢失的序列化对象引用，以及违反 `DisallowMultipleComponent` 的重复组件。
-- 玩家与镜头检查覆盖固定主控关键组件、生命/索敌/连段/格挡/Animator 桥接、三种武器形态动作组、世界交互接线、Main Camera、Cinemachine Brain 和视角模式入口。
+- 玩家与镜头检查覆盖固定主控关键组件、生命/索敌/连段/射击瞄准/格挡/Animator 桥接、三种武器形态动作组、世界交互接线、Main Camera、Cinemachine Brain 和视角模式入口。
 - 战斗与敌人检查覆盖场景反馈调度器、正式敌人生命/平衡/标签/目标/状态/感知/移动/动作接线、视觉根和敌人 Collider Layer。
 - 数据与导航检查覆盖场景实际引用的 Action Id、Hitbox Prefab、重复 Action Id、推荐 Layer、NavMesh 数据和启用但未落在 NavMesh 上的 Agent。
 - 窗口支持按严重程度、类别和关键字筛选，问题对象可直接定位，并可复制完整文本报告。

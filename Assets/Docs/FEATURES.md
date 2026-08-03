@@ -47,7 +47,7 @@
 | [统一 Combat Target](Features/COMBAT.md#feature-combat-target) | 已完成第一版 | 为玩家、队友和敌人统一提供唯一根身份、存活/可选状态、锁定点、Collider 表面点和水平表面距离。 |
 | [角色战斗数值基础](Features/COMBAT.md#feature-character-stats) | 已完成第一版 | 提供玩家、队友和敌人共用的攻击力与承受击退倍率，并支持动作按固定伤害与攻击力倍率组合计算伤害。 |
 | [战斗动作配置](Features/COMBAT.md#feature-combat-action) | 已完成命中反馈配置版 | 使用 `CombatActionDefinition` 描述伤害、冷却、Hitbox、标签、协同率、动画根位移和命中反馈，并支持数据时间或动画事件驱动动作。 |
-| [三种武器形态基础](Features/COMBAT.md#feature-player-weapon-forms) | 已完成初版动作配置 | 固定提供 A、B、C 三种形态，当前分别使用默认近战普攻、远程弹体和原近战技能动作，并向战斗执行、Animator 和后续 UI 暴露统一切换接口。 |
+| [三种武器形态基础](Features/COMBAT.md#feature-player-weapon-forms) | 已完成射击瞄准第一版 | 固定提供 A、B、C 三种形态；B 形态支持右键/LT 瞄准、准星方向射击、临时近距镜头和射击后退出瞄准。 |
 | [通用战斗反馈](Features/COMBAT.md#feature-combat-feedback) | 已完成调度基础版 | 通过可复用反馈资产与场景调度器，统一提供 Hitstop、Cinemachine Impulse、手柄震动、音效和 VFX 请求入口。 |
 | [统一 Action 执行接口](Features/COMBAT.md#feature-combat-action-executor) | 已完成多判定窗口版 | 统一玩家、队友和敌人的动作检查、执行、冷却和目标传入，并支持动画事件动作在一次执行中开启多个判定窗口。 |
 | [伤害结算管线基础](Features/COMBAT.md#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
@@ -63,7 +63,7 @@
 | [队友助战基础组件](Features/ALLY.md#feature-ally-assist) | 已完成持续助战第一版 | 提供队友事件响应大脑和队友战斗执行器，用于主控命中敌人后让队友自动接近目标并持续攻击。 |
 | [队友有限状态机](Features/ALLY.md#feature-ally-state-machine) | 已完成动作打断版 | 提供 Idle、Follow、Assist、Action、Hit、LinkDown 外层状态；当前停用队友主动技能，Action 仅保留为连携等通用单次动作承载层。 |
 | [队友跟随移动](Features/ALLY.md#feature-ally-follow-motor) | 已完成 NavMesh 接线版 | 负责队友在 Follow 状态中跟随主控，移动到主控附近的队形偏移范围，并支持 NavMesh 寻路、按路径高度移动、高低差脱离死区、坡道贴地、平滑减速、追赶、远距离归位和简易避让。 |
-| [连携触发与窗口](Features/ALLY.md#feature-party-link-context) | 已完成奥义充能接线版 | 协议反应触发后为三人小队开启 4 秒共享连携窗口，允许玩家释放一个连携技，并按连携动作配置提升全队协同率。 |
+| [连携触发与窗口](Features/ALLY.md#feature-party-link-context) | 基础保留，运行入口停用 | 保留协议反应窗口与协同率基础代码；角色连携动作槽和全部连携输入绑定已移除，当前流程无法主动释放连携技。 |
 | [小队战斗状态上下文](Features/ALLY.md#feature-party-combat-context) | 已完成基础版 | 监听战斗事件，记录小队是否处于战斗、当前主目标和已知敌人，供队友目标选择、战斗 UI 和后续连携系统读取。 |
 | [固定三人小队管理](Features/ALLY.md#feature-party-manager) | 已完成动态槽位版 | 负责保存固定主控和 2 个队友槽位，统一分配跟随目标、动态队形、小队查询和战斗命令，并支持暂时禁用单个队友。 |
 
@@ -93,14 +93,14 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [战斗 UI 基础](Features/UI.md#feature-combat-ui-foundation) | 已完成平衡值接口版 | 提供生命与平衡值通用显示接口、敌人头顶血条、运行时调试日志和 UGUI 生成入口；旧版小队动作栏、头像及奥义 UI 已暂时归档。 |
+| [战斗 UI 基础](Features/UI.md#feature-combat-ui-foundation) | 已完成武器形态显示第一版 | 提供生命与平衡值显示、敌人头顶血条、瞄准准星、A/B/C 武器形态显示、运行时调试日志和 UGUI 生成入口。 |
 
 #### TOOLS
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
 | [战斗数据编辑工具](Features/TOOLS.md#feature-combat-data-tool) | 已完成校验摘要版 | 提供 Editor 窗口快捷创建和查看战斗动作、战斗标签、标签组合规则，并同步显示命中、平衡、动作时序、反馈及基础合法性状态。 |
-| [战斗 HUD 生成工具](Features/TOOLS.md#feature-combat-hud-generator) | 已收束当前组件版 | 只生成仍在使用的运行时调试面板和敌人头顶血条；旧版小队状态、动作槽和奥义面板不再由工具生成。 |
+| [战斗 HUD 生成工具](Features/TOOLS.md#feature-combat-hud-generator) | 已收束当前组件版 | 生成运行时调试面板、敌人头顶血条、居中瞄准准星和 A/B/C 武器形态显示；旧版小队面板不再生成。 |
 | [EndLink Combat Lab](Features/TOOLS.md#feature-combat-lab) | 已完成新模型实验版 | 提供浏览器端战斗实验工具，用于快速验证标签定义、层数、持续时间、反应效果、基础伤害和连携窗口。 |
 | [美术资源校验工具](Features/TOOLS.md#feature-art-asset-validator) | 已完成自动校验第一版 | 自动检查 `_Incoming` 中的 Shader、材质、Prefab、FBX、贴图和临时命名问题，并提供完整结果窗口与资源定位。 |
 | [场景配置体检](Features/TOOLS.md#feature-scene-doctor) | 已完成只读第一版 | 扫描当前活动场景中的缺失引用、关键组件接线、Layer、NavMesh、敌人和战斗动作配置，支持筛选、定位与复制报告，不自动修改场景。 |

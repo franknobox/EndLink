@@ -16,9 +16,6 @@ namespace EndLink.UI
         PlayerSkill = 0,
         AllySlotASkill = 1,
         AllySlotBSkill = 2,
-        PlayerLinkAttack = 3,
-        AllySlotALinkAttack = 4,
-        AllySlotBLinkAttack = 5,
         PartyUltimate = 6
     }
 
@@ -241,7 +238,6 @@ namespace EndLink.UI
             return CommandType switch
             {
                 PartyCombatCommandType.Skill => ResolveSkillAction(),
-                PartyCombatCommandType.LinkAttack => ResolveLinkAction(),
                 _ => null
             };
         }
@@ -253,17 +249,6 @@ namespace EndLink.UI
                 PartyCombatActorSlot.MainCharacter => ResolvePlayerCombatDriver()?.SkillAction,
                 PartyCombatActorSlot.AllySlotA => ResolveAllyCombatDriver(PartyCombatActorSlot.AllySlotA)?.SkillAction,
                 PartyCombatActorSlot.AllySlotB => ResolveAllyCombatDriver(PartyCombatActorSlot.AllySlotB)?.SkillAction,
-                _ => null
-            };
-        }
-
-        private CombatActionDefinition ResolveLinkAction()
-        {
-            return ActorSlot switch
-            {
-                PartyCombatActorSlot.MainCharacter => ResolvePlayerCombatDriver()?.LinkAction,
-                PartyCombatActorSlot.AllySlotA => ResolveAllyCombatDriver(PartyCombatActorSlot.AllySlotA)?.LinkAction,
-                PartyCombatActorSlot.AllySlotB => ResolveAllyCombatDriver(PartyCombatActorSlot.AllySlotB)?.LinkAction,
                 _ => null
             };
         }
@@ -347,9 +332,6 @@ namespace EndLink.UI
                 UICombatActionSlotId.PlayerSkill => PartyCombatCommandType.Skill,
                 UICombatActionSlotId.AllySlotASkill => PartyCombatCommandType.Skill,
                 UICombatActionSlotId.AllySlotBSkill => PartyCombatCommandType.Skill,
-                UICombatActionSlotId.PlayerLinkAttack => PartyCombatCommandType.LinkAttack,
-                UICombatActionSlotId.AllySlotALinkAttack => PartyCombatCommandType.LinkAttack,
-                UICombatActionSlotId.AllySlotBLinkAttack => PartyCombatCommandType.LinkAttack,
                 UICombatActionSlotId.PartyUltimate => PartyCombatCommandType.Ultimate,
                 _ => PartyCombatCommandType.Skill
             };
@@ -360,11 +342,8 @@ namespace EndLink.UI
             return uiSlot switch
             {
                 UICombatActionSlotId.PlayerSkill => PartyCombatActorSlot.MainCharacter,
-                UICombatActionSlotId.PlayerLinkAttack => PartyCombatActorSlot.MainCharacter,
                 UICombatActionSlotId.AllySlotASkill => PartyCombatActorSlot.AllySlotA,
-                UICombatActionSlotId.AllySlotALinkAttack => PartyCombatActorSlot.AllySlotA,
                 UICombatActionSlotId.AllySlotBSkill => PartyCombatActorSlot.AllySlotB,
-                UICombatActionSlotId.AllySlotBLinkAttack => PartyCombatActorSlot.AllySlotB,
                 UICombatActionSlotId.PartyUltimate => PartyCombatActorSlot.Party,
                 _ => PartyCombatActorSlot.MainCharacter
             };

@@ -14,12 +14,7 @@ namespace EndLink.Party
     public enum PartyCombatCommandType
     {
         Skill = 0,
-        /// <summary>
-        /// 连携技请求。
-        /// 这不是普通快捷键释放，必须由连携窗口确认当前存在合法窗口后才能执行。
-        /// </summary>
-        LinkAttack = 1,
-        Ultimate = 2
+        Ultimate = 1
     }
 
     /// <summary>
@@ -36,8 +31,7 @@ namespace EndLink.Party
     /// <summary>
     /// 一次玩家主动发出的战斗命令。
     /// 外部系统可以订阅 PartyCombatRouter.CommandRequested 做 UI、音效、调试或额外表现；
-    /// 当前 Router 自身会处理技能、连携和终链奥义的基础路由。
-    /// LinkAttack 类型只表示玩家请求使用连携槽位，不代表动作可以直接释放。
+    /// 当前 Router 自身只保留旧技能与终链奥义的基础路由；连携命令入口已停用。
     /// </summary>
     public readonly struct PartyCombatCommand
     {
@@ -65,10 +59,9 @@ namespace EndLink.Party
     /// <summary>
     /// 小队战斗命令路由器。
     /// 负责把 PlayerInputReader 中的战斗输入翻译成“主控/队友/全队”的命令请求。
-    /// 它不生成 Hitbox、不结算伤害；技能和连携会转发给角色状态机，终链奥义会转发给小队奥义上下文。
+    /// 它不生成 Hitbox、不结算伤害；旧技能会转发给角色状态机，终链奥义会转发给小队奥义上下文。
     /// </summary>
     [DisallowMultipleComponent]
-    [RequireComponent(typeof(PartyLinkContext))]
     [RequireComponent(typeof(PartyUltimateContext))]
     public sealed class PartyCombatRouter : MonoBehaviour
     {
@@ -80,10 +73,6 @@ namespace EndLink.Party
         [Tooltip("固定小队管理器。为空时会在场景中自动查找。")]
         [SerializeField]
         private PartyManager partyManager;
-
-        [Tooltip("小队连携窗口上下文。负责判断连携是否解锁、解析目标并在成功释放后消费窗口。")]
-        [SerializeField]
-        private PartyLinkContext linkContext;
 
         [Tooltip("小队终链奥义上下文。负责协同率、奥义就绪和奥义消耗；不执行具体奥义表现。")]
         [SerializeField]
@@ -102,37 +91,21 @@ namespace EndLink.Party
         [SerializeField]
         private Key allySlotBSkillKey = Key.None;
 
-        [Header("连携请求键位")]
-        [Tooltip("主控连携请求键位。默认 1。按下后只发出请求，必须由连携窗口确认可释放。")]
-        [SerializeField]
-        private Key playerLinkAttackKey = Key.Digit1;
-
-        [Tooltip("队友 A 连携请求键位。默认 2。按下后只发出请求，必须由连携窗口确认可释放。")]
-        [SerializeField]
-        private Key allySlotALinkAttackKey = Key.Digit2;
-
-        [Tooltip("队友 B 连携请求键位。默认 3。按下后只发出请求，必须由连携窗口确认可释放。")]
-        [SerializeField]
-        private Key allySlotBLinkAttackKey = Key.Digit3;
-
         [Header("终链奥义键位")]
         [Tooltip("全队终链奥义键位。默认 V。")]
         [SerializeField]
         private Key partyUltimateKey = Key.V;
 
         [Header("调试")]
-        [Tooltip("是否在收到战斗命令、连携窗口校验、动作请求或终链奥义请求时打印调试日志。")]
+        [Tooltip("是否在收到旧技能、动作请求或终链奥义请求时打印调试日志。")]
         [SerializeField]
         private bool logCommands = true;
 
         /// <summary>战斗命令请求事件。</summary>
         public static event Action<PartyCombatCommand> CommandRequested;
 
-        /// <summary>技能和连携键位绑定变化事件，供 UI 刷新键位文本。</summary>
+        /// <summary>当前仍启用的战斗键位绑定变化事件，供 UI 刷新键位文本。</summary>
         public event Action KeyBindingsChanged;
-
-        /// <summary>当前绑定的小队连携窗口上下文。</summary>
-        public PartyLinkContext LinkContext => linkContext;
 
         /// <summary>当前绑定的小队终链奥义上下文。</summary>
         public PartyUltimateContext UltimateContext => ultimateContext;
@@ -182,21 +155,6 @@ namespace EndLink.Party
                 RouteCommand(PartyCombatCommandType.Skill, PartyCombatActorSlot.AllySlotB);
             }
 
-            if (inputReader.ConsumePlayerLinkAttackPressed())
-            {
-                RouteCommand(PartyCombatCommandType.LinkAttack, PartyCombatActorSlot.MainCharacter);
-            }
-
-            if (inputReader.ConsumeAllySlotALinkAttackPressed())
-            {
-                RouteCommand(PartyCombatCommandType.LinkAttack, PartyCombatActorSlot.AllySlotA);
-            }
-
-            if (inputReader.ConsumeAllySlotBLinkAttackPressed())
-            {
-                RouteCommand(PartyCombatCommandType.LinkAttack, PartyCombatActorSlot.AllySlotB);
-            }
-
             if (inputReader.ConsumePartyUltimatePressed())
             {
                 RouteCommand(PartyCombatCommandType.Ultimate, PartyCombatActorSlot.Party);
@@ -204,7 +162,7 @@ namespace EndLink.Party
         }
 
         /// <summary>
-        /// 把 Inspector 中配置的主动技能、连携和终链奥义键位覆盖到运行时 InputAction。
+        /// 把 Inspector 中仍保留的旧主动技能和终链奥义键位覆盖到运行时 InputAction。
         /// </summary>
         public void ApplyInputBindings()
         {
@@ -222,9 +180,6 @@ namespace EndLink.Party
                 playerSkillKey,
                 allySlotASkillKey,
                 allySlotBSkillKey,
-                playerLinkAttackKey,
-                allySlotALinkAttackKey,
-                allySlotBLinkAttackKey,
                 partyUltimateKey);
 
             KeyBindingsChanged?.Invoke();
@@ -243,13 +198,6 @@ namespace EndLink.Party
                     PartyCombatActorSlot.MainCharacter => playerSkillKey,
                     PartyCombatActorSlot.AllySlotA => allySlotASkillKey,
                     PartyCombatActorSlot.AllySlotB => allySlotBSkillKey,
-                    _ => Key.None
-                },
-                PartyCombatCommandType.LinkAttack => actorSlot switch
-                {
-                    PartyCombatActorSlot.MainCharacter => playerLinkAttackKey,
-                    PartyCombatActorSlot.AllySlotA => allySlotALinkAttackKey,
-                    PartyCombatActorSlot.AllySlotB => allySlotBLinkAttackKey,
                     _ => Key.None
                 },
                 PartyCombatCommandType.Ultimate => actorSlot == PartyCombatActorSlot.Party ? partyUltimateKey : Key.None,
@@ -276,16 +224,6 @@ namespace EndLink.Party
             if (partyManager == null)
             {
                 partyManager = FindFirstObjectByType<PartyManager>();
-            }
-
-            if (linkContext == null)
-            {
-                linkContext = GetComponent<PartyLinkContext>();
-            }
-
-            if (linkContext == null && partyManager != null)
-            {
-                linkContext = partyManager.GetComponent<PartyLinkContext>();
             }
 
             if (ultimateContext == null)
@@ -321,9 +259,6 @@ namespace EndLink.Party
             {
                 case PartyCombatCommandType.Skill:
                     ExecuteSkillCommand(command);
-                    break;
-                case PartyCombatCommandType.LinkAttack:
-                    ExecuteLinkAttackCommand(command);
                     break;
                 case PartyCombatCommandType.Ultimate:
                     ExecuteUltimateCommand(command);
@@ -401,48 +336,6 @@ namespace EndLink.Party
             return null;
         }
 
-        private void ExecuteLinkAttackCommand(PartyCombatCommand command)
-        {
-            if (linkContext == null)
-            {
-                CacheReferences();
-            }
-
-            if (linkContext == null || !linkContext.IsWindowOpen)
-            {
-                LogCommand($"ignored LinkAttack for {command.ActorSlot}: link window is closed");
-                return;
-            }
-
-            CombatActionDefinition linkAction = ResolveLinkAction(command.ActorSlot, command.Actor);
-            Transform target = linkContext.ResolveLinkTarget();
-            if (target == null)
-            {
-                LogCommand($"ignored LinkAttack for {command.ActorSlot}: no valid reaction or soft-lock target");
-                return;
-            }
-
-            bool executed = command.ActorSlot switch
-            {
-                PartyCombatActorSlot.MainCharacter => RequestPlayerLinkAction(command.Actor, target, linkAction),
-                PartyCombatActorSlot.AllySlotA => RequestAllyLinkAction(command.Actor, target, linkAction),
-                PartyCombatActorSlot.AllySlotB => RequestAllyLinkAction(command.Actor, target, linkAction),
-                _ => false
-            };
-
-            if (!executed)
-            {
-                LogCommand(
-                    $"LinkAttack request rejected, slot={command.ActorSlot}, actor={GetObjectName(command.Actor)}, target={GetObjectName(target)}");
-                return;
-            }
-
-            linkContext.ConsumeWindow();
-            AddSynergyFromLinkAction(linkAction);
-            LogCommand(
-                $"LinkAttack accepted and window consumed, slot={command.ActorSlot}, actor={GetObjectName(command.Actor)}, target={GetObjectName(target)}");
-        }
-
         private void ExecuteUltimateCommand(PartyCombatCommand command)
         {
             if (ultimateContext == null)
@@ -467,88 +360,6 @@ namespace EndLink.Party
             {
                 LogCommand("Ultimate consumed: EndLink Ultimate effect is not implemented yet");
             }
-        }
-
-        private void AddSynergyFromLinkAction(CombatActionDefinition linkAction)
-        {
-            if (ultimateContext == null)
-            {
-                CacheReferences();
-            }
-
-            if (ultimateContext == null)
-            {
-                LogCommand("LinkAttack succeeded but PartyUltimateContext was not found");
-                return;
-            }
-
-            float gainedSynergy = ultimateContext.AddSynergyFromLinkAction(linkAction);
-            LogCommand(
-                $"LinkAttack synergy gained={gainedSynergy:F1}, current={ultimateContext.CurrentSynergyRate:F1}/{ultimateContext.MaxSynergyRate:F1}");
-        }
-
-        private bool RequestPlayerLinkAction(GameObject actor, Transform target, CombatActionDefinition linkAction)
-        {
-            if (actor == null
-                || !actor.TryGetComponent(out PlayerStateMachine stateMachine)
-                || linkAction == null)
-            {
-                return false;
-            }
-
-            return stateMachine.RequestAction(linkAction, target);
-        }
-
-        private static bool RequestAllyLinkAction(GameObject actor, Transform target, CombatActionDefinition linkAction)
-        {
-            if (actor == null || !actor.TryGetComponent(out AllyStateMachine stateMachine))
-            {
-                return false;
-            }
-
-            AllyCombatDriver combatDriver = stateMachine.CombatDriver;
-            ICombatActionExecutor actionExecutor = combatDriver;
-            if (linkAction == null || actionExecutor == null || !actionExecutor.CanExecute(linkAction))
-            {
-                return false;
-            }
-
-            return stateMachine.RequestAction(linkAction, target);
-        }
-
-        private static CombatActionDefinition ResolveLinkAction(PartyCombatActorSlot actorSlot, GameObject actor)
-        {
-            if (actor == null)
-            {
-                return null;
-            }
-
-            return actorSlot switch
-            {
-                PartyCombatActorSlot.MainCharacter => actor.TryGetComponent(out PlayerCombatDriver playerDriver)
-                    ? playerDriver.LinkAction
-                    : null,
-                PartyCombatActorSlot.AllySlotA or PartyCombatActorSlot.AllySlotB => ResolveAllyLinkAction(actor),
-                _ => null
-            };
-        }
-
-        private static CombatActionDefinition ResolveAllyLinkAction(GameObject actor)
-        {
-            if (actor == null)
-            {
-                return null;
-            }
-
-            if (actor.TryGetComponent(out AllyStateMachine stateMachine)
-                && stateMachine.CombatDriver != null)
-            {
-                return stateMachine.CombatDriver.LinkAction;
-            }
-
-            return actor.TryGetComponent(out AllyCombatDriver combatDriver)
-                ? combatDriver.LinkAction
-                : null;
         }
 
         private GameObject ResolveActor(PartyCombatActorSlot actorSlot)

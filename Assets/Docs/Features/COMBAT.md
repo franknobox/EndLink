@@ -167,10 +167,13 @@
 - `PlayerWeaponController` 是主角武器形态的唯一运行时入口，固定包含 `A`、`B`、`C` 三种形态；当前设计定位分别为标准、射击、重刃。
 - 每种形态分别配置独立的动作组，具体伤害、平衡伤害、Hitbox 与动作时序继续复用 `CombatActionDefinition`。
 - 当前 A 形态使用三段默认近战普攻；B 形态使用原远程弹体动作；C 形态使用原 Q 键近战技能动作。B、C 暂时都作为对应形态的基础攻击执行。
+- `PlayerAimController` 承接 B 形态射击瞄准：按住右键或手柄 LT 进入瞄准，屏幕中心射线决定瞄准点，角色持续面向该方向；瞄准时会清除硬锁并临时切换到更近的越肩镜头。
+- B 形态必须先瞄准才能执行基础攻击。射击开始时会冻结本次世界空间瞄准点，Projectile 从实际生成位置重新计算三维方向，降低越肩相机与枪口视差；成功射击后退出瞄准，松开瞄准键后才可再次进入。
+- A/C 形态继续使用鼠标右键格挡；手柄格挡固定为 LB，不与 LT 瞄准冲突。
 - 三个形态的主动技能槽位当前均为空；玩家、队友旧 Skill Action 引用和键位绑定已清空，避免旧技能入口与形态攻击并行。
 - `PlayerComboController` 会在连段开始时读取并锁定当前形态的动作列表；`PlayerCombatDriver` 会读取当前形态的起手动作。
 - 第一版直接切换只允许在 `Idle`、`Move` 或状态机尚未初始化时进行，避免攻击中途直接替换动作组；后续战斗内切换由玩家状态机在合法取消窗口或形态派生流程中授权。
-- 提供指定形态、上一形态和下一形态请求，以及 `FormChanged` 变化事件；当前不直接读取输入，键位与新版战斗 UI 后续通过公开接口接入。
+- 提供指定形态、上一形态和下一形态请求，以及 `FormChanged` 变化事件；当前由 `PlayerInputReader` 提供切换意图，Q / D-Pad Up 切到上一形态，E / D-Pad Down 切到下一形态。
 - `PlayerAnimatorDriver` 会向 Animator 写入 `WeaponForm` Int 参数：0 为 A、1 为 B、2 为 C。
 - 未挂载 `PlayerWeaponController` 时，现有 `PlayerComboController` 和 `PlayerCombatDriver` 配置继续作为兼容回退，当前场景不会因新增基础组件失效。
 
@@ -178,6 +181,7 @@
 - `Assets/_EndLink/Combat/Weapon/PlayerWeaponController.cs`
 - `Assets/_EndLink/Player/ActCombat/PlayerComboController.cs`
 - `Assets/_EndLink/Player/ActCombat/PlayerCombatDriver.cs`
+- `Assets/_EndLink/Player/ActCombat/PlayerAimController.cs`
 - `Assets/_EndLink/Control/PlayerAnimatorDriver.cs`
 - `Assets/_EndLink/Control/Animation/CombatAnimatorParams.cs`
 
@@ -186,12 +190,17 @@
   - `PlayerWeaponController`
   - `PlayerComboController`
   - `PlayerCombatDriver`
+  - `PlayerAimController`
 
 关键配置：
 - `initialForm`：进入场景时默认使用的形态
 - `formA`：A 形态动作组，当前配置三段默认近战普攻
 - `formB`：B 形态动作组，当前配置远程弹体攻击
 - `formC`：C 形态动作组，当前配置原近战技能攻击
+- `PlayerAimController.aimCamera`：用于屏幕中心瞄准射线的实际渲染相机，空时运行期缓存 Main Camera
+- `PlayerAimController.aimLayerMask`：瞄准射线可命中的 Layer，建议包含 Enemy、Environment 和 Interactable，不包含 Player
+- `PlayerAimController.maxAimDistance`：没有命中物体时的最远瞄准距离
+- `PlayerViewController.aimDistance / aimFieldOfView / aimShoulderOffset`：瞄准期间的距离、视场角和越肩构图，只覆盖当前镜头，不改写两套常驻视角预设
 
 </details>
 

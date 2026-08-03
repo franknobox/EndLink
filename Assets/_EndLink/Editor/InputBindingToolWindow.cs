@@ -729,6 +729,11 @@ namespace EndLink.Editor
                         continue;
                     }
 
+                    if (IsAllowedContextualBindingPair(first, second))
+                    {
+                        continue;
+                    }
+
                     _conflictPairs.Add(new ConflictPair(
                         first.Key,
                         second.Key,
@@ -896,13 +901,13 @@ namespace EndLink.Editor
                 "Sprint" => "冲刺",
                 "Dodge" => "闪避",
                 "Guard" => "格挡",
+                "Aim" => "瞄准",
+                "PreviousWeaponForm" => "上一武器形态",
+                "NextWeaponForm" => "下一武器形态",
                 "TargetLock" => "锁定目标",
                 "PlayerSkill" => "主动技能",
                 "AllySlotASkill" => "队友 A 技能",
                 "AllySlotBSkill" => "队友 B 技能",
-                "PlayerLinkAttack" => "主角连携技",
-                "AllySlotALinkAttack" => "队友 A 连携技",
-                "AllySlotBLinkAttack" => "队友 B 连携技",
                 "PartyUltimate" => "终链奥义",
                 "Navigate" => "界面导航",
                 "Submit" => "确认",
@@ -1079,6 +1084,21 @@ namespace EndLink.Editor
                    second.StartsWith(first + "/", StringComparison.OrdinalIgnoreCase);
         }
 
+        private static bool IsAllowedContextualBindingPair(BindingEntry first, BindingEntry second)
+        {
+            if (!string.Equals(first.MapName, "Player", StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(first.Path, "<Mouse>/rightButton", StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(second.Path, "<Mouse>/rightButton", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return string.Equals(first.ActionName, "Guard", StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(second.ActionName, "Aim", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(first.ActionName, "Aim", StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(second.ActionName, "Guard", StringComparison.OrdinalIgnoreCase);
+        }
+
         private void DestroyWorkingAsset()
         {
             if (_workingAsset == null)
@@ -1147,6 +1167,7 @@ namespace EndLink.Editor
             {
                 Key = new BindingKey(actionId, binding.id);
                 MapName = mapName;
+                ActionName = actionName;
                 Path = binding.path;
                 Groups = binding.groups;
                 KeyboardMouse = BindingBelongsToPage(binding, DevicePage.KeyboardMouse);
@@ -1157,6 +1178,7 @@ namespace EndLink.Editor
 
             public BindingKey Key { get; }
             public string MapName { get; }
+            public string ActionName { get; }
             public string Path { get; }
             public string Groups { get; }
             public bool KeyboardMouse { get; }

@@ -137,6 +137,17 @@ namespace EndLink.Core
         private float _lockRotationSmoothTime = 0.12f;
         private float _lockYawVelocity;
         private float _lockPitchVelocity;
+        private bool _hasTemporaryViewOverride;
+        private bool _returningFromTemporaryView;
+        private float _temporaryDistance;
+        private float _temporaryFieldOfView;
+        private Vector3 _temporaryShoulderOffset;
+        private float _temporaryEnterSmoothTime = 0.12f;
+        private float _temporaryExitSmoothTime = 0.22f;
+        private float _currentFieldOfView;
+        private float _fieldOfViewSmoothVelocity;
+        private Vector3 _currentShoulderOffset;
+        private Vector3 _shoulderOffsetSmoothVelocity;
 
         /// <summary>当前相机跟随的玩家根节点，供视角模式协调器解析玩家组件。</summary>
         public Transform FollowTarget => followTarget;
@@ -192,12 +203,49 @@ namespace EndLink.Core
                     ? activeDistance
                     : idleDistance;
                 _distanceSmoothVelocity = 0f;
+                _currentFieldOfView = fieldOfView;
+                _fieldOfViewSmoothVelocity = 0f;
+                _currentShoulderOffset = shoulderOffset;
+                _shoulderOffsetSmoothVelocity = Vector3.zero;
             }
 
             if (_cinemachineCamera != null && _thirdPersonFollow != null)
             {
                 ApplyCinemachineSettings();
             }
+        }
+
+        /// <summary>
+        /// 启用临时镜头构图。射击瞄准等短时模式使用该入口，不会覆盖当前视角模式保存的基础参数。
+        /// </summary>
+        public void SetTemporaryViewOverride(
+            float distance,
+            float overrideFieldOfView,
+            Vector3 overrideShoulderOffset,
+            float enterSmoothTime,
+            float exitSmoothTime)
+        {
+            _temporaryDistance = Mathf.Max(0.01f, distance);
+            _temporaryFieldOfView = Mathf.Clamp(overrideFieldOfView, 1f, 179f);
+            _temporaryShoulderOffset = overrideShoulderOffset;
+            _temporaryEnterSmoothTime = Mathf.Max(0.01f, enterSmoothTime);
+            _temporaryExitSmoothTime = Mathf.Max(0.01f, exitSmoothTime);
+            _hasTemporaryViewOverride = true;
+            _returningFromTemporaryView = false;
+            ResetViewOverrideVelocities();
+        }
+
+        /// <summary>解除临时镜头构图，并平滑恢复当前视角模式与自动距离。</summary>
+        public void ClearTemporaryViewOverride()
+        {
+            if (!_hasTemporaryViewOverride)
+            {
+                return;
+            }
+
+            _hasTemporaryViewOverride = false;
+            _returningFromTemporaryView = true;
+            ResetViewOverrideVelocities();
         }
 
         /// <summary>让自由相机平滑朝向指定硬锁点。</summary>
@@ -312,6 +360,8 @@ namespace EndLink.Core
             _lastActiveDistanceRequested = true;
             _distanceRequestDuration = 0f;
             _currentDistance = activeDistance;
+            _currentFieldOfView = fieldOfView;
+            _currentShoulderOffset = shoulderOffset;
 
             ApplyCinemachineSettings();
         }
@@ -472,12 +522,20 @@ namespace EndLink.Core
                 activeRequested,
                 _distanceRequestDuration);
 
-            float targetDistance = _distanceMode == CameraDistanceMode.Active
+            float baseTargetDistance = _distanceMode == CameraDistanceMode.Active
                 ? activeDistance
                 : idleDistance;
-            float smoothTime = _distanceMode == CameraDistanceMode.Active
+            float baseSmoothTime = _distanceMode == CameraDistanceMode.Active
                 ? activeDistanceSmoothTime
                 : idleDistanceSmoothTime;
+            float targetDistance = _hasTemporaryViewOverride
+                ? _temporaryDistance
+                : baseTargetDistance;
+            float smoothTime = _hasTemporaryViewOverride
+                ? _temporaryEnterSmoothTime
+                : _returningFromTemporaryView
+                    ? _temporaryExitSmoothTime
+                    : baseSmoothTime;
 
             _currentDistance = Mathf.SmoothDamp(
                 _currentDistance,
@@ -486,6 +544,49 @@ namespace EndLink.Core
                 smoothTime,
                 Mathf.Infinity,
                 deltaTime);
+
+            float targetFieldOfView = _hasTemporaryViewOverride
+                ? _temporaryFieldOfView
+                : fieldOfView;
+            Vector3 targetShoulderOffset = _hasTemporaryViewOverride
+                ? _temporaryShoulderOffset
+                : shoulderOffset;
+            float compositionSmoothTime = _hasTemporaryViewOverride
+                ? _temporaryEnterSmoothTime
+                : _returningFromTemporaryView
+                    ? _temporaryExitSmoothTime
+                    : 0f;
+
+            if (compositionSmoothTime <= 0f)
+            {
+                _currentFieldOfView = targetFieldOfView;
+                _currentShoulderOffset = targetShoulderOffset;
+            }
+            else
+            {
+                _currentFieldOfView = Mathf.SmoothDamp(
+                    _currentFieldOfView,
+                    targetFieldOfView,
+                    ref _fieldOfViewSmoothVelocity,
+                    compositionSmoothTime,
+                    Mathf.Infinity,
+                    deltaTime);
+                _currentShoulderOffset = Vector3.SmoothDamp(
+                    _currentShoulderOffset,
+                    targetShoulderOffset,
+                    ref _shoulderOffsetSmoothVelocity,
+                    compositionSmoothTime,
+                    Mathf.Infinity,
+                    deltaTime);
+            }
+
+            if (_returningFromTemporaryView
+                && Mathf.Abs(_currentDistance - baseTargetDistance) <= 0.01f
+                && Mathf.Abs(_currentFieldOfView - fieldOfView) <= 0.05f
+                && (_currentShoulderOffset - shoulderOffset).sqrMagnitude <= 0.0001f)
+            {
+                _returningFromTemporaryView = false;
+            }
         }
 
         private bool IsActiveDistanceRequested()
@@ -508,13 +609,20 @@ namespace EndLink.Core
                 _cinemachineCamera.Target.CustomLookAtTarget = false;
             }
 
-            _thirdPersonFollow.ShoulderOffset = shoulderOffset;
+            _thirdPersonFollow.ShoulderOffset = _currentShoulderOffset;
             _thirdPersonFollow.VerticalArmLength = verticalArmLength;
             _thirdPersonFollow.CameraSide = cameraSide;
             _thirdPersonFollow.Damping = damping;
             _thirdPersonFollow.CameraDistance = _currentDistance;
 
-            _cinemachineCamera.Lens.FieldOfView = fieldOfView;
+            _cinemachineCamera.Lens.FieldOfView = _currentFieldOfView;
+        }
+
+        private void ResetViewOverrideVelocities()
+        {
+            _distanceSmoothVelocity = 0f;
+            _fieldOfViewSmoothVelocity = 0f;
+            _shoulderOffsetSmoothVelocity = Vector3.zero;
         }
 
         private Transform CreateRuntimeCameraTarget(Transform baseTarget)

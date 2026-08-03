@@ -26,6 +26,12 @@ namespace EndLink.Core
         /// </summary>
         public bool GuardHeld { get; private set; }
 
+        /// <summary>
+        /// 当前是否按住射击瞄准输入。默认绑定为鼠标右键，手柄为 LT / L2。
+        /// 是否真正进入瞄准由武器形态和玩家状态决定。
+        /// </summary>
+        public bool AimHeld { get; private set; }
+
         private InputSystem_Actions _inputActions;
         private InputActionMap _playerActionMap;
         private InputAction _moveAction;
@@ -33,6 +39,7 @@ namespace EndLink.Core
         private InputAction _sprintAction;
         private InputAction _dodgeAction;
         private InputAction _guardAction;
+        private InputAction _aimAction;
         private InputAction _targetLockAction;
         private InputAction _previousAction;
         private InputAction _nextAction;
@@ -41,9 +48,8 @@ namespace EndLink.Core
         private InputAction _playerSkillAction;
         private InputAction _allySlotASkillAction;
         private InputAction _allySlotBSkillAction;
-        private InputAction _playerLinkAttackAction;
-        private InputAction _allySlotALinkAttackAction;
-        private InputAction _allySlotBLinkAttackAction;
+        private InputAction _previousWeaponFormAction;
+        private InputAction _nextWeaponFormAction;
         private InputAction _partyUltimateAction;
         private bool _initialized;
         private bool _attackPressed;
@@ -56,9 +62,8 @@ namespace EndLink.Core
         private bool _playerSkillPressed;
         private bool _allySlotASkillPressed;
         private bool _allySlotBSkillPressed;
-        private bool _playerLinkAttackPressed;
-        private bool _allySlotALinkAttackPressed;
-        private bool _allySlotBLinkAttackPressed;
+        private bool _previousWeaponFormPressed;
+        private bool _nextWeaponFormPressed;
         private bool _partyUltimatePressed;
 
         private void Awake()
@@ -100,6 +105,9 @@ namespace EndLink.Core
             _guardAction.started -= OnGuardStartedOrPerformed;
             _guardAction.performed -= OnGuardStartedOrPerformed;
             _guardAction.canceled -= OnGuardCanceled;
+            _aimAction.started -= OnAimStartedOrPerformed;
+            _aimAction.performed -= OnAimStartedOrPerformed;
+            _aimAction.canceled -= OnAimCanceled;
             _targetLockAction.performed -= OnTargetLockPerformed;
             _previousAction.performed -= OnPreviousPerformed;
             _nextAction.performed -= OnNextPerformed;
@@ -108,9 +116,8 @@ namespace EndLink.Core
             _playerSkillAction.performed -= OnPlayerSkillPerformed;
             _allySlotASkillAction.performed -= OnAllySlotASkillPerformed;
             _allySlotBSkillAction.performed -= OnAllySlotBSkillPerformed;
-            _playerLinkAttackAction.performed -= OnPlayerLinkAttackPerformed;
-            _allySlotALinkAttackAction.performed -= OnAllySlotALinkAttackPerformed;
-            _allySlotBLinkAttackAction.performed -= OnAllySlotBLinkAttackPerformed;
+            _previousWeaponFormAction.performed -= OnPreviousWeaponFormPerformed;
+            _nextWeaponFormAction.performed -= OnNextWeaponFormPerformed;
             _partyUltimateAction.performed -= OnPartyUltimatePerformed;
 
             _inputActions.Dispose();
@@ -181,7 +188,7 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 消费一次主控主动技能输入，默认键位 Q。
+        /// 消费一次旧主控主动技能输入。当前没有默认绑定，Q 已用于上一武器形态。
         /// </summary>
         public bool ConsumePlayerSkillPressed()
         {
@@ -205,30 +212,19 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 消费一次主控连携请求输入，默认键位 1。
-        /// 这里只读取玩家意图，是否能释放必须由连携窗口判断。
+        /// 消费一次切换到上一武器形态的输入，默认键位 Q，手柄为 D-Pad Up。
         /// </summary>
-        public bool ConsumePlayerLinkAttackPressed()
+        public bool ConsumePreviousWeaponFormPressed()
         {
-            return ConsumePressed(ref _playerLinkAttackPressed);
+            return ConsumePressed(ref _previousWeaponFormPressed);
         }
 
         /// <summary>
-        /// 消费一次队友 A 连携请求输入，默认键位 2。
-        /// 这里只读取玩家意图，是否能释放必须由连携窗口判断。
+        /// 消费一次切换到下一武器形态的输入，默认键位 E，手柄为 D-Pad Down。
         /// </summary>
-        public bool ConsumeAllySlotALinkAttackPressed()
+        public bool ConsumeNextWeaponFormPressed()
         {
-            return ConsumePressed(ref _allySlotALinkAttackPressed);
-        }
-
-        /// <summary>
-        /// 消费一次队友 B 连携请求输入，默认键位 3。
-        /// 这里只读取玩家意图，是否能释放必须由连携窗口判断。
-        /// </summary>
-        public bool ConsumeAllySlotBLinkAttackPressed()
-        {
-            return ConsumePressed(ref _allySlotBLinkAttackPressed);
+            return ConsumePressed(ref _nextWeaponFormPressed);
         }
 
         /// <summary>
@@ -240,25 +236,19 @@ namespace EndLink.Core
         }
 
         /// <summary>
-        /// 覆盖主控主动技能、队友主动技能、连携请求和终链奥义的键盘绑定。
+        /// 覆盖旧主控/队友主动技能和终链奥义的键盘绑定。
         /// 该方法只改运行时 InputAction 实例，不写回 inputactions 资产。
         /// </summary>
         public void ApplyPartyCombatKeyboardBindings(
             Key playerSkillKey,
             Key allySlotASkillKey,
             Key allySlotBSkillKey,
-            Key playerLinkAttackKey,
-            Key allySlotALinkAttackKey,
-            Key allySlotBLinkAttackKey,
             Key partyUltimateKey)
         {
             EnsureInitialized();
             ApplyKeyboardBindingOverride(_playerSkillAction, playerSkillKey);
             ApplyKeyboardBindingOverride(_allySlotASkillAction, allySlotASkillKey);
             ApplyKeyboardBindingOverride(_allySlotBSkillAction, allySlotBSkillKey);
-            ApplyKeyboardBindingOverride(_playerLinkAttackAction, playerLinkAttackKey);
-            ApplyKeyboardBindingOverride(_allySlotALinkAttackAction, allySlotALinkAttackKey);
-            ApplyKeyboardBindingOverride(_allySlotBLinkAttackAction, allySlotBLinkAttackKey);
             ApplyKeyboardBindingOverride(_partyUltimateAction, partyUltimateKey);
         }
 
@@ -305,6 +295,16 @@ namespace EndLink.Core
             GuardHeld = false;
         }
 
+        private void OnAimStartedOrPerformed(InputAction.CallbackContext context)
+        {
+            AimHeld = context.ReadValueAsButton();
+        }
+
+        private void OnAimCanceled(InputAction.CallbackContext context)
+        {
+            AimHeld = false;
+        }
+
         private void OnTargetLockPerformed(InputAction.CallbackContext context)
         {
             SetPressedIfButton(context, ref _targetLockPressed);
@@ -345,19 +345,14 @@ namespace EndLink.Core
             SetPressedIfButton(context, ref _allySlotBSkillPressed);
         }
 
-        private void OnPlayerLinkAttackPerformed(InputAction.CallbackContext context)
+        private void OnPreviousWeaponFormPerformed(InputAction.CallbackContext context)
         {
-            SetPressedIfButton(context, ref _playerLinkAttackPressed);
+            SetPressedIfButton(context, ref _previousWeaponFormPressed);
         }
 
-        private void OnAllySlotALinkAttackPerformed(InputAction.CallbackContext context)
+        private void OnNextWeaponFormPerformed(InputAction.CallbackContext context)
         {
-            SetPressedIfButton(context, ref _allySlotALinkAttackPressed);
-        }
-
-        private void OnAllySlotBLinkAttackPerformed(InputAction.CallbackContext context)
-        {
-            SetPressedIfButton(context, ref _allySlotBLinkAttackPressed);
+            SetPressedIfButton(context, ref _nextWeaponFormPressed);
         }
 
         private void OnPartyUltimatePerformed(InputAction.CallbackContext context)
@@ -388,6 +383,7 @@ namespace EndLink.Core
         {
             SprintHeld = false;
             GuardHeld = false;
+            AimHeld = false;
             _attackPressed = false;
             _dodgePressed = false;
             _targetLockPressed = false;
@@ -398,9 +394,8 @@ namespace EndLink.Core
             _playerSkillPressed = false;
             _allySlotASkillPressed = false;
             _allySlotBSkillPressed = false;
-            _playerLinkAttackPressed = false;
-            _allySlotALinkAttackPressed = false;
-            _allySlotBLinkAttackPressed = false;
+            _previousWeaponFormPressed = false;
+            _nextWeaponFormPressed = false;
             _partyUltimatePressed = false;
         }
 
@@ -418,6 +413,7 @@ namespace EndLink.Core
             _sprintAction = _inputActions.asset.FindAction("Player/Sprint", true);
             _dodgeAction = _inputActions.asset.FindAction("Player/Dodge", true);
             _guardAction = _inputActions.asset.FindAction("Player/Guard", true);
+            _aimAction = _inputActions.asset.FindAction("Player/Aim", true);
             _targetLockAction = _inputActions.asset.FindAction("Player/TargetLock", true);
             _previousAction = _inputActions.asset.FindAction("Player/Previous", true);
             _nextAction = _inputActions.asset.FindAction("Player/Next", true);
@@ -426,9 +422,8 @@ namespace EndLink.Core
             _playerSkillAction = _inputActions.asset.FindAction("Player/PlayerSkill", true);
             _allySlotASkillAction = _inputActions.asset.FindAction("Player/AllySlotASkill", true);
             _allySlotBSkillAction = _inputActions.asset.FindAction("Player/AllySlotBSkill", true);
-            _playerLinkAttackAction = _inputActions.asset.FindAction("Player/PlayerLinkAttack", true);
-            _allySlotALinkAttackAction = _inputActions.asset.FindAction("Player/AllySlotALinkAttack", true);
-            _allySlotBLinkAttackAction = _inputActions.asset.FindAction("Player/AllySlotBLinkAttack", true);
+            _previousWeaponFormAction = _inputActions.asset.FindAction("Player/PreviousWeaponForm", true);
+            _nextWeaponFormAction = _inputActions.asset.FindAction("Player/NextWeaponForm", true);
             _partyUltimateAction = _inputActions.asset.FindAction("Player/PartyUltimate", true);
             _moveAction.performed += OnMoveChanged;
             _moveAction.canceled += OnMoveCanceled;
@@ -440,6 +435,9 @@ namespace EndLink.Core
             _guardAction.started += OnGuardStartedOrPerformed;
             _guardAction.performed += OnGuardStartedOrPerformed;
             _guardAction.canceled += OnGuardCanceled;
+            _aimAction.started += OnAimStartedOrPerformed;
+            _aimAction.performed += OnAimStartedOrPerformed;
+            _aimAction.canceled += OnAimCanceled;
             _targetLockAction.performed += OnTargetLockPerformed;
             _previousAction.performed += OnPreviousPerformed;
             _nextAction.performed += OnNextPerformed;
@@ -448,9 +446,8 @@ namespace EndLink.Core
             _playerSkillAction.performed += OnPlayerSkillPerformed;
             _allySlotASkillAction.performed += OnAllySlotASkillPerformed;
             _allySlotBSkillAction.performed += OnAllySlotBSkillPerformed;
-            _playerLinkAttackAction.performed += OnPlayerLinkAttackPerformed;
-            _allySlotALinkAttackAction.performed += OnAllySlotALinkAttackPerformed;
-            _allySlotBLinkAttackAction.performed += OnAllySlotBLinkAttackPerformed;
+            _previousWeaponFormAction.performed += OnPreviousWeaponFormPerformed;
+            _nextWeaponFormAction.performed += OnNextWeaponFormPerformed;
             _partyUltimateAction.performed += OnPartyUltimatePerformed;
             _initialized = true;
         }
