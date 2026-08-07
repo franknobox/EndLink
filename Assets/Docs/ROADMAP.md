@@ -80,16 +80,30 @@ EndLink 是一个早期 3D 连携战斗 demo，目标参考类似《异度之刃
 场景顶层结构：
 
 ```text
-SceneRoot
-├─ _Systems         世界、小队、战斗、复活等场景级系统
-├─ _Gameplay        玩家、队友、敌人、交互物和出生点
-├─ _Environment     几何、碰撞、NavMesh 和关卡结构
-├─ _Presentation    相机、灯光、VFX 和 UI
-└─ _Debug           只用于开发期的调试物体
+Scene
+├─ _Systems
+│  ├─ Combat        战斗反馈、小队上下文等场景级战斗系统
+│  ├─ EndLink_3rd_Camera
+│  ├─ Lighting      灯光与 Volume
+│  ├─ Main Camera
+│  ├─ Navigation    NavMesh 等导航数据入口
+│  ├─ UI            Canvas、EventSystem 和运行时 HUD
+│  └─ World         复活管理等世界级系统
+├─ _Gameplay
+│  ├─ Checkpoints   开场点、检查点和复活点
+│  ├─ CombatZones   敌人战斗协调区域
+│  └─ SpawnPoints   能够生成敌人或其他实体的生成位置
+├─ _Blockout
+│  ├─ Env           ProBuilder 白盒环境与基础碰撞
+│  └─ Interact      门、电梯等白盒交互物
+├─ Layout           Layout、Paintover 和其他场景构图参考
+└─ Player_Root      当前主控玩家逻辑根
 ```
 
 约定：
-- `SceneRoot` 及各分类根保持位置零、旋转零、缩放一，不通过分类根缩放实际内容。
+- 各分类根保持位置零、旋转零、缩放一，不通过分类根缩放实际内容。
+- `Checkpoints` 统一收纳 `PlayStart`、`RespawnPoint` 等玩家流程检查点；`SpawnPoints` 专门收纳可以生成敌人或其他实体的位置标记。
+- `Layout` 只作为白盒搭建参考，不参与物理碰撞、NavMesh 烘焙或运行时玩法查询。
 - 角色与敌人使用“逻辑根 + `Visuals`”结构；状态机、生命、碰撞、移动和战斗组件放在逻辑根，模型、Animator 和纯表现放在 `Visuals`。
 - 可复用内容优先做成 Prefab，场景实例只保存位置、引用和少量关卡差异配置。
 - Layer 只表达物理碰撞、射线和范围查询关系；战斗状态继续使用 `CombatTag`，不要用 Unity Layer 代替。
@@ -106,7 +120,7 @@ SceneRoot
 | `Player` | 主角逻辑根和实体碰撞。 |
 | `Water` | 水面及水相关查询。 |
 | `UI` | Canvas UI。 |
-| `Interactable` | 可被 `WorldInteractor` 扫描的交互碰撞体。 |
+| `Interactable` | 挂载 `ObjInteractable`、可被对应武器 Hitbox 命中的交互碰撞体。 |
 | `Environment` | 地面、墙体、门框和其他场景实体碰撞。 |
 | `Enemy` | 敌人逻辑根和实体碰撞。 |
 | `Ally` | 队友逻辑根和实体碰撞。 |

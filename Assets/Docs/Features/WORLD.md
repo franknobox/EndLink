@@ -61,6 +61,7 @@
 
 ### 相关物体 / 配置
 - 场景系统物体挂一个 `WorldRespawnManager`，拖入玩家根物体和默认 `WorldSpawnPoint`；同一场景只能启用一个调度器。
+- 场景层级中的 `Checkpoints` 统一收纳 `PlayStart`、`RespawnPoint` 等玩家流程检查点；`SpawnPoints` 专门收纳能够生成敌人或其他实体的位置标记。
 - `fallDeathHeight`：玩家坠落死亡使用的世界 Y 高度，当前默认 `-50`。
 - 开场出生点挂 `WorldSpawnPoint` 并选择 `PlayerStart`，朝向箭头表示玩家出生朝向。
 - 可交互检查点根物体挂 `WorldCheckpoint`，其 `ObjInteract` 子物体负责 Collider、交互类型和武器命中入口。
