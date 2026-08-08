@@ -51,10 +51,10 @@
 | [通用战斗反馈](Features/COMBAT.md#feature-combat-feedback) | 已完成调度基础版 | 通过可复用反馈资产与场景调度器，统一提供 Hitstop、Cinemachine Impulse、手柄震动、音效和 VFX 请求入口。 |
 | [统一 Action 执行接口](Features/COMBAT.md#feature-combat-action-executor) | 已完成多判定窗口版 | 统一玩家、队友和敌人的动作检查、执行、冷却和目标传入，并支持动画事件动作在一次执行中开启多个判定窗口。 |
 | [伤害结算管线基础](Features/COMBAT.md#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
-| [受击规则基础](Features/COMBAT.md#feature-hit-response) | 已完成动态拦截版 | Hitbox 造成伤害后统一计算击退，并允许格挡、弹反、临时护盾等规则动态接入生命结算，修改伤害与击退结果。 |
+| [受击规则基础](Features/COMBAT.md#feature-hit-response) | 已完成命中结算版 | Hitbox 先取得受击方的 `HitResolution`，统一区分正常命中、格挡、弹反、闪避、免疫和拒绝，再决定事件、反馈与标签。 |
 | [战斗标签系统](Features/COMBAT.md#feature-combat-tags) | 已完成基础版 | 提供战斗专用标签定义、目标标签容器、多标签、持续时间、带来源的增删事件、合法检查和协议反应规则。 |
-| [战斗事件总栈](Features/COMBAT.md#feature-combat-events-bus) | 已完成监视增强版 | 提供全局战斗事件类型、事件数据、事件广播入口、Console 日志监听器和可筛选复制的 Editor 监视窗口，当前已接入攻击、命中、受伤、死亡、标签变化和协议反应。 |
-| [基础 Hitbox 配置](Features/COMBAT.md#feature-hitbox) | 已完成动画窗口接线版 | 提供通用与远程 Hitbox；普通判定支持数据有效段或动画事件关闭，弹体始终使用自身寿命规则。 |
+| [战斗事件总栈](Features/COMBAT.md#feature-combat-events-bus) | 已完成命中结果版 | 提供全局事件广播、日志与 Editor 监视；当前会广播完整 `HitResolved`，并保留成立命中的 `HitLanded` 供战斗参与逻辑使用。 |
+| [基础 Hitbox 配置](Features/COMBAT.md#feature-hitbox) | 已完成结算接线版 | 提供通用与远程 Hitbox；支持数据/动画判定窗口，并依据受击结果控制成立命中事件、普通反馈和标签附加。 |
 
 #### ALLY
 

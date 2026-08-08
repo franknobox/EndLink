@@ -178,8 +178,18 @@ namespace EndLink.Combat
         /// <summary>
         /// 接收 Hitbox 的完整命中信息，并转为生命伤害处理。
         /// </summary>
-        public void ReceiveHit(HitboxHitInfo hitInfo)
+        public HitResolution ReceiveHit(HitboxHitInfo hitInfo)
         {
+            if (_isDead)
+            {
+                return new HitResolution(HitOutcome.Rejected);
+            }
+
+            if (IsTemporaryInvincible)
+            {
+                return new HitResolution(HitOutcome.Dodged);
+            }
+
             DamageContext context = DamageContext.FromHit(hitInfo, gameObject);
             DamageResult damageResult = DamageCalculator.Calculate(context);
             HitInterception interception = ResolveHitInterception(hitInfo);
@@ -199,6 +209,11 @@ namespace EndLink.Combat
             {
                 CombatKnockback.TryApply(gameObject, hitInfo.HitDirection, hitInfo.KnockbackForce);
             }
+
+            HitOutcome outcome = interception.Intercepted
+                ? interception.Outcome
+                : HitOutcome.Applied;
+            return new HitResolution(outcome, appliedDamage);
         }
 
         /// <summary>

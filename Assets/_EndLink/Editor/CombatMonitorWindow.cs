@@ -21,6 +21,7 @@ namespace EndLink.Editor
         private bool _isPaused;
         private bool _autoScroll = true;
         private bool _showActionStarted = true;
+        private bool _showHitResolved = true;
         private bool _showHitLanded = true;
         private bool _showDamaged = true;
         private bool _showDead = true;
@@ -89,7 +90,8 @@ namespace EndLink.Editor
             {
                 EditorGUILayout.LabelField("筛选", EditorStyles.boldLabel, GUILayout.Width(40f));
                 _showActionStarted = GUILayout.Toggle(_showActionStarted, "动作", EditorStyles.miniButtonLeft);
-                _showHitLanded = GUILayout.Toggle(_showHitLanded, "命中", EditorStyles.miniButtonMid);
+                _showHitResolved = GUILayout.Toggle(_showHitResolved, "结算", EditorStyles.miniButtonMid);
+                _showHitLanded = GUILayout.Toggle(_showHitLanded, "成立命中", EditorStyles.miniButtonMid);
                 _showDamaged = GUILayout.Toggle(_showDamaged, "伤害", EditorStyles.miniButtonMid);
                 _showDead = GUILayout.Toggle(_showDead, "死亡", EditorStyles.miniButtonMid);
                 _showTagEvents = GUILayout.Toggle(_showTagEvents, "标签", EditorStyles.miniButtonMid);
@@ -110,6 +112,7 @@ namespace EndLink.Editor
                 DrawHeaderColumn("层数", 44f);
                 DrawHeaderColumn("伤害", 58f);
                 DrawHeaderColumn("伤害类型", 105f);
+                DrawHeaderColumn("结算结果", 86f);
             }
         }
 
@@ -140,6 +143,7 @@ namespace EndLink.Editor
                     DrawColumn(record.StackText, 44f);
                     DrawColumn(record.DamageText, 58f);
                     DrawColumn(record.DamageTypeText, 105f);
+                    DrawColumn(record.HitOutcomeText, 86f);
                 }
             }
 
@@ -194,6 +198,7 @@ namespace EndLink.Editor
             return eventType switch
             {
                 CombatEventType.ActionStarted => _showActionStarted,
+                CombatEventType.HitResolved => _showHitResolved,
                 CombatEventType.HitLanded => _showHitLanded,
                 CombatEventType.Damaged => _showDamaged,
                 CombatEventType.Dead => _showDead,
@@ -228,7 +233,9 @@ namespace EndLink.Editor
                     .Append(" | Damage=")
                     .Append(record.DamageText)
                     .Append(' ')
-                    .AppendLine(record.DamageTypeText);
+                    .Append(record.DamageTypeText)
+                    .Append(" | HitOutcome=")
+                    .AppendLine(record.HitOutcomeText);
             }
 
             return builder.ToString();
@@ -253,6 +260,9 @@ namespace EndLink.Editor
                     : "-";
                 DamageText = eventData.DamageAmount > 0f ? eventData.DamageAmount.ToString("0.#") : "-";
                 DamageTypeText = eventData.DamageAmount > 0f ? eventData.DamageType.ToString() : "-";
+                HitOutcomeText = eventData.HasHitResolution
+                    ? eventData.HitResolution.Outcome.ToString()
+                    : "-";
             }
 
             public string TimeText { get; }
@@ -272,6 +282,8 @@ namespace EndLink.Editor
             public string DamageText { get; }
 
             public string DamageTypeText { get; }
+
+            public string HitOutcomeText { get; }
 
             private static string GetObjectName(Object targetObject)
             {

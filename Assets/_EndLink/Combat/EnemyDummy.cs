@@ -105,10 +105,16 @@ namespace EndLink.Combat
         /// <summary>
         /// 接收 Hitbox 的完整命中信息，并转发给简单伤害接口。
         /// </summary>
-        public void ReceiveHit(HitboxHitInfo hitInfo)
+        public HitResolution ReceiveHit(HitboxHitInfo hitInfo)
         {
+            if (_isDead)
+            {
+                return new HitResolution(HitOutcome.Rejected);
+            }
+
             DamageContext context = DamageContext.FromHit(hitInfo, gameObject);
-            ApplyDamage(DamageCalculator.Calculate(context));
+            int appliedDamage = ApplyDamage(DamageCalculator.Calculate(context));
+            return new HitResolution(HitOutcome.Applied, appliedDamage);
         }
 
         /// <summary>
@@ -130,15 +136,21 @@ namespace EndLink.Combat
             ApplyDamage(DamageCalculator.Calculate(context));
         }
 
-        private void ApplyDamage(DamageResult damageResult)
+        private int ApplyDamage(DamageResult damageResult)
         {
             if (_isDead)
             {
-                return;
+                return 0;
             }
 
-            int appliedDamage = Mathf.Max(0, damageResult.FinalDamage);
-            _currentHealth = Mathf.Max(0, _currentHealth - appliedDamage);
+            int requestedDamage = Mathf.Max(0, damageResult.FinalDamage);
+            int previousHealth = _currentHealth;
+            _currentHealth = Mathf.Max(0, _currentHealth - requestedDamage);
+            int appliedDamage = previousHealth - _currentHealth;
+            if (appliedDamage <= 0)
+            {
+                return 0;
+            }
 
             if (logHits)
             {
@@ -159,10 +171,11 @@ namespace EndLink.Combat
             if (_currentHealth <= 0)
             {
                 Die(damageResult.Source);
-                return;
+                return appliedDamage;
             }
 
             PlayHitFlash();
+            return appliedDamage;
         }
 
         /// <summary>

@@ -249,16 +249,30 @@ namespace EndLink.Combat
 
             HitboxHitInfo hitInfo = BuildHitInfo(other);
             GameObject hitTarget = ResolveHitTarget(receiver, other);
-            CombatEventsBus.RaiseHitLanded(_owner, hitTarget, hitInfo);
-            receiver.ReceiveHit(hitInfo);
-            CombatFeedbackBus.Raise(
-                _actionDefinition != null ? _actionDefinition.HitFeedback : null,
-                hitInfo.HitPoint,
-                hitInfo.HitDirection,
-                _owner,
-                hitTarget);
-            ApplyCombatTag(other);
-            onHit.Invoke(other);
+            HitResolution resolution = receiver.ReceiveHit(hitInfo);
+
+            // 先拿到受击方的真实结算结果，再决定后续事件、标签和普通命中反馈。
+            CombatEventsBus.RaiseHitResolved(_owner, hitTarget, hitInfo, resolution);
+            if (resolution.CountsAsHitLanded)
+            {
+                CombatEventsBus.RaiseHitLanded(_owner, hitTarget, hitInfo, resolution);
+            }
+
+            if (resolution.AllowsNormalFeedback)
+            {
+                CombatFeedbackBus.Raise(
+                    _actionDefinition != null ? _actionDefinition.HitFeedback : null,
+                    hitInfo.HitPoint,
+                    hitInfo.HitDirection,
+                    _owner,
+                    hitTarget);
+                onHit.Invoke(other);
+            }
+
+            if (resolution.AllowsCombatTag)
+            {
+                ApplyCombatTag(other);
+            }
         }
 
         /// <summary>

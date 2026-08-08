@@ -220,7 +220,7 @@
 - 手柄震动驱动当前 `Gamepad` 的高低频马达；调度器禁用、失去焦点或震动到期时会主动归零。
 - 音效通过调度器的统一 `AudioSource.PlayOneShot` 播放；VFX 以 GameObject prefab 形式生成在命中点，因此可兼容 ParticleSystem 和 Visual Effect Graph prefab。
 - 当前 VFX 仍使用 `Instantiate/Destroy`，尚未接入对象池；正式高频特效接入时与 Hitbox 池化一起处理。
-- 当前 Action 反馈语义是“Hitbox 接触有效受击目标”，格挡和弹反仍可能同时触发该动作的普通接触反馈；后续命中结算结果标准化后再区分普通命中、格挡、弹反和闪避反馈。
+- 当前 Action 的 `HitFeedback` 只在 `HitResolution` 为 `Applied` 时触发；格挡、弹反、闪避、免疫和拒绝不会误用普通命中反馈，专用反馈后续从各自规则入口提交。
 
 对应脚本：
 - `Assets/_EndLink/Combat/Feedback/CombatFeedbackDefinition.cs`
@@ -317,7 +317,21 @@
 
 <details>
 <summary>展开详情</summary>
+
 功能说明：
+- `IHitReceiver.ReceiveHit` 返回最小 `HitResolution`，统一表达 `Applied`、`Blocked`、`Parried`、`Dodged`、`Immune` 和 `Rejected`。
+- `AppliedDamage` 表示目标生命值的实际减少量；过量伤害只记录目标剩余生命，不把公式伤害误报为实扣伤害。
+- `Applied`、`Blocked`、`Parried`、`Immune` 视为成立命中并广播 `HitLanded`；`Dodged`、`Rejected` 只广播完整的 `HitResolved`。
+- Action 普通命中反馈仅由 `Applied` 触发；战斗标签当前只允许在 `Applied` 和 `Blocked` 时附加。
+- 同一个 Hitbox 的六种结算结果都会消耗本次目标记录，避免持续碰撞在单个判定窗口内反复尝试；后续持续伤害区域需要使用独立的间隔命中规则。
+- `IHitInterceptor` 允许格挡、弹反和临时护盾动态接入生命结算，返回命中结果、伤害倍率与击退许可。
+
+对应脚本：
+- `Assets/_EndLink/Combat/Hitbox/HitResolution.cs`
+- `Assets/_EndLink/Combat/Hitbox/IHitReceiver.cs`
+- `Assets/_EndLink/Combat/Hitbox/IHitInterceptor.cs`
+- `Assets/_EndLink/Combat/CharacterHealth.cs`
+- `Assets/_EndLink/Enemies/Base/EnemyHealth.cs`
 - Hitbox 实际造成伤害后，通过 `CombatKnockback` 统一计算并分发总击退位移；免伤、无伤害和击退距离为 `0` 时不会产生位移。
 - `CharacterHealth` 初始化时自动登记同根物体上已启用的 `IHitInterceptor`，并提供动态注册与退订接口，供格挡、弹反、临时护盾和短暂无敌在运行时接入伤害结算。
 - 动态拦截器按注册顺序处理；已禁用或已销毁的拦截器会在命中结算时自动移除，避免继续影响后续受击。
@@ -338,7 +352,7 @@
 - `Assets/_EndLink/Combat/Hitbox/ICombatParryReceiver.cs`
 - `Assets/_EndLink/Combat/Stats/CharacterStats.cs`
 - `Assets/_EndLink/Combat/CharacterHealth.cs`
-- `Assets/_EndLink/Enemies/EnemyHealth.cs`
+- `Assets/_EndLink/Enemies/Base/EnemyHealth.cs`
 - `Assets/_EndLink/Control/PlayerController.cs`
 - `Assets/_EndLink/Ally/AllyFollowMotor.cs`
 - `Assets/_EndLink/Enemies/Abilities/EnemyMotorBase.cs`
@@ -401,12 +415,17 @@
 <details>
 <summary>展开详情</summary>
 
+补充更新：
+- `HitResolved` 会携带 `HitResolution`，六种结果都会广播，适合调试、统计和后续单人战斗流程判断。
+- `HitLanded` 只在正常命中、格挡、弹反和免疫时广播，继续供战斗上下文和既有响应逻辑使用。
+- `Combat Monitor` 增加命中结算筛选与结果列，Console/HUD 调试日志也会显示结果和实际伤害。
+
 功能说明：
 - `CombatEventsBus` 是全局战斗事件广播入口。
 - `CombatEvent` 是一条战斗事件的数据结构，包含事件类型、来源、目标、动作配置、战斗标签、伤害、命中信息和时间戳。
-- `CombatEventType` 目前包含 `ActionStarted`、`HitLanded`、`Damaged`、`Dead`、`TagAdded`、`TagRemoved`、`TagExpired`、`ReactionTriggered`。
+- `CombatEventType` 目前包含 `ActionStarted`、`HitResolved`、`HitLanded`、`Damaged`、`Dead`、`TagAdded`、`TagRemoved`、`TagExpired`、`ReactionTriggered`。
 - `CombatEventLog` 是白模阶段用的 Console 日志监听器，默认不打印，必要时手动开启。
-- `CombatMonitorWindow` 是 Editor 战斗事件监视窗口，通过 `EndLink > Debug > Combat Monitor` 打开；支持分别筛选动作、命中、伤害、死亡、标签和协议反应，显示标签层数，并可复制当前事件报告。
+- `CombatMonitorWindow` 是 Editor 战斗事件监视窗口，通过 `EndLink > Debug > Combat Monitor` 打开；支持分别筛选动作、命中结算、成立命中、伤害、死亡、标签和协议反应，并可复制当前事件报告。
 - 事件总栈只广播事实，不保存状态，不决定连携规则，不直接驱动队友 AI。
 - 接入范围包括 `PlayerCombatDriver` / `AllyCombatDriver` / `EnemyCombatDriver` 的动作开始、`HitboxBase` 的命中、`CharacterHealth` / `EnemyHealth` / `EnemyDummy` 的受伤与死亡，以及 `CombatTagContainer` 的标签添加、移除、过期和协议反应。
 
@@ -428,6 +447,7 @@
 - `CombatEventsBus.Raised`：全局事件订阅入口
 - `CombatEventsBus.Raise(...)`：广播通用事件
 - `CombatEventsBus.RaiseActionStarted(...)`
+- `CombatEventsBus.RaiseHitResolved(...)`
 - `CombatEventsBus.RaiseHitLanded(...)`
 - `CombatEventsBus.RaiseDamaged(...)`
 - `CombatEventsBus.RaiseDead(...)`
@@ -446,6 +466,9 @@
 <summary>展开详情</summary>
 
 补充更新：
+- Hitbox 接触后先调用 `IHitReceiver.ReceiveHit`，取得最终 `HitResolution` 后再广播事件、播放普通反馈和附加标签。
+- 六种结果都会记入当前 Hitbox 的已处理目标集合；普通反馈和 `onHit` 仅在 `Applied` 时触发，标签仅在 `Applied`、`Blocked` 时触发。
+
 - 数据驱动的标准近战/驻留 Hitbox 使用动作 `ActiveTime` 作为本次生命周期。
 - 动画驱动的标准 Hitbox 由 `HitboxEnd` 或 `ActionEnd` 主动关闭，同时保留动作总时长后的防泄漏超时。
 - `HitboxProjectile` 不读取动作 `ActiveTime`，仍使用 prefab 自身的 `lifetime` 与 `maxDistance` 控制飞行寿命。
@@ -465,14 +488,15 @@
 - 命中后查找目标父级上的 `IHitReceiver`。
 - 命中信息通过 `HitboxHitInfo` 传递，包含伤害、击退、`CombatTagDefinition` 标签、标签持续时间、标签层数、命中点、命中方向、Owner、Hitbox 和命中的 Collider。
 - 命中时如果目标实现 `ICombatTagReceiver`，会把 `CombatTagDefinition` 添加到目标标签容器，并把 Hitbox owner 传入标签事件来源。
-- 命中后触发 `UnityEvent<Collider>`，方便后续挂音效、特效或调试组件。
-- 命中后会通过 `CombatEventsBus` 广播 `HitLanded`。
-- 命中来自带 `HitFeedback` 的 Action 时，会通过 `CombatFeedbackBus` 提交命中点反馈请求。
+- `Applied` 命中后触发 `UnityEvent<Collider>`，方便后续挂音效、特效或调试组件。
+- 所有受击结果都会广播 `HitResolved`；只有正常命中、格挡、弹反和免疫会继续广播 `HitLanded`。
+- 命中来自带 `HitFeedback` 的 Action 且结果为 `Applied` 时，会通过 `CombatFeedbackBus` 提交命中点反馈请求。
 
 对应脚本：
 - `Assets/_EndLink/Combat/Hitbox/HitboxBase.cs`
 - `Assets/_EndLink/Combat/Hitbox/HitboxProjectile.cs`
 - `Assets/_EndLink/Combat/Hitbox/HitboxHitInfo.cs`
+- `Assets/_EndLink/Combat/Hitbox/HitResolution.cs`
 - `Assets/_EndLink/Combat/Hitbox/IHitReceiver.cs`
 - `Assets/_EndLink/Combat/Target/ICombatTarget.cs`
 - `Assets/_EndLink/Combat/Target/CombatTargetUtility.cs`

@@ -165,7 +165,9 @@ namespace EndLink.UI
                 CombatEventType.ActionStarted =>
                     $"[{eventData.TimeStamp:F1}] Combat Action {GetObjectName(eventData.Source)} -> {GetObjectName(eventData.Target)} {GetActionName(eventData.ActionDefinition)}",
                 CombatEventType.HitLanded =>
-                    $"[{eventData.TimeStamp:F1}] Combat Hit {GetObjectName(eventData.Source)} -> {GetObjectName(eventData.Target)} dmg={eventData.DamageAmount:0}",
+                    $"[{eventData.TimeStamp:F1}] Combat Hit {GetObjectName(eventData.Source)} -> {GetObjectName(eventData.Target)} {GetHitResult(eventData)}",
+                CombatEventType.HitResolved =>
+                    $"[{eventData.TimeStamp:F1}] Hit Resolved {GetObjectName(eventData.Source)} -> {GetObjectName(eventData.Target)} {GetHitResult(eventData)}",
                 CombatEventType.Damaged =>
                     $"[{eventData.TimeStamp:F1}] Damage {GetObjectName(eventData.Source)} -> {GetObjectName(eventData.Target)} {eventData.DamageAmount:0} {eventData.DamageType}",
                 CombatEventType.Dead =>
@@ -242,6 +244,13 @@ namespace EndLink.UI
         private static string GetRuleName(CombatTagCombinationRule reactionRule)
         {
             return reactionRule != null ? reactionRule.name : "None";
+        }
+
+        private static string GetHitResult(CombatEvent eventData)
+        {
+            return eventData.HasHitResolution
+                ? $"{eventData.HitResolution.Outcome} dmg={eventData.HitResolution.AppliedDamage}"
+                : $"dmg={eventData.DamageAmount:0}";
         }
     }
 }

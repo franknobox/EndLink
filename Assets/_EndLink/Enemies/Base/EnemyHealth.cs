@@ -148,14 +148,26 @@ namespace EndLink.Enemies
         /// <summary>
         /// 接收 Hitbox 的完整命中信息，并转为生命伤害处理。
         /// </summary>
-        public void ReceiveHit(HitboxHitInfo hitInfo)
+        public HitResolution ReceiveHit(HitboxHitInfo hitInfo)
         {
+            if (_isDead)
+            {
+                return new HitResolution(HitOutcome.Rejected);
+            }
+
+            if (!TryAcceptDamageType(hitInfo.DamageType))
+            {
+                return new HitResolution(HitOutcome.Immune);
+            }
+
             DamageContext context = DamageContext.FromHit(hitInfo, gameObject);
-            int appliedDamage = ApplyDamage(DamageCalculator.Calculate(context));
+            int appliedDamage = ApplyAcceptedDamage(DamageCalculator.Calculate(context));
             if (appliedDamage > 0)
             {
                 CombatKnockback.TryApply(gameObject, hitInfo.HitDirection, hitInfo.KnockbackForce);
             }
+
+            return new HitResolution(HitOutcome.Applied, appliedDamage);
         }
 
         /// <summary>
@@ -228,26 +240,30 @@ namespace EndLink.Enemies
                 return 0;
             }
 
-            if (!CanReceiveDamageType(damageResult.DamageType))
+            if (!TryAcceptDamageType(damageResult.DamageType))
             {
-                if (logHits)
-                {
-                    Debug.Log(
-                        $"Enemy ignored {damageResult.DamageType} damage due to enemy kind: {_actor.EnemyKind}",
-                        this);
-                }
-
                 return 0;
             }
 
-            int appliedDamage = Mathf.Max(0, damageResult.FinalDamage);
-            if (appliedDamage <= 0)
+            return ApplyAcceptedDamage(damageResult);
+        }
+
+        private int ApplyAcceptedDamage(DamageResult damageResult)
+        {
+            int requestedDamage = Mathf.Max(0, damageResult.FinalDamage);
+            if (requestedDamage <= 0)
             {
                 return 0;
             }
 
             _lastDamageSource = damageResult.Source;
-            _currentHealth = Mathf.Max(0, _currentHealth - appliedDamage);
+            int previousHealth = _currentHealth;
+            _currentHealth = Mathf.Max(0, _currentHealth - requestedDamage);
+            int appliedDamage = previousHealth - _currentHealth;
+            if (appliedDamage <= 0)
+            {
+                return 0;
+            }
 
             if (logHits)
             {
@@ -274,6 +290,23 @@ namespace EndLink.Enemies
 
             PlayHitFlash();
             return appliedDamage;
+        }
+
+        private bool TryAcceptDamageType(CombatDamageType damageType)
+        {
+            if (CanReceiveDamageType(damageType))
+            {
+                return true;
+            }
+
+            if (logHits)
+            {
+                Debug.Log(
+                    $"Enemy ignored {damageType} damage due to enemy kind: {_actor.EnemyKind}",
+                    this);
+            }
+
+            return false;
         }
 
         private void Die(GameObject source)

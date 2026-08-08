@@ -39,23 +39,60 @@ namespace EndLink.Combat
         }
 
         /// <summary>
-        /// 广播 Hitbox 命中事件。
+        /// 广播 Hitbox 最终结算事件。所有结果都会进入该事件。
+        /// </summary>
+        public static void RaiseHitResolved(
+            GameObject source,
+            GameObject target,
+            HitboxHitInfo hitInfo,
+            HitResolution hitResolution)
+        {
+            RaiseHitEvent(
+                CombatEventType.HitResolved,
+                source,
+                target,
+                hitInfo,
+                hitResolution);
+        }
+
+        /// <summary>
+        /// 广播 Hitbox 成立命中事件。
+        /// 仅用于 Applied、Blocked、Parried 和 Immune，供既有战斗参与逻辑继续订阅。
         /// </summary>
         public static void RaiseHitLanded(
             GameObject source,
             GameObject target,
-            HitboxHitInfo hitInfo)
+            HitboxHitInfo hitInfo,
+            HitResolution hitResolution)
+        {
+            RaiseHitEvent(
+                CombatEventType.HitLanded,
+                source,
+                target,
+                hitInfo,
+                hitResolution);
+        }
+
+        private static void RaiseHitEvent(
+            CombatEventType eventType,
+            GameObject source,
+            GameObject target,
+            HitboxHitInfo hitInfo,
+            HitResolution hitResolution)
         {
             Raise(new CombatEvent(
-                CombatEventType.HitLanded,
+                eventType,
                 source,
                 target,
                 hitInfo.ActionDefinition,
                 hitInfo.CombatTagToApply,
-                hitInfo.DamageAmount,
+                hitResolution.AppliedDamage,
                 hitInfo.DamageType,
                 hitInfo.CombatTagStackCount,
                 hitInfo,
+                true,
+                null,
+                hitResolution,
                 true));
         }
 

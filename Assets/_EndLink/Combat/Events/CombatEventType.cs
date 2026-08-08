@@ -28,6 +28,9 @@ namespace EndLink.Combat
         TagExpired = 6,
 
         /// <summary>协议反应成功触发，例如 A + B 执行一组反应效果。</summary>
-        ReactionTriggered = 7
+        ReactionTriggered = 7,
+
+        /// <summary>Hitbox 接触经过受击方规则处理后得到最终命中结果。</summary>
+        HitResolved = 8
     }
 }

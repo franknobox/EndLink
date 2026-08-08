@@ -7,8 +7,8 @@ namespace EndLink.Combat
     public interface IHitReceiver
     {
         /// <summary>
-        /// 接收一次命中信息。
+        /// 接收一次命中信息，并返回受击方规则处理后的最终结果。
         /// </summary>
-        void ReceiveHit(HitboxHitInfo hitInfo);
+        HitResolution ReceiveHit(HitboxHitInfo hitInfo);
     }
 }

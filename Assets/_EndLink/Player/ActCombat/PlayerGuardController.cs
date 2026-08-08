@@ -180,14 +180,14 @@ namespace EndLink.Combat
                 NotifyParriedAttacker(hitInfo.Owner);
                 PlayGuardFeedback(PlayerGuardResult.Parried);
                 onParried?.Invoke();
-                return new HitInterception(true, 0f, false);
+                return new HitInterception(HitOutcome.Parried, 0f, false);
             }
 
             if (result == PlayerGuardResult.Blocked)
             {
                 PlayGuardFeedback(PlayerGuardResult.Blocked);
                 onBlocked?.Invoke();
-                return new HitInterception(true, blockedDamageMultiplier, false);
+                return new HitInterception(HitOutcome.Blocked, blockedDamageMultiplier, false);
             }
 
             return HitInterception.Continue;

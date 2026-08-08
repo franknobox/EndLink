@@ -19,7 +19,9 @@ namespace EndLink.Combat
             int combatTagStackCount = 0,
             HitboxHitInfo hitInfo = default,
             bool hasHitInfo = false,
-            CombatTagCombinationRule reactionRule = null)
+            CombatTagCombinationRule reactionRule = null,
+            HitResolution hitResolution = default,
+            bool hasHitResolution = false)
         {
             EventType = eventType;
             Source = source;
@@ -32,6 +34,8 @@ namespace EndLink.Combat
             HitInfo = hitInfo;
             HasHitInfo = hasHitInfo;
             ReactionRule = reactionRule;
+            HitResolution = hitResolution;
+            HasHitResolution = hasHitResolution;
             TimeStamp = Time.time;
         }
 
@@ -64,6 +68,12 @@ namespace EndLink.Combat
 
         /// <summary>当前事件是否携带有效 Hitbox 命中信息。</summary>
         public bool HasHitInfo { get; }
+
+        /// <summary>受击方返回的最终命中结算结果。</summary>
+        public HitResolution HitResolution { get; }
+
+        /// <summary>当前事件是否携带有效命中结算结果。</summary>
+        public bool HasHitResolution { get; }
 
         /// <summary>触发本次协议反应的组合规则。非反应事件为空。</summary>
         public CombatTagCombinationRule ReactionRule { get; }

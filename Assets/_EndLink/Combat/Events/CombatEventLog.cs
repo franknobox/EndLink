@@ -73,6 +73,14 @@ namespace EndLink.Combat
                 _builder.Append(eventData.DamageType);
             }
 
+            if (eventData.HasHitResolution)
+            {
+                _builder.Append(" | outcome=");
+                _builder.Append(eventData.HitResolution.Outcome);
+                _builder.Append(" | appliedDamage=");
+                _builder.Append(eventData.HitResolution.AppliedDamage);
+            }
+
             Debug.Log(_builder.ToString(), this);
         }
 
