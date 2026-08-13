@@ -309,11 +309,6 @@ namespace EndLink.Editor
 
                     referencedActions.Add(comboAction);
                 }
-
-                if (actionSet.SkillAction != null)
-                {
-                    referencedActions.Add(actionSet.SkillAction);
-                }
             }
         }
 

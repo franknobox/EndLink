@@ -30,10 +30,6 @@ namespace EndLink.Combat
         [SerializeField]
         private List<CombatActionDefinition> comboActions = new() { null, null, null };
 
-        [Tooltip("该形态的主动技能动作。")]
-        [SerializeField]
-        private CombatActionDefinition skillAction;
-
         /// <summary>该形态的普攻连段，只允许外部读取。</summary>
         public IReadOnlyList<CombatActionDefinition> ComboActions => comboActions;
 
@@ -42,9 +38,6 @@ namespace EndLink.Combat
 
         /// <summary>普攻起手动作。</summary>
         public CombatActionDefinition BasicAttackAction => GetComboAction(0);
-
-        /// <summary>主动技能动作。</summary>
-        public CombatActionDefinition SkillAction => skillAction;
 
         /// <summary>读取指定段数的普攻动作；越界或未配置时返回空。</summary>
         public CombatActionDefinition GetComboAction(int index)
@@ -70,19 +63,19 @@ namespace EndLink.Combat
         private PlayerWeaponForm initialForm = PlayerWeaponForm.A;
 
         [Header("A 形态")]
-        [Tooltip("A 形态（当前定位：标准）的独立普攻连段和主动技能。")]
+        [Tooltip("A 形态（当前定位：标准）的独立普攻连段。")]
         [FormerlySerializedAs("standard")]
         [SerializeField]
         private PlayerWeaponActionSet formA = new();
 
         [Header("B 形态")]
-        [Tooltip("B 形态（当前定位：射击）的独立普攻连段和主动技能。")]
+        [Tooltip("B 形态（当前定位：射击）的独立普攻连段。")]
         [FormerlySerializedAs("shooting")]
         [SerializeField]
         private PlayerWeaponActionSet formB = new();
 
         [Header("C 形态")]
-        [Tooltip("C 形态（当前定位：重刃）的独立普攻连段和主动技能。")]
+        [Tooltip("C 形态（当前定位：重刃）的独立普攻连段。")]
         [FormerlySerializedAs("heavyBlade")]
         [SerializeField]
         private PlayerWeaponActionSet formC = new();
@@ -106,9 +99,6 @@ namespace EndLink.Combat
 
         /// <summary>当前形态的普攻起手动作。</summary>
         public CombatActionDefinition CurrentBasicAttackAction => CurrentActionSet.BasicAttackAction;
-
-        /// <summary>当前形态的主动技能。</summary>
-        public CombatActionDefinition CurrentSkillAction => CurrentActionSet.SkillAction;
 
         /// <summary>
         /// 当前是否允许切换形态。

@@ -41,6 +41,7 @@
 | 材质 | `MAT_` | `MAT_Player_Main_Body.mat` |
 | 贴图 | `T_` | `T_Player_Main_Body_BC.png` |
 | 视觉 Prefab | `PF_` | `PF_APS01_Visual.prefab` |
+| 白盒关卡 Prefab | `BOX_` | `BOX_Wall_Regular.prefab` |
 | 特效 | `VFX_` | `VFX_Hit_Overclock.prefab` |
 | UI 图标 | `UI_` | `UI_Action_Overclock.png` |
 

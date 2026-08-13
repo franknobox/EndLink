@@ -20,7 +20,7 @@
 - 攻击输入读取 `Player/Attack`，由状态机统一捕获并写入短时攻击缓冲，再决定是否进入攻击状态。
 - 攻击输入读取 `Player/Attack`，默认键位为鼠标左键、手柄 `RB / R1`。
 - 防御输入读取 `Player/Guard`，默认键位为鼠标右键、手柄 `LB / L1`，只缓存当前是否按住。
-- 瞄准输入读取 `Player/Aim`，默认键位为鼠标右键、手柄 `LT / L2`；鼠标右键在 A/C 形态保持格挡语义，在 B 形态由瞄准系统接管。
+- 瞄准输入读取 `Player/Aim`，默认键位为鼠标右键、手柄 `LT / L2`；鼠标右键在 A/C 形态保持格挡语义，在 B 形态由瞄准系统接管，手柄 LT 在非 B 形态下会快捷切换到 B 并进入瞄准。
 - 目标锁定输入读取 `Player/TargetLock`，默认键位为鼠标中键、手柄右摇杆按下；输入层只缓存按下事件，是否建立硬锁由视角模式决定。
 - 硬锁目标切换复用 `Player/Look`：键鼠按鼠标横向滑动方向切换，手柄按右摇杆左右推动方向切换；输入层只提供原始方向，候选目标仍由索敌系统选择。
 - 闪避输入读取 `Player/Dodge`，默认键位为键盘 `Left Ctrl`、手柄 `buttonEast`。
@@ -28,7 +28,7 @@
 - 武器形态切换读取 `Player/PreviousWeaponForm` 和 `Player/NextWeaponForm`：键鼠使用 Q / E，手柄使用 D-Pad 上 / 下。
 - 主控和队友连携请求 Input Action 与全部键位绑定当前已移除，底层连携窗口只作为未来恢复用基础保留。
 - 全队终链奥义读取 `Player/PartyUltimate`，当前仅保留键盘 V；手柄方向键下已让给下一武器形态。
-- 手柄当前绑定：攻击 `RB / R1`，格挡 `LB / L1`，B 形态瞄准 `LT / L2`，上一/下一武器形态为 D-Pad 上/下；旧主动技能与连携输入当前不绑定。
+- 手柄当前绑定：攻击 `RB / R1`，格挡 `LB / L1`，射击形态快捷瞄准 `LT / L2`，上一/下一武器形态为 D-Pad 上/下；旧主动技能与连携输入当前不绑定。
 - 相机旋转读取 `Player/Look`。
 
 对应脚本：
@@ -418,12 +418,12 @@
 功能说明：
 - `PlayerCombatDriver` 不读取输入，不决定是否能进入攻击状态。
 - 状态机决定能否攻击，`PlayerCombatDriver` 只负责执行攻击表现和判定。
-- 支持通过 `CombatActionDefinition` 配置普攻、主动技能、连携技的伤害、击退、`CombatTagDefinition` 标签、标签持续时间、冷却、Hitbox 和生成参数；挂载 `PlayerWeaponController` 后，普攻与主动技能自动读取当前形态动作组。
+- 支持通过 `CombatActionDefinition` 配置动作的伤害、击退、`CombatTagDefinition` 标签、标签持续时间、冷却、Hitbox 和生成参数；挂载 `PlayerWeaponController` 后，普攻读取当前形态的独立连段。
 - `PlayerCombatDriver` 执行的动作必须来自 `CombatActionDefinition`。
 - 支持 `DataDriven` 和 `AnimationEventDriven` 两种动作时序；后者由动画事件决定普通 Hitbox 的有效窗口和状态退出。
 - 动画事件动作可以重复配置多组 `HitboxStart / HitboxEnd`，用于一招多段命中；每个窗口生成独立 Hitbox，整套动作仍只进入一次状态并记录一次冷却。
 - 当前执行内容是生成指定 Hitbox prefab；有自动软锁目标时先让玩家正面转向目标，判定生成瞬间读取角色实时正前方，使前摇期间的跟随转向能同步影响 Hitbox 朝向。
-- 普攻、主动技能和连携技按各自 `CombatActionDefinition` 独立记录冷却。
+- 不同动作按各自 `CombatActionDefinition` 独立记录冷却。
 - 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 区分普攻、技能和连携槽。
 - 实现 `ICombatActionExecutor`，状态机通过统一 `CanExecute` / `TryExecute` 入口检查和执行动作。
 - 支持通过动作资产中的 `Hitbox Spawn Distance` 和 `Hitbox Spawn Height` 调整 Hitbox 生成位置。

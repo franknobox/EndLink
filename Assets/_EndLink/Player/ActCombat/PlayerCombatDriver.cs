@@ -18,7 +18,7 @@ namespace EndLink.Combat
         [SerializeField]
         private CombatActionDefinition basicAttackAction;
 
-        [Tooltip("未挂 PlayerWeaponController 时使用的玩家主动技能回退动作。")]
+        [Tooltip("归档的小队主动技能入口使用的玩家动作；当前没有默认输入绑定。")]
         [SerializeField]
         private CombatActionDefinition skillAction;
 
@@ -52,10 +52,8 @@ namespace EndLink.Combat
             ? _weaponController.CurrentBasicAttackAction
             : basicAttackAction;
 
-        /// <summary>玩家主动技能动作。</summary>
-        public CombatActionDefinition SkillAction => _weaponController != null
-            ? _weaponController.CurrentSkillAction
-            : skillAction;
+        /// <summary>归档的小队主动技能入口使用的玩家动作。</summary>
+        public CombatActionDefinition SkillAction => skillAction;
 
         /// <summary>当前是否可以释放下一次动作。</summary>
         public bool CanAttack => CanExecute(BasicAttackAction);

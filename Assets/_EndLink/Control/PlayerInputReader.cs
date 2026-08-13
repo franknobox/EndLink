@@ -32,6 +32,12 @@ namespace EndLink.Core
         /// </summary>
         public bool AimHeld { get; private set; }
 
+        /// <summary>
+        /// 当前是否由手柄 LT / L2 按住瞄准输入。
+        /// 业务层可用它区分手柄的射击形态快捷入口与鼠标右键的形态内语义。
+        /// </summary>
+        public bool GamepadAimHeld { get; private set; }
+
         private InputSystem_Actions _inputActions;
         private InputActionMap _playerActionMap;
         private InputAction _moveAction;
@@ -286,11 +292,19 @@ namespace EndLink.Core
         private void OnAimStartedOrPerformed(InputAction.CallbackContext context)
         {
             AimHeld = context.ReadValueAsButton();
+            if (context.control?.device is Gamepad)
+            {
+                GamepadAimHeld = AimHeld;
+            }
         }
 
         private void OnAimCanceled(InputAction.CallbackContext context)
         {
             AimHeld = false;
+            if (context.control?.device is Gamepad)
+            {
+                GamepadAimHeld = false;
+            }
         }
 
         private void OnTargetLockPerformed(InputAction.CallbackContext context)
@@ -367,6 +381,7 @@ namespace EndLink.Core
             SprintHeld = false;
             GuardHeld = false;
             AimHeld = false;
+            GamepadAimHeld = false;
             _attackPressed = false;
             _dodgePressed = false;
             _targetLockPressed = false;

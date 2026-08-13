@@ -2,6 +2,26 @@
 
 本文件记录灰盒地图、机关和世界交互相关的已完成功能。
 
+<a id="feature-blockout-module-library"></a>
+
+## Feature: 白盒关卡模块库
+
+### 当前状态
+已完成基础模块第一版。
+
+### 功能说明
+- 提供可重复使用的石块、柱体、边界、墙体、门洞、楼梯、坡道、垂直爬梯、天花板和数据方块白盒 Prefab，用于快速搭建关卡轮廓、通行结构和空间参照。
+- 两种大型不规则柱体分别采用中段收窄和中段加粗轮廓，顶部保持平坦，可作为大树树干、石柱或大型环境支撑物占位。
+- 不规则墙体和天花板使用多层三角切面、错位轮廓与不平整表面；墙体顶部保留轻微起伏但避免尖锐高峰，`BOX_DataBlock_02` 使用非对称框架、核心方块和离散体素表现复杂数据结构。
+- 所有模块默认使用白色 ProBuilder 材质、`Environment` Layer 和实体 `MeshCollider`，不附带玩法脚本，可在场景中继续缩放和替换语义材质。
+- 白盒关卡 Prefab 统一使用 `BOX_` 前缀，与普通玩法或视觉 Prefab 的 `PF_` 前缀区分。
+
+### 相关物体 / 配置
+- Prefab：`Assets/_EndLink/World/Prefab/Blockout`。
+- Mesh：`Assets/Art/Environments/Blockout`。
+- 当前包含三种 `BOX_Rock`、`BOX_Pillar_Narrow`、`BOX_Pillar_Thick`、`BOX_Boundary_X`、规则/不规则墙体、门洞、楼梯、坡道、垂直爬梯、不规则天花板和三种数据方块。
+- 楼梯单级高度为 `0.25m`，用于基础 CharacterController 通行验证；垂直爬梯目前只有白盒外形和碰撞，不包含攀爬逻辑。
+
 <a id="feature-weapon-object-interaction"></a>
 
 ## Feature: 武器物体交互

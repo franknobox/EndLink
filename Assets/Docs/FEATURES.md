@@ -29,7 +29,7 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成三形态输入版 | 负责读取玩家移动、攻击、防御、瞄准、目标锁定、武器形态切换和 Look 等输入；当前手柄攻击/格挡为 `RB / LB`，不保留蹲伏与按键交互 Action。 |
+| [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成三形态输入版 | 负责读取玩家移动、攻击、防御、瞄准、目标锁定、武器形态切换和 Look 等输入；手柄 `LT` 可快捷切入 B 形态瞄准，攻击/格挡为 `RB / LB`。 |
 | [玩家 CharacterController 移动](Features/PLAYER.md#feature-player-movement) | 已完成锁定移动版 | 负责玩家平滑移动、基础跳跃、重力贴地、转向、目标相对移动，以及战斗击退的短时衰减后退。 |
 | [第三人称视角模式](Features/PLAYER.md#feature-third-person-camera) | 已完成锁定操控版 | 独立保存高速自由与魂类近距两套镜头预设；魂类硬锁会统一驱动镜头、玩家朝向、锁定移动和定向闪避。 |
 | [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成动作取消策略版 | 负责八个玩家状态，并承接普攻缓冲、动作锁、取消窗口、普攻/技能派生、闪避/格挡取消和强制打断。 |
@@ -47,7 +47,7 @@
 | [统一 Combat Target](Features/COMBAT.md#feature-combat-target) | 已完成第一版 | 为玩家、队友和敌人统一提供唯一根身份、存活/可选状态、锁定点、Collider 表面点和水平表面距离。 |
 | [角色战斗数值基础](Features/COMBAT.md#feature-character-stats) | 已完成第一版 | 提供玩家、队友和敌人共用的攻击力与承受击退倍率，并支持动作按固定伤害与攻击力倍率组合计算伤害。 |
 | [战斗动作配置](Features/COMBAT.md#feature-combat-action) | 已完成命中反馈配置版 | 使用 `CombatActionDefinition` 描述伤害、冷却、Hitbox、标签、协同率、动画根位移和命中反馈，并支持数据时间或动画事件驱动动作。 |
-| [三种武器形态基础](Features/COMBAT.md#feature-player-weapon-forms) | 已完成射击瞄准第一版 | 固定提供 A、B、C 三种形态；B 形态支持右键/LT 瞄准、准星方向射击、临时近距镜头和射击后退出瞄准。 |
+| [三种武器形态基础](Features/COMBAT.md#feature-player-weapon-forms) | 已完成射击瞄准快捷切换版 | 固定提供 A、B、C 三种形态；手柄 `LT` 可直接切入 B 形态瞄准，并支持准星方向射击、临时近距镜头和射击后退出瞄准。 |
 | [通用战斗反馈](Features/COMBAT.md#feature-combat-feedback) | 已完成调度基础版 | 通过可复用反馈资产与场景调度器，统一提供 Hitstop、Cinemachine Impulse、手柄震动、音效和 VFX 请求入口。 |
 | [统一 Action 执行接口](Features/COMBAT.md#feature-combat-action-executor) | 已完成多判定窗口版 | 统一玩家、队友和敌人的动作检查、执行、冷却和目标传入，并支持动画事件动作在一次执行中开启多个判定窗口。 |
 | [伤害结算管线基础](Features/COMBAT.md#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
@@ -83,6 +83,7 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
+| [白盒关卡模块库](Features/WORLD.md#feature-blockout-module-library) | 已完成基础模块第一版 | 提供统一使用 `BOX_` 前缀的石块、柱体、边界、墙体、门洞、楼梯、坡道、垂直爬梯、不规则天花板和数据方块 Prefab。 |
 | [武器物体交互](Features/WORLD.md#feature-weapon-object-interaction) | 已完成场景接线版 | 通过通用 `ObjInteractable` 接收 A/B/C 武器命中，统一驱动 `IObjFunction`，并在功能生效时提供闪白反馈。 |
 | [通用出生点与检查点](Features/WORLD.md#feature-world-spawn-checkpoint) | 已完成坠落死亡版 | 提供世界出生锚点、开场出生、检查点休整、玩家死亡复活和默认 `Y=-50` 坠落出界判定，并为未来存档与敌人生成保留稳定位置身份。 |
 | [两层移动电梯](Features/WORLD.md#feature-elevator-platform) | 已完成武器交互版 | 提供由交互子物体触发的上下层往返平台，通过运动学 Rigidbody 驱动物理实体，并为 CharacterController 乘客补偿平台三维位移。 |

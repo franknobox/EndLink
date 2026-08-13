@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 3355298573590013267}
   - component: {fileID: 297630792667211803}
   m_Layer: 7
-  m_Name: PF_Rock_03
+  m_Name: BOX_Rock_03
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

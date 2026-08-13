@@ -153,6 +153,18 @@ namespace EndLink.Combat
                 return;
             }
 
+            // LT / L2 是射击形态的快捷入口。鼠标右键仍由当前形态决定是格挡还是瞄准，
+            // 不在 A/C 形态下强制切换武器。
+            if (_inputReader.GamepadAimHeld
+                && _weaponController != null
+                && _weaponController.CurrentForm != PlayerWeaponForm.B)
+            {
+                if (!_weaponController.RequestForm(PlayerWeaponForm.B))
+                {
+                    return;
+                }
+            }
+
             if (IsAiming)
             {
                 if (!CanMaintainAim())

@@ -96,16 +96,6 @@ Scene
 └─ Player_Root      当前主控玩家逻辑根
 ```
 
-约定：
-- 各分类根保持位置零、旋转零、缩放一，不通过分类根缩放实际内容。
-- `Checkpoints` 统一收纳 `PlayStart`、`RespawnPoint` 等玩家流程检查点；`SpawnPoints` 专门收纳可以生成敌人或其他实体的位置标记。
-- `Layout` 只作为白盒搭建参考，不参与物理碰撞、NavMesh 烘焙或运行时玩法查询。
-- 角色与敌人使用“逻辑根 + `Visuals`”结构；状态机、生命、碰撞、移动和战斗组件放在逻辑根，模型、Animator 和纯表现放在 `Visuals`。
-- 可复用内容优先做成 Prefab，场景实例只保存位置、引用和少量关卡差异配置。
-- Layer 只表达物理碰撞、射线和范围查询关系；战斗状态继续使用 `CombatTag`，不要用 Unity Layer 代替。
-- 交互扫描要求交互 Collider 所在物体使用 `Interactable` Layer；不要求所有视觉子物体继承该 Layer。
-- 玩法对象不应长期停留在 `Default` Layer；纯视觉子物体可以保持 `Default`，除非有明确的物理查询需求。
-
 当前 Layer 用途：
 
 | Layer | 用途 |
