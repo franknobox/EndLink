@@ -176,6 +176,10 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 - 玩家与镜头检查覆盖固定主控关键组件、生命/索敌/连段/射击瞄准/格挡/Animator 桥接、三种武器形态动作组、Main Camera、Cinemachine Brain 和视角模式入口；不再检查旧按键交互组件。
 - 战斗与敌人检查覆盖场景反馈调度器、正式敌人生命/平衡/标签/目标/状态/感知/移动/动作接线、视觉根和敌人 Collider Layer。
 - 数据与导航检查覆盖场景实际引用的 Action Id、Hitbox Prefab、重复 Action Id、推荐 Layer、NavMesh 数据和启用但未落在 NavMesh 上的 Agent。
+- 白盒 Prefab 检查允许 `BOX_` 根节点自由摆放，只警告子节点额外的 Position/Rotation/Scale Override，以及接近零、负数或异常巨大的子节点变换。
+- 几何检查会校验同物体 `MeshFilter` 与 `MeshCollider` 的网格引用，并比较激活对象的 Renderer/非 Trigger Collider Bounds；Trigger、隐藏 Renderer、CharacterController 和 `ObjInteractable` 检测体不参与空间对齐检查。
+- 场景归类检查按 `_Blockout/Env`、`_Blockout/Interact`、`_Gameplay/SpawnPoints`、`Checkpoints`、`CombatZones` 和 `_Systems` 约定报告放错区域的明确玩法组件，只提供 Warning 和定位。
+- Layer/Tag 检查要求 `_Blockout/Env` 实体碰撞使用 `Environment`、`ObjInteractable` 碰撞子物体使用 `Interactable`，普通白盒保持 `Untagged`；玩家、敌人与 MainCamera 延续既有规则。
 - 窗口支持按严重程度、类别和关键字筛选，问题对象可直接定位，并可复制完整文本报告。
 
 对应脚本：

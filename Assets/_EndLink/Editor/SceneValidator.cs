@@ -49,6 +49,7 @@ namespace EndLink.Editor
 
             ValidateGeneral(sceneObjects, issues);
             ValidateLayers(issues);
+            SceneBlockoutValidation.Validate(sceneObjects, issues);
             ValidatePlayer(sceneObjects, issues, referencedActions);
             ValidateCamera(sceneObjects, issues);
             ValidateCombat(sceneObjects, issues);
@@ -738,7 +739,7 @@ namespace EndLink.Editor
                 .ToList();
         }
 
-        private static void Add(
+        internal static void Add(
             ICollection<SceneValidationIssue> issues,
             SceneValidationSeverity severity,
             string code,

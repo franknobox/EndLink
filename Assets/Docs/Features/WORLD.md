@@ -7,19 +7,21 @@
 ## Feature: 白盒关卡模块库
 
 ### 当前状态
-已完成基础模块第一版。
+已完成数据体块扩展版。
 
 ### 功能说明
-- 提供可重复使用的石块、柱体、边界、墙体、门洞、楼梯、坡道、垂直爬梯、天花板和数据方块白盒 Prefab，用于快速搭建关卡轮廓、通行结构和空间参照。
+- 提供可重复使用的石块、柱体、边界、墙体、门洞、楼梯、坡道、垂直爬梯、天花板和数据体块白盒 Prefab，用于快速搭建关卡轮廓、通行结构和空间参照。
 - 两种大型不规则柱体分别采用中段收窄和中段加粗轮廓，顶部保持平坦，可作为大树树干、石柱或大型环境支撑物占位。
-- 不规则墙体和天花板使用多层三角切面、错位轮廓与不平整表面；墙体顶部保留轻微起伏但避免尖锐高峰，`BOX_DataBlock_02` 使用非对称框架、核心方块和离散体素表现复杂数据结构。
-- 所有模块默认使用白色 ProBuilder 材质、`Environment` Layer 和实体 `MeshCollider`，不附带玩法脚本，可在场景中继续缩放和替换语义材质。
+- 不规则墙体和天花板使用多层三角切面、错位轮廓与不平整表面；墙体顶部保留轻微起伏但避免尖锐高峰。
+- `BOX_Rock_01~03` 保持为独立的通用不规则石块；`BOX_DataCube_01~03` 是较小、结构相对简单的数据方体，用于细节填充和小型空间参照。
+- `BOX_DataCluster_01~03` 是三种大型复合数据簇，与石块资源相互独立；01 和 03 使用不同构图的非对称框架、梁体、核心方块和离散体素构成自由结构，02 使用阶梯式实心主体、非对称支撑和表面模块构成厚重整体。
+- 模块默认使用白色材质、`Environment` Layer 和实体 `MeshCollider`，不附带玩法脚本；大型数据簇使用 URP 纯白 Lit 材质，不显示 ProBuilder 网格、刻度或文字。
 - 白盒关卡 Prefab 统一使用 `BOX_` 前缀，与普通玩法或视觉 Prefab 的 `PF_` 前缀区分。
 
 ### 相关物体 / 配置
 - Prefab：`Assets/_EndLink/World/Prefab/Blockout`。
 - Mesh：`Assets/Art/Environments/Blockout`。
-- 当前包含三种 `BOX_Rock`、`BOX_Pillar_Narrow`、`BOX_Pillar_Thick`、`BOX_Boundary_X`、规则/不规则墙体、门洞、楼梯、坡道、垂直爬梯、不规则天花板和三种数据方块。
+- 当前包含三种 `BOX_Rock`、三种 `BOX_DataCube`、三种大型 `BOX_DataCluster`、`BOX_Pillar_Narrow`、`BOX_Pillar_Thick`、`BOX_Boundary_X`、规则/不规则墙体、门洞、楼梯、坡道、垂直爬梯和不规则天花板。
 - 楼梯单级高度为 `0.25m`，用于基础 CharacterController 通行验证；垂直爬梯目前只有白盒外形和碰撞，不包含攀爬逻辑。
 
 <a id="feature-weapon-object-interaction"></a>

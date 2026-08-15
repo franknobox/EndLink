@@ -83,7 +83,7 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [白盒关卡模块库](Features/WORLD.md#feature-blockout-module-library) | 已完成基础模块第一版 | 提供统一使用 `BOX_` 前缀的石块、柱体、边界、墙体、门洞、楼梯、坡道、垂直爬梯、不规则天花板和数据方块 Prefab。 |
+| [白盒关卡模块库](Features/WORLD.md#feature-blockout-module-library) | 已完成数据体块扩展版 | 提供统一使用 `BOX_` 前缀的石块、小型数据方体、两种自由结构与一种实心结构的大型数据簇及常用建筑结构 Prefab。 |
 | [武器物体交互](Features/WORLD.md#feature-weapon-object-interaction) | 已完成场景接线版 | 通过通用 `ObjInteractable` 接收 A/B/C 武器命中，统一驱动 `IObjFunction`，并在功能生效时提供闪白反馈。 |
 | [通用出生点与检查点](Features/WORLD.md#feature-world-spawn-checkpoint) | 已完成坠落死亡版 | 提供世界出生锚点、开场出生、检查点休整、玩家死亡复活和默认 `Y=-50` 坠落出界判定，并为未来存档与敌人生成保留稳定位置身份。 |
 | [两层移动电梯](Features/WORLD.md#feature-elevator-platform) | 已完成武器交互版 | 提供由交互子物体触发的上下层往返平台，通过运动学 Rigidbody 驱动物理实体，并为 CharacterController 乘客补偿平台三维位移。 |
@@ -103,5 +103,5 @@
 | [战斗 HUD 生成工具](Features/TOOLS.md#feature-combat-hud-generator) | 已收束当前组件版 | 生成运行时调试面板、敌人头顶血条、居中瞄准准星和 A/B/C 武器形态显示；旧版小队面板不再生成。 |
 | [EndLink Combat Lab](Features/TOOLS.md#feature-combat-lab) | 已完成新模型实验版 | 提供浏览器端战斗实验工具，用于快速验证标签定义、层数、持续时间、反应效果、基础伤害和连携窗口。 |
 | [美术资源校验工具](Features/TOOLS.md#feature-art-asset-validator) | 已完成自动校验第一版 | 自动检查 `_Incoming` 中的 Shader、材质、Prefab、FBX、贴图和临时命名问题，并提供完整结果窗口与资源定位。 |
-| [场景配置体检](Features/TOOLS.md#feature-scene-doctor) | 已完成只读第一版 | 扫描当前活动场景中的缺失引用、关键组件接线、Layer、NavMesh、敌人和战斗动作配置，支持筛选、定位与复制报告，不自动修改场景。 |
+| [场景配置体检](Features/TOOLS.md#feature-scene-doctor) | 已完成白盒规则版 | 扫描当前活动场景中的缺失引用、关键接线、NavMesh、BOX_ 子节点 Override、网格碰撞错位、场景归类和 Layer/Tag，支持筛选、定位与复制报告。 |
 | [输入绑定工具](Features/TOOLS.md#feature-input-binding-tool) | 已完成双页面版 | 使用接近游戏键位设置的键鼠/手柄双页面展示默认绑定，支持点击槽位监听修改、清除、冲突检查、Undo 和手动应用。 |

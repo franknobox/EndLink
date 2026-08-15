@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 5761798415659598123}
   - component: {fileID: 3552294712005060815}
   m_Layer: 7
-  m_Name: BOX_DataBlock_01
+  m_Name: BOX_DataCube_01
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
