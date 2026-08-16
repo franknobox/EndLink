@@ -83,7 +83,7 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [白盒关卡模块库](Features/WORLD.md#feature-blockout-module-library) | 已完成数据体块扩展版 | 提供统一使用 `BOX_` 前缀的石块、小型数据方体、两种自由结构与一种实心结构的大型数据簇及常用建筑结构 Prefab。 |
+| [白盒关卡模块库](Features/WORLD.md#feature-blockout-module-library) | 已完成通行与环境模块扩展版 | 提供统一使用 `BOX_` 前缀、带封闭实体网格的石块、树木、大型塔体占位、数据体块、窄桥及常用建筑结构 Prefab。 |
 | [武器物体交互](Features/WORLD.md#feature-weapon-object-interaction) | 已完成场景接线版 | 通过通用 `ObjInteractable` 接收 A/B/C 武器命中，统一驱动 `IObjFunction`，并在功能生效时提供闪白反馈。 |
 | [通用出生点与检查点](Features/WORLD.md#feature-world-spawn-checkpoint) | 已完成坠落死亡版 | 提供世界出生锚点、开场出生、检查点休整、玩家死亡复活和默认 `Y=-50` 坠落出界判定，并为未来存档与敌人生成保留稳定位置身份。 |
 | [两层移动电梯](Features/WORLD.md#feature-elevator-platform) | 已完成武器交互版 | 提供由交互子物体触发的上下层往返平台，通过运动学 Rigidbody 驱动物理实体，并为 CharacterController 乘客补偿平台三维位移。 |
