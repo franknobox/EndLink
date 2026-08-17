@@ -33,6 +33,29 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 
 </details>
 
+<a id="feature-probuilder-mesh-repair"></a>
+
+### Feature：ProBuilder 网格修补
+
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- 通过 `EndLink > Level > ProBuilder Mesh Repair` 打开，扫描当前选择或手动指定的 `ProBuilderMesh`。
+- 按 ProBuilder 共享顶点拓扑识别闭合边界、开放边链、歧义区域和非流形边，并在 Scene View 中分别显示；用户勾选的边界会高亮。
+- 支持封闭一个或多个近平面边界；平面误差阈值可调，无法组成单一边界的区域不会被强行修补。
+- 支持桥接两圈闭合且顶点数相同的边界，工具会按空间距离自动匹配两圈顶点。
+- 新面方向可手动反转；修补操作支持 Unity Undo，并在完成后刷新同物体的 `MeshCollider`。
+- 工具不会一键修复全部开放边界，避免误封门洞、窗口和其他有意保留的开口。
+
+对应脚本：
+- `Assets/_EndLink/Editor/ProBuilderMeshRepairWindow.cs`
+
+相关 Editor 工具：
+- `EndLink > Level > ProBuilder Mesh Repair`
+
+</details>
+
 <a id="feature-input-binding-tool"></a>
 
 ### Feature：输入绑定工具

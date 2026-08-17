@@ -47,7 +47,7 @@
 | [统一 Combat Target](Features/COMBAT.md#feature-combat-target) | 已完成第一版 | 为玩家、队友和敌人统一提供唯一根身份、存活/可选状态、锁定点、Collider 表面点和水平表面距离。 |
 | [角色战斗数值基础](Features/COMBAT.md#feature-character-stats) | 已完成第一版 | 提供玩家、队友和敌人共用的攻击力与承受击退倍率，并支持动作按固定伤害与攻击力倍率组合计算伤害。 |
 | [战斗动作配置](Features/COMBAT.md#feature-combat-action) | 已完成命中反馈配置版 | 使用 `CombatActionDefinition` 描述伤害、冷却、Hitbox、标签、协同率、动画根位移和命中反馈，并支持数据时间或动画事件驱动动作。 |
-| [三种武器形态基础](Features/COMBAT.md#feature-player-weapon-forms) | 已完成射击瞄准快捷切换版 | 固定提供 A、B、C 三种形态；手柄 `LT` 可直接切入 B 形态瞄准，并支持准星方向射击、临时近距镜头和射击后退出瞄准。 |
+| [三种武器形态基础](Features/COMBAT.md#feature-player-weapon-forms) | 已完成解锁基础版 | 固定提供 A、B、C 三种形态；A 始终可用，B/C 支持初始锁定与运行时解锁，切换时自动跳过未解锁形态，并保留射击瞄准流程。 |
 | [通用战斗反馈](Features/COMBAT.md#feature-combat-feedback) | 已完成调度基础版 | 通过可复用反馈资产与场景调度器，统一提供 Hitstop、Cinemachine Impulse、手柄震动、音效和 VFX 请求入口。 |
 | [统一 Action 执行接口](Features/COMBAT.md#feature-combat-action-executor) | 已完成多判定窗口版 | 统一玩家、队友和敌人的动作检查、执行、冷却和目标传入，并支持动画事件动作在一次执行中开启多个判定窗口。 |
 | [伤害结算管线基础](Features/COMBAT.md#feature-damage-pipeline) | 已完成基础版 | 建立 `DamageContext`、`DamageResult` 和 `DamageCalculator`，让 Hitbox、标签反应和直接伤害先进入统一伤害上下文，再交给生命组件扣血。 |
@@ -104,4 +104,5 @@
 | [EndLink Combat Lab](Features/TOOLS.md#feature-combat-lab) | 已完成新模型实验版 | 提供浏览器端战斗实验工具，用于快速验证标签定义、层数、持续时间、反应效果、基础伤害和连携窗口。 |
 | [美术资源校验工具](Features/TOOLS.md#feature-art-asset-validator) | 已完成自动校验第一版 | 自动检查 `_Incoming` 中的 Shader、材质、Prefab、FBX、贴图和临时命名问题，并提供完整结果窗口与资源定位。 |
 | [场景配置体检](Features/TOOLS.md#feature-scene-doctor) | 已完成白盒规则版 | 扫描当前活动场景中的缺失引用、关键接线、NavMesh、BOX_ 子节点 Override、网格碰撞错位、场景归类和 Layer/Tag，支持筛选、定位与复制报告。 |
+| [ProBuilder 网格修补](Features/TOOLS.md#feature-probuilder-mesh-repair) | 已完成安全修补第一版 | 扫描选中 ProBuilder 网格的开放边界并在 Scene View 预览，支持手动选择近平面封口、等顶点数双环桥接、Undo 和 MeshCollider 刷新。 |
 | [输入绑定工具](Features/TOOLS.md#feature-input-binding-tool) | 已完成双页面版 | 使用接近游戏键位设置的键鼠/手柄双页面展示默认绑定，支持点击槽位监听修改、清除、冲突检查、Undo 和手动应用。 |

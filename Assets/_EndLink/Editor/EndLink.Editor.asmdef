@@ -4,6 +4,7 @@
     "references": [
         "EndLink.Runtime",
         "Unity.InputSystem",
+        "Unity.ProBuilder",
         "Unity.TextMeshPro",
         "UnityEngine.UI"
     ],
