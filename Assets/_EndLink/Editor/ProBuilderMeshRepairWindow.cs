@@ -12,13 +12,14 @@ using Object = UnityEngine.Object;
 namespace EndLink.Editor
 {
     /// <summary>
-    /// 扫描 ProBuilder 网格的拓扑边界，并在用户确认后封口或桥接两圈边界。
+    /// 检查 ProBuilder 面朝向，并提供独立的拓扑边界封口工具。
     /// </summary>
     internal sealed class ProBuilderMeshRepairWindow : EditorWindow
     {
         private const string MenuPath = "EndLink/Level/ProBuilder Mesh Repair";
         private const float DefaultPlanarityTolerance = 0.01f;
 
+        private static readonly Color InwardColor = new(1f, 0.32f, 0.18f, 1f);
         private static readonly Color ClosedColor = new(0.15f, 0.85f, 1f, 1f);
         private static readonly Color OpenColor = new(1f, 0.58f, 0.12f, 1f);
         private static readonly Color AmbiguousColor = new(1f, 0.2f, 0.2f, 1f);
@@ -28,9 +29,12 @@ namespace EndLink.Editor
         private readonly List<BoundaryRegion> _regions = new();
         private readonly List<CanonicalEdge> _nonManifoldEdges = new();
         private readonly List<SharedPoint> _sharedPoints = new();
+        private readonly List<FaceOrientationIssue> _faceIssues = new();
 
         private ProBuilderMesh _target;
-        private Vector2 _scrollPosition;
+        private RepairMode _repairMode = RepairMode.FaceOrientation;
+        private Vector2 _faceScrollPosition;
+        private Vector2 _boundaryScrollPosition;
         private float _planarityTolerance = DefaultPlanarityTolerance;
         private bool _previewInScene = true;
         private bool _flipNewFaceWinding;
@@ -67,18 +71,41 @@ namespace EndLink.Editor
         {
             DrawHeader();
             DrawTargetControls();
-            DrawSummary();
-            DrawRegionList();
-            DrawRepairControls();
+
+            if (_repairMode == RepairMode.FaceOrientation)
+            {
+                DrawFaceSummary();
+                DrawFaceList();
+                DrawFaceRepairControls();
+            }
+            else
+            {
+                DrawBoundarySummary();
+                DrawRegionList();
+                DrawBoundaryRepairControls();
+            }
         }
 
         private void DrawHeader()
         {
             EditorGUILayout.Space(6f);
             EditorGUILayout.LabelField("ProBuilder 网格修补", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox(
-                "扫描选中 ProBuilder 网格的开放边界。请只勾选确实需要修补的区域；门洞、窗口等有意开口不会被自动区分。",
-                MessageType.Info);
+
+            EditorGUI.BeginChangeCheck();
+            int nextMode = GUILayout.Toolbar(
+                (int)_repairMode,
+                new[] { "面朝向", "边界封口" },
+                GUILayout.Height(24f));
+            if (EditorGUI.EndChangeCheck())
+            {
+                _repairMode = (RepairMode)nextMode;
+                ScanTarget();
+            }
+
+            string description = _repairMode == RepairMode.FaceOrientation
+                ? "默认只查询疑似朝向物体内部的面。勾选确认后可翻转面方向，适合修复楼梯底面从外侧不可见的问题。"
+                : "手动拓扑工具：显示开放边界并支持封口或桥接。开放边界可能是正常建模结构，不代表网格存在问题。";
+            EditorGUILayout.HelpBox(description, MessageType.Info);
         }
 
         private void DrawTargetControls()
@@ -117,17 +144,42 @@ namespace EndLink.Editor
                     GUILayout.Width(132f));
             }
 
-            float nextTolerance = EditorGUILayout.FloatField("平面误差容许值", _planarityTolerance);
-            nextTolerance = Mathf.Clamp(nextTolerance, 0.0001f, 0.5f);
-            if (!Mathf.Approximately(nextTolerance, _planarityTolerance))
+            if (_repairMode == RepairMode.BoundaryFill)
             {
-                _planarityTolerance = nextTolerance;
-                EvaluateRegionPlanarity();
-                SceneView.RepaintAll();
+                float nextTolerance = EditorGUILayout.FloatField(
+                    new GUIContent(
+                        "单面封口平面误差",
+                        "误差以内的边界生成一个多边形面；超过误差的空间边界使用三角面组封闭。"),
+                    _planarityTolerance);
+                nextTolerance = Mathf.Clamp(nextTolerance, 0.0001f, 0.5f);
+                if (!Mathf.Approximately(nextTolerance, _planarityTolerance))
+                {
+                    _planarityTolerance = nextTolerance;
+                    EvaluateRegionPlanarity();
+                    SceneView.RepaintAll();
+                }
             }
         }
 
-        private void DrawSummary()
+        private void DrawFaceSummary()
+        {
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.HelpBox(_statusMessage, _statusType);
+
+            if (_target == null)
+            {
+                return;
+            }
+
+            using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+            {
+                GUILayout.Label($"疑似反向面 {_faceIssues.Count}", GUILayout.Width(120f));
+                GUILayout.FlexibleSpace();
+                GUILayout.Label($"总面数 {_target.faceCount}", EditorStyles.miniLabel);
+            }
+        }
+
+        private void DrawBoundarySummary()
         {
             EditorGUILayout.Space(4f);
             EditorGUILayout.HelpBox(_statusMessage, _statusType);
@@ -152,6 +204,104 @@ namespace EndLink.Editor
             }
         }
 
+        private void DrawFaceList()
+        {
+            if (_target == null || _faceIssues.Count == 0)
+            {
+                return;
+            }
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField("疑似反向的面", EditorStyles.boldLabel);
+                GUILayout.FlexibleSpace();
+
+                if (GUILayout.Button("全部选择", GUILayout.Width(78f)))
+                {
+                    foreach (FaceOrientationIssue issue in _faceIssues)
+                    {
+                        issue.Selected = true;
+                    }
+
+                    SceneView.RepaintAll();
+                }
+
+                if (GUILayout.Button("清除选择", GUILayout.Width(78f)))
+                {
+                    foreach (FaceOrientationIssue issue in _faceIssues)
+                    {
+                        issue.Selected = false;
+                    }
+
+                    SceneView.RepaintAll();
+                }
+            }
+
+            _faceScrollPosition = EditorGUILayout.BeginScrollView(_faceScrollPosition);
+            foreach (FaceOrientationIssue issue in _faceIssues)
+            {
+                DrawFaceIssue(issue);
+            }
+
+            EditorGUILayout.EndScrollView();
+        }
+
+        private void DrawFaceIssue(FaceOrientationIssue issue)
+        {
+            using (new EditorGUILayout.HorizontalScope(EditorStyles.helpBox))
+            {
+                EditorGUI.BeginChangeCheck();
+                bool selected = EditorGUILayout.Toggle(issue.Selected, GUILayout.Width(18f));
+                if (EditorGUI.EndChangeCheck())
+                {
+                    issue.Selected = selected;
+                    SceneView.RepaintAll();
+                }
+
+                GUILayout.Label($"面 {issue.FaceIndex}", EditorStyles.boldLabel, GUILayout.Width(68f));
+                GUILayout.Label("与相邻面的方向不一致", GUILayout.Width(160f));
+                GUILayout.Label("请在 Scene View 确认", EditorStyles.miniLabel);
+                GUILayout.FlexibleSpace();
+
+                if (GUILayout.Button("定位", GUILayout.Width(52f)))
+                {
+                    FrameFace(issue);
+                }
+            }
+        }
+
+        private void DrawFaceRepairControls()
+        {
+            EditorGUILayout.Space(4f);
+            List<Face> selectedIssues = _faceIssues
+                .Where(issue => issue.Selected)
+                .Select(issue => issue.Face)
+                .ToList();
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(selectedIssues.Count == 0))
+                {
+                    if (GUILayout.Button("翻转勾选面", GUILayout.Height(28f)))
+                    {
+                        FlipFaces(selectedIssues, "翻转疑似反向面");
+                    }
+                }
+
+                using (new EditorGUI.DisabledScope(_target == null))
+                {
+                    if (GUILayout.Button("翻转 ProBuilder 当前选面", GUILayout.Height(28f)))
+                    {
+                        FlipCurrentProBuilderSelection();
+                    }
+                }
+            }
+
+            EditorGUILayout.LabelField(
+                "自动结果只报告与同一连通区域多数面方向不一致的面；整体朝内或缺少相邻面的结构，需要在 ProBuilder 面模式中手动选面后翻转。",
+                EditorStyles.wordWrappedMiniLabel);
+        }
+
         private void DrawRegionList()
         {
             if (_target == null || _regions.Count == 0)
@@ -164,11 +314,11 @@ namespace EndLink.Editor
                 EditorGUILayout.LabelField("检测到的边界", EditorStyles.boldLabel);
                 GUILayout.FlexibleSpace();
 
-                if (GUILayout.Button("选择可封口项", GUILayout.Width(100f)))
+                if (GUILayout.Button("选择闭合开口", GUILayout.Width(100f)))
                 {
                     foreach (BoundaryRegion region in _regions)
                     {
-                        region.Selected = region.Kind == BoundaryKind.Closed && region.IsPlanar;
+                        region.Selected = region.Kind == BoundaryKind.Closed;
                     }
 
                     SceneView.RepaintAll();
@@ -185,7 +335,7 @@ namespace EndLink.Editor
                 }
             }
 
-            _scrollPosition = EditorGUILayout.BeginScrollView(_scrollPosition);
+            _boundaryScrollPosition = EditorGUILayout.BeginScrollView(_boundaryScrollPosition);
             foreach (BoundaryRegion region in _regions)
             {
                 DrawRegion(region);
@@ -220,8 +370,8 @@ namespace EndLink.Editor
                 if (region.Kind == BoundaryKind.Closed)
                 {
                     string planarLabel = region.IsPlanar
-                        ? $"近平面，误差 {region.PlanarityError:F4}"
-                        : $"非平面，误差 {region.PlanarityError:F4}";
+                        ? $"单面封口，误差 {region.PlanarityError:F4}"
+                        : $"三角化封口，误差 {region.PlanarityError:F4}";
                     GUILayout.Label(planarLabel, GUILayout.MinWidth(150f));
                 }
                 else
@@ -237,7 +387,7 @@ namespace EndLink.Editor
             }
         }
 
-        private void DrawRepairControls()
+        private void DrawBoundaryRepairControls()
         {
             EditorGUILayout.Space(4f);
             _flipNewFaceWinding = EditorGUILayout.Toggle(
@@ -248,7 +398,7 @@ namespace EndLink.Editor
 
             List<BoundaryRegion> selected = _regions.Where(region => region.Selected).ToList();
             bool canFill = selected.Count > 0
-                && selected.All(region => region.Kind == BoundaryKind.Closed && region.IsPlanar);
+                && selected.All(region => region.Kind == BoundaryKind.Closed);
             bool canBridge = selected.Count == 2
                 && selected.All(region => region.Kind == BoundaryKind.Closed)
                 && selected[0].OrderedSharedIndices.Count == selected[1].OrderedSharedIndices.Count;
@@ -257,7 +407,7 @@ namespace EndLink.Editor
             {
                 using (new EditorGUI.DisabledScope(!canFill))
                 {
-                    if (GUILayout.Button("封闭所选平面开口", GUILayout.Height(28f)))
+                    if (GUILayout.Button("封闭所选开口", GUILayout.Height(28f)))
                     {
                         FillSelectedRegions(selected);
                     }
@@ -275,9 +425,43 @@ namespace EndLink.Editor
             if (selected.Count > 0 && !canFill && !canBridge)
             {
                 EditorGUILayout.LabelField(
-                    "当前选择不满足安全修补条件。开放边链和歧义边界需要先手工整理拓扑。",
+                    "当前选择不满足安全修补条件。只有闭合边界能直接封口；开放边链和歧义边界需要先手工整理拓扑。",
                     EditorStyles.wordWrappedMiniLabel);
             }
+        }
+
+        private void FlipCurrentProBuilderSelection()
+        {
+            Face[] selectedFaces = _target.GetSelectedFaces();
+            if (selectedFaces == null || selectedFaces.Length == 0)
+            {
+                SetStatus(
+                    "ProBuilder 当前没有选中的面。请切换到面选择模式后选中目标面。",
+                    MessageType.Warning);
+                return;
+            }
+
+            FlipFaces(selectedFaces, "翻转 ProBuilder 当前选面");
+        }
+
+        private void FlipFaces(IEnumerable<Face> faces, string undoName)
+        {
+            List<Face> faceList = faces
+                .Where(face => face != null)
+                .Distinct()
+                .ToList();
+            if (_target == null || faceList.Count == 0)
+            {
+                return;
+            }
+
+            ExecuteMeshRepair(undoName, () =>
+            {
+                foreach (Face face in faceList)
+                {
+                    face.Reverse();
+                }
+            });
         }
 
         private void UseCurrentSelection()
@@ -294,6 +478,7 @@ namespace EndLink.Editor
             _regions.Clear();
             _nonManifoldEdges.Clear();
             _sharedPoints.Clear();
+            _faceIssues.Clear();
 
             if (_target == null)
             {
@@ -303,10 +488,159 @@ namespace EndLink.Editor
             }
 
             IList<Vector3> positions = _target.positions;
-            IList<SharedVertex> sharedVertices = _target.sharedVertices;
-            if (positions == null || positions.Count == 0 || sharedVertices == null)
+            if (positions == null || positions.Count == 0)
             {
                 SetStatus("目标没有可扫描的 ProBuilder 顶点数据。", MessageType.Warning);
+                return;
+            }
+
+            if (_repairMode == RepairMode.FaceOrientation)
+            {
+                ScanFaceOrientation(positions);
+            }
+            else
+            {
+                ScanBoundaryTopology(positions);
+            }
+
+            SceneView.RepaintAll();
+        }
+
+        private void ScanFaceOrientation(IList<Vector3> positions)
+        {
+            IList<SharedVertex> sharedVertices = _target.sharedVertices;
+            if (sharedVertices == null)
+            {
+                SetStatus("目标没有可扫描的 ProBuilder 共享顶点数据。", MessageType.Warning);
+                return;
+            }
+
+            int[] rawToShared = BuildSharedPointLookup(positions, sharedVertices);
+            IList<Face> faces = _target.faces;
+            Dictionary<CanonicalEdge, List<FaceEdgeUse>> edgeUses = new();
+            for (int faceIndex = 0; faceIndex < faces.Count; faceIndex++)
+            {
+                Face face = faces[faceIndex];
+                foreach (Edge edge in face.edges)
+                {
+                    if (!TryGetSharedIndex(rawToShared, edge.a, out int a)
+                        || !TryGetSharedIndex(rawToShared, edge.b, out int b)
+                        || a == b)
+                    {
+                        continue;
+                    }
+
+                    CanonicalEdge canonicalEdge = new(a, b);
+                    if (!edgeUses.TryGetValue(canonicalEdge, out List<FaceEdgeUse> uses))
+                    {
+                        uses = new List<FaceEdgeUse>(2);
+                        edgeUses.Add(canonicalEdge, uses);
+                    }
+
+                    uses.Add(new FaceEdgeUse(faceIndex, a, b));
+                }
+            }
+
+            Dictionary<int, List<FaceAdjacency>> adjacency = new();
+            for (int faceIndex = 0; faceIndex < faces.Count; faceIndex++)
+            {
+                adjacency.Add(faceIndex, new List<FaceAdjacency>());
+            }
+
+            foreach (List<FaceEdgeUse> uses in edgeUses.Values)
+            {
+                if (uses.Count != 2)
+                {
+                    continue;
+                }
+
+                FaceEdgeUse first = uses[0];
+                FaceEdgeUse second = uses[1];
+                bool sameDirection = first.A == second.A && first.B == second.B;
+                adjacency[first.FaceIndex].Add(
+                    new FaceAdjacency(second.FaceIndex, sameDirection));
+                adjacency[second.FaceIndex].Add(
+                    new FaceAdjacency(first.FaceIndex, sameDirection));
+            }
+
+            bool?[] flipFlags = new bool?[faces.Count];
+            for (int seed = 0; seed < faces.Count; seed++)
+            {
+                if (flipFlags[seed].HasValue)
+                {
+                    continue;
+                }
+
+                List<int> component = new();
+                Queue<int> queue = new();
+                flipFlags[seed] = false;
+                queue.Enqueue(seed);
+
+                while (queue.Count > 0)
+                {
+                    int current = queue.Dequeue();
+                    component.Add(current);
+                    bool currentFlip = flipFlags[current].GetValueOrDefault();
+
+                    foreach (FaceAdjacency neighbor in adjacency[current])
+                    {
+                        bool expectedFlip = currentFlip ^ neighbor.RequiresOppositeFlip;
+                        if (!flipFlags[neighbor.FaceIndex].HasValue)
+                        {
+                            flipFlags[neighbor.FaceIndex] = expectedFlip;
+                            queue.Enqueue(neighbor.FaceIndex);
+                        }
+                    }
+                }
+
+                int flippedCount = component.Count(index => flipFlags[index] == true);
+                int unflippedCount = component.Count - flippedCount;
+                if (flippedCount == unflippedCount)
+                {
+                    continue;
+                }
+
+                bool minorityFlag = flippedCount < unflippedCount;
+                foreach (int faceIndex in component)
+                {
+                    if (flipFlags[faceIndex] != minorityFlag)
+                    {
+                        continue;
+                    }
+
+                    Face face = faces[faceIndex];
+                    Vector3 normal = UnityEngine.ProBuilder.Math.Normal(_target, face).normalized;
+                    _faceIssues.Add(new FaceOrientationIssue
+                    {
+                        FaceIndex = faceIndex,
+                        Face = face,
+                        Center = CalculateFaceCenter(face, positions),
+                        Normal = normal,
+                        LocalBounds = CalculateFaceBounds(face, positions)
+                    });
+                }
+            }
+
+            if (_faceIssues.Count == 0)
+            {
+                SetStatus(
+                    "未发现与相邻面方向明显不一致的面。拓扑边界不会计入此结果。",
+                    MessageType.Info);
+            }
+            else
+            {
+                SetStatus(
+                    $"发现 {_faceIssues.Count} 个疑似反向面。请结合 Scene View 确认后再翻转。",
+                    MessageType.Warning);
+            }
+        }
+
+        private void ScanBoundaryTopology(IList<Vector3> positions)
+        {
+            IList<SharedVertex> sharedVertices = _target.sharedVertices;
+            if (sharedVertices == null)
+            {
+                SetStatus("目标没有可扫描的 ProBuilder 共享顶点数据。", MessageType.Warning);
                 return;
             }
 
@@ -353,11 +687,38 @@ namespace EndLink.Editor
             else
             {
                 SetStatus(
-                    $"扫描完成：检测到 {_regions.Count} 个边界区域、{_nonManifoldEdges.Count} 条非流形边。",
+                    $"拓扑扫描完成：显示 {_regions.Count} 个边界区域、{_nonManifoldEdges.Count} 条非流形边。这些结果不默认视为问题。",
                     _nonManifoldEdges.Count > 0 ? MessageType.Warning : MessageType.Info);
             }
+        }
 
-            SceneView.RepaintAll();
+        private static Vector3 CalculateFaceCenter(Face face, IList<Vector3> positions)
+        {
+            Vector3 center = Vector3.zero;
+            IReadOnlyList<int> indices = face.distinctIndexes;
+            for (int index = 0; index < indices.Count; index++)
+            {
+                center += positions[indices[index]];
+            }
+
+            return indices.Count > 0 ? center / indices.Count : center;
+        }
+
+        private static Bounds CalculateFaceBounds(Face face, IList<Vector3> positions)
+        {
+            IReadOnlyList<int> indices = face.distinctIndexes;
+            if (indices.Count == 0)
+            {
+                return default;
+            }
+
+            Bounds bounds = new(positions[indices[0]], Vector3.zero);
+            for (int index = 1; index < indices.Count; index++)
+            {
+                bounds.Encapsulate(positions[indices[index]]);
+            }
+
+            return bounds;
         }
 
         private int[] BuildSharedPointLookup(
@@ -643,18 +1004,149 @@ namespace EndLink.Editor
                 foreach (BoundaryRegion region in selectedRegions)
                 {
                     List<int> rawIndices = GetRawVertexIndices(region.OrderedSharedIndices);
-                    if (_flipNewFaceWinding)
+                    if (region.IsPlanar)
                     {
-                        rawIndices.Reverse();
-                    }
+                        if (_flipNewFaceWinding)
+                        {
+                            rawIndices.Reverse();
+                        }
 
-                    if (_target.CreatePolygon(rawIndices, false) == null)
+                        if (_target.CreatePolygon(rawIndices, false) == null)
+                        {
+                            throw new InvalidOperationException(
+                                $"边界 #{region.Id} 无法生成有效多边形。请检查边界顺序或改用手工修复。");
+                        }
+                    }
+                    else
                     {
-                        throw new InvalidOperationException(
-                            $"边界 #{region.Id} 无法生成有效多边形。请检查边界顺序或改用手工修复。");
+                        FillNonPlanarRegion(region, rawIndices);
                     }
                 }
             });
+        }
+
+        private void FillNonPlanarRegion(BoundaryRegion region, IReadOnlyList<int> rawIndices)
+        {
+            List<BoundaryTriangle> triangles = TriangulateBoundary(region.OrderedSharedIndices);
+            if (triangles.Count != rawIndices.Count - 2)
+            {
+                throw new InvalidOperationException(
+                    $"边界 #{region.Id} 无法得到稳定的三角化结果，请先手工整理边界。");
+            }
+
+            foreach (BoundaryTriangle triangle in triangles)
+            {
+                List<int> triangleIndices = new()
+                {
+                    rawIndices[triangle.A],
+                    rawIndices[triangle.B],
+                    rawIndices[triangle.C]
+                };
+                if (_flipNewFaceWinding)
+                {
+                    triangleIndices.Reverse();
+                }
+
+                if (_target.CreatePolygon(triangleIndices, false) == null)
+                {
+                    throw new InvalidOperationException(
+                        $"边界 #{region.Id} 的三角面创建失败，边界中可能存在共线点或交叉边。");
+                }
+            }
+        }
+
+        private List<BoundaryTriangle> TriangulateBoundary(IReadOnlyList<int> sharedIndices)
+        {
+            int count = sharedIndices.Count;
+            float[,] costs = new float[count, count];
+            int[,] splits = new int[count, count];
+
+            for (int start = 0; start < count; start++)
+            {
+                for (int end = 0; end < count; end++)
+                {
+                    costs[start, end] = float.PositiveInfinity;
+                    splits[start, end] = -1;
+                }
+
+                costs[start, start] = 0f;
+                if (start + 1 < count)
+                {
+                    costs[start, start + 1] = 0f;
+                }
+            }
+
+            for (int gap = 2; gap < count; gap++)
+            {
+                for (int start = 0; start + gap < count; start++)
+                {
+                    int end = start + gap;
+                    for (int split = start + 1; split < end; split++)
+                    {
+                        float triangleCost = CalculateTriangleCost(
+                            sharedIndices[start],
+                            sharedIndices[split],
+                            sharedIndices[end]);
+                        if (float.IsPositiveInfinity(triangleCost)
+                            || float.IsPositiveInfinity(costs[start, split])
+                            || float.IsPositiveInfinity(costs[split, end]))
+                        {
+                            continue;
+                        }
+
+                        float totalCost = costs[start, split]
+                            + costs[split, end]
+                            + triangleCost;
+                        if (totalCost < costs[start, end])
+                        {
+                            costs[start, end] = totalCost;
+                            splits[start, end] = split;
+                        }
+                    }
+                }
+            }
+
+            List<BoundaryTriangle> triangles = new(count - 2);
+            CollectBoundaryTriangles(0, count - 1, splits, triangles);
+            return triangles;
+        }
+
+        private float CalculateTriangleCost(int firstIndex, int secondIndex, int thirdIndex)
+        {
+            Vector3 first = _sharedPoints[firstIndex].Position;
+            Vector3 second = _sharedPoints[secondIndex].Position;
+            Vector3 third = _sharedPoints[thirdIndex].Position;
+            float doubledArea = Vector3.Cross(second - first, third - first).magnitude;
+            if (doubledArea <= 0.000001f)
+            {
+                return float.PositiveInfinity;
+            }
+
+            return (first - second).sqrMagnitude
+                + (second - third).sqrMagnitude
+                + (third - first).sqrMagnitude;
+        }
+
+        private static void CollectBoundaryTriangles(
+            int start,
+            int end,
+            int[,] splits,
+            ICollection<BoundaryTriangle> triangles)
+        {
+            if (end - start < 2)
+            {
+                return;
+            }
+
+            int split = splits[start, end];
+            if (split <= start || split >= end)
+            {
+                return;
+            }
+
+            triangles.Add(new BoundaryTriangle(start, split, end));
+            CollectBoundaryTriangles(start, split, splits, triangles);
+            CollectBoundaryTriangles(split, end, splits, triangles);
         }
 
         private void BridgeSelectedRegions(BoundaryRegion first, BoundaryRegion second)
@@ -837,9 +1329,25 @@ namespace EndLink.Editor
             SceneView.lastActiveSceneView.Frame(worldBounds, false);
         }
 
+        private void FrameFace(FaceOrientationIssue issue)
+        {
+            if (_target == null || SceneView.lastActiveSceneView == null)
+            {
+                return;
+            }
+
+            Selection.activeGameObject = _target.gameObject;
+            Bounds worldBounds = TransformBounds(_target.transform, issue.LocalBounds);
+            worldBounds.Expand(Mathf.Max(0.5f, worldBounds.size.magnitude * 0.5f));
+            SceneView.lastActiveSceneView.Frame(worldBounds, false);
+        }
+
         private void DrawScenePreview(SceneView sceneView)
         {
-            if (!_previewInScene || _target == null || _regions.Count == 0)
+            bool hasPreview = _repairMode == RepairMode.FaceOrientation
+                ? _faceIssues.Count > 0
+                : _regions.Count > 0 || _nonManifoldEdges.Count > 0;
+            if (!_previewInScene || _target == null || !hasPreview)
             {
                 return;
             }
@@ -850,6 +1358,51 @@ namespace EndLink.Editor
             Handles.matrix = _target.transform.localToWorldMatrix;
             Handles.zTest = CompareFunction.LessEqual;
 
+            if (_repairMode == RepairMode.FaceOrientation)
+            {
+                DrawFaceOrientationPreview();
+            }
+            else
+            {
+                DrawBoundaryPreview();
+            }
+
+            Handles.matrix = previousMatrix;
+            Handles.color = previousColor;
+            Handles.zTest = previousZTest;
+        }
+
+        private void DrawFaceOrientationPreview()
+        {
+            IList<Vector3> positions = _target.positions;
+            foreach (FaceOrientationIssue issue in _faceIssues)
+            {
+                Handles.color = issue.Selected ? SelectedColor : InwardColor;
+                foreach (Edge edge in issue.Face.edges)
+                {
+                    if (edge.a >= 0
+                        && edge.a < positions.Count
+                        && edge.b >= 0
+                        && edge.b < positions.Count)
+                    {
+                        Handles.DrawAAPolyLine(5f, positions[edge.a], positions[edge.b]);
+                    }
+                }
+
+                float normalLength = Mathf.Max(0.35f, issue.LocalBounds.size.magnitude * 0.2f);
+                Handles.DrawLine(
+                    issue.Center,
+                    issue.Center + issue.Normal * normalLength,
+                    issue.Selected ? 4f : 2f);
+                Handles.Label(
+                    issue.Center,
+                    $"面 {issue.FaceIndex}",
+                    issue.Selected ? EditorStyles.whiteBoldLabel : EditorStyles.miniBoldLabel);
+            }
+        }
+
+        private void DrawBoundaryPreview()
+        {
             foreach (BoundaryRegion region in _regions)
             {
                 Handles.color = region.Selected ? SelectedColor : GetRegionColor(region.Kind);
@@ -868,7 +1421,7 @@ namespace EndLink.Editor
                     $"#{region.Id}",
                     region.Selected ? EditorStyles.whiteBoldLabel : EditorStyles.miniBoldLabel);
 
-                if (region.Selected && region.Kind == BoundaryKind.Closed && region.IsPlanar)
+                if (region.Selected && region.Kind == BoundaryKind.Closed)
                 {
                     float normalLength = Mathf.Max(0.35f, region.LocalBounds.size.magnitude * 0.15f);
                     Handles.DrawLine(
@@ -887,10 +1440,6 @@ namespace EndLink.Editor
                     Handles.DrawAAPolyLine(6f, first.Position, second.Position);
                 }
             }
-
-            Handles.matrix = previousMatrix;
-            Handles.color = previousColor;
-            Handles.zTest = previousZTest;
         }
 
         private bool TryGetSharedPoint(int index, out SharedPoint point)
@@ -936,11 +1485,27 @@ namespace EndLink.Editor
             Repaint();
         }
 
+        private enum RepairMode
+        {
+            FaceOrientation,
+            BoundaryFill
+        }
+
         private enum BoundaryKind
         {
             Closed,
             OpenChain,
             Ambiguous
+        }
+
+        private sealed class FaceOrientationIssue
+        {
+            public int FaceIndex;
+            public Face Face;
+            public Vector3 Center;
+            public Vector3 Normal;
+            public Bounds LocalBounds;
+            public bool Selected;
         }
 
         private sealed class BoundaryRegion
@@ -967,6 +1532,46 @@ namespace EndLink.Editor
 
             public Vector3 Position { get; }
             public int RepresentativeRawIndex { get; }
+        }
+
+        private readonly struct BoundaryTriangle
+        {
+            public BoundaryTriangle(int a, int b, int c)
+            {
+                A = a;
+                B = b;
+                C = c;
+            }
+
+            public int A { get; }
+            public int B { get; }
+            public int C { get; }
+        }
+
+        private readonly struct FaceEdgeUse
+        {
+            public FaceEdgeUse(int faceIndex, int a, int b)
+            {
+                FaceIndex = faceIndex;
+                A = a;
+                B = b;
+            }
+
+            public int FaceIndex { get; }
+            public int A { get; }
+            public int B { get; }
+        }
+
+        private readonly struct FaceAdjacency
+        {
+            public FaceAdjacency(int faceIndex, bool requiresOppositeFlip)
+            {
+                FaceIndex = faceIndex;
+                RequiresOppositeFlip = requiresOppositeFlip;
+            }
+
+            public int FaceIndex { get; }
+            public bool RequiresOppositeFlip { get; }
         }
 
         private readonly struct CanonicalEdge : IEquatable<CanonicalEdge>
