@@ -12809,6 +12809,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 293e0aa208234eae9649b9eba813db68, type: 3}
   m_Name: 
   m_EditorClassIdentifier: EndLink.Runtime::EndLink.World.WorldCheckpoint
+  spawnPoint: {fileID: 1021938880}
+  respawnManager: {fileID: 150618763}
+  allowDuringCombat: 0
   onActivated:
     m_PersistentCalls:
       m_Calls:
@@ -12836,9 +12839,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 1
         m_CallState: 2
-  spawnPoint: {fileID: 1021938880}
-  respawnManager: {fileID: 150618763}
-  allowDuringCombat: 0
 --- !u!1 &1046502300
 GameObject:
   m_ObjectHideFlags: 0
@@ -31132,22 +31132,22 @@ MonoBehaviour:
     damping: {x: 0.22, y: 0.28, z: 0.24}
     fieldOfView: 52
   soulsLikeSettings:
-    targetWorldOffset: {x: 0, y: 1.35, z: 0}
+    targetWorldOffset: {x: 0, y: 1.2, z: 0}
     gamepadYawSpeed: 125
     gamepadPitchSpeed: 85
     mouseYawSensitivity: 0.08
     mousePitchSensitivity: 0.07
     minPitch: -22
-    maxPitch: 38
-    idleDistance: 3.2
+    maxPitch: 55
+    idleDistance: 3.6
     activeDistance: 4.2
     idleDistanceSmoothTime: 0.65
     activeDistanceSmoothTime: 0.2
-    shoulderOffset: {x: 0.35, y: 0.75, z: 0}
-    verticalArmLength: 0.15
+    shoulderOffset: {x: 0.35, y: 0.5, z: 0}
+    verticalArmLength: 0.1
     cameraSide: 0.5
     damping: {x: 0.15, y: 0.2, z: 0.16}
-    fieldOfView: 48
+    fieldOfView: 50
   aimDistance: 2.6
   aimFieldOfView: 44
   aimShoulderOffset: {x: 0.9, y: 1.25, z: 0}
@@ -31196,20 +31196,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: EndLink.Runtime::EndLink.Combat.PlayerWeaponController
   initialForm: 0
+  formBInitiallyUnlocked: 1
+  formCInitiallyUnlocked: 1
   formA:
     comboActions:
     - {fileID: 11400000, guid: 5aad972d3b43ae1408e5aeb62b6f8bd4, type: 2}
     - {fileID: 11400000, guid: 5aad972d3b43ae1408e5aeb62b6f8bd4, type: 2}
     - {fileID: 11400000, guid: 5aad972d3b43ae1408e5aeb62b6f8bd4, type: 2}
-    skillAction: {fileID: 0}
   formB:
     comboActions:
     - {fileID: 11400000, guid: c41052575e1541f1940a105596abc2e9, type: 2}
-    skillAction: {fileID: 0}
   formC:
     comboActions:
     - {fileID: 11400000, guid: bd19f0735bc84f84389cecf9cf0cd519, type: 2}
-    skillAction: {fileID: 0}
 --- !u!1 &2112096919
 GameObject:
   m_ObjectHideFlags: 0

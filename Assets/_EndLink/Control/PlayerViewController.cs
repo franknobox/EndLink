@@ -163,26 +163,26 @@ namespace EndLink.Core
                 52f);
         }
 
-        /// <summary>创建第一版偏近、偏低、旋转较慢的魂类视角预设。</summary>
+        /// <summary>创建偏近、偏低、旋转较慢的魂类视角预设。</summary>
         public static PlayerViewSettings CreateSoulsLikeDefault()
         {
             return new PlayerViewSettings(
-                new Vector3(0f, 1.35f, 0f),
+                new Vector3(0f, 1.2f, 0f),
                 125f,
                 85f,
                 0.08f,
                 0.07f,
                 -22f,
-                38f,
-                3.2f,
+                55f,
+                3.6f,
                 4.2f,
                 0.65f,
                 0.2f,
-                new Vector3(0.35f, 0.75f, 0f),
-                0.15f,
+                new Vector3(0.35f, 0.5f, 0f),
+                0.1f,
                 0.5f,
                 new Vector3(0.15f, 0.2f, 0.16f),
-                48f);
+                50f);
         }
 
         /// <summary>钳制 Inspector 数据，避免无效距离或角度破坏相机。</summary>

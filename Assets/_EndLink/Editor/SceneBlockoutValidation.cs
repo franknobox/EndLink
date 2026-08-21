@@ -206,6 +206,18 @@ namespace EndLink.Editor
                     .ToArray();
                 if (colliders.Length == 0)
                 {
+                    if (RequiresSolidBlockoutCollider(sceneObject, meshFilter))
+                    {
+                        SceneValidator.Add(
+                            issues,
+                            SceneValidationSeverity.Error,
+                            "GEOMETRY_COLLIDER_MISSING",
+                            "几何",
+                            $"_Blockout/Env 中启用的可见网格缺少同物体非 Trigger Collider："
+                            + $"Mesh={meshFilter.sharedMesh.name}。运行时角色会直接穿过该物体。",
+                            meshFilter);
+                    }
+
                     continue;
                 }
 
@@ -215,6 +227,15 @@ namespace EndLink.Editor
                     ValidateBounds(renderer, colliders, issues);
                 }
             }
+        }
+
+        private static bool RequiresSolidBlockoutCollider(
+            GameObject sceneObject,
+            MeshFilter meshFilter)
+        {
+            return sceneObject.activeInHierarchy
+                && meshFilter.sharedMesh != null
+                && IsUnderHierarchy(sceneObject.transform, "_Blockout", "Env");
         }
 
         private static void ValidateMeshReferences(
