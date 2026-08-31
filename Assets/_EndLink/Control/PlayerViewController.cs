@@ -277,6 +277,39 @@ namespace EndLink.Core
         [SerializeField, Min(0.01f)]
         private float hardLockRotationSmoothTime = 0.12f;
 
+        [Header("移动步态")]
+        [Tooltip("是否根据玩家实际移动速度叠加轻微镜头步态晃动。")]
+        [SerializeField]
+        private bool enableLocomotionBob = true;
+
+        [Tooltip("普通移动时的左右、上下晃动幅度，单位为米。")]
+        [SerializeField]
+        private Vector2 walkBobAmplitude = new(0.018f, 0.025f);
+
+        [Tooltip("冲刺时的左右、上下晃动幅度，单位为米。")]
+        [SerializeField]
+        private Vector2 sprintBobAmplitude = new(0.028f, 0.038f);
+
+        [Tooltip("普通移动与冲刺时每秒的步态周期数。")]
+        [SerializeField]
+        private Vector2 bobFrequency = new(1.65f, 2.15f);
+
+        [Tooltip("达到完整步态幅度所需的水平速度，单位米/秒。")]
+        [SerializeField, Min(0.01f)]
+        private float fullBobSpeed = 3.5f;
+
+        [Tooltip("低于该水平速度时视为静止。")]
+        [SerializeField, Min(0f)]
+        private float minimumBobSpeed = 0.12f;
+
+        [Tooltip("步态进入和退出的权重变化速度。")]
+        [SerializeField, Min(0.01f)]
+        private float bobBlendSpeed = 7f;
+
+        [Tooltip("射击瞄准时保留的步态比例，0 表示瞄准时完全关闭晃动。")]
+        [SerializeField, Range(0f, 1f)]
+        private float aimBobMultiplier = 0.18f;
+
         [Header("硬锁目标切换")]
         [Tooltip("鼠标在硬锁期间需要累计多少横向像素位移才切换一次目标。越小越灵敏，越大越不容易误触。")]
         [SerializeField, Min(1f)]
@@ -304,6 +337,9 @@ namespace EndLink.Core
         private float _nextTargetSwitchTime;
         private bool _gamepadTargetSwitchArmed = true;
         private bool _aimViewActive;
+        private PlayerStateMachine _playerStateMachine;
+        private float _bobPhase;
+        private float _bobWeight;
 
         /// <summary>当前选择的视角模式。</summary>
         public PlayerViewMode ViewMode => viewMode;
@@ -336,6 +372,14 @@ namespace EndLink.Core
             aimShoulderOffset = new Vector3(0.9f, 1.25f, 0f);
             aimEnterSmoothTime = 0.12f;
             aimExitSmoothTime = 0.22f;
+            enableLocomotionBob = true;
+            walkBobAmplitude = new Vector2(0.018f, 0.025f);
+            sprintBobAmplitude = new Vector2(0.028f, 0.038f);
+            bobFrequency = new Vector2(1.65f, 2.15f);
+            fullBobSpeed = 3.5f;
+            minimumBobSpeed = 0.12f;
+            bobBlendSpeed = 7f;
+            aimBobMultiplier = 0.18f;
             fastActionSettingsInitialized = true;
         }
 
@@ -367,6 +411,8 @@ namespace EndLink.Core
             {
                 ApplyMode(viewMode, false);
             }
+
+            UpdateLocomotionBob(Time.deltaTime);
 
             if (_aimViewActive)
             {
@@ -406,6 +452,10 @@ namespace EndLink.Core
 
         private void OnDisable()
         {
+            _bobPhase = 0f;
+            _bobWeight = 0f;
+            _cameraController?.ClearAdditiveViewOffset();
+
             if (!_initialized)
             {
                 return;
@@ -436,6 +486,16 @@ namespace EndLink.Core
             aimFieldOfView = Mathf.Clamp(aimFieldOfView, 1f, 179f);
             aimEnterSmoothTime = Mathf.Max(0.01f, aimEnterSmoothTime);
             aimExitSmoothTime = Mathf.Max(0.01f, aimExitSmoothTime);
+            walkBobAmplitude.x = Mathf.Max(0f, walkBobAmplitude.x);
+            walkBobAmplitude.y = Mathf.Max(0f, walkBobAmplitude.y);
+            sprintBobAmplitude.x = Mathf.Max(0f, sprintBobAmplitude.x);
+            sprintBobAmplitude.y = Mathf.Max(0f, sprintBobAmplitude.y);
+            bobFrequency.x = Mathf.Max(0f, bobFrequency.x);
+            bobFrequency.y = Mathf.Max(0f, bobFrequency.y);
+            fullBobSpeed = Mathf.Max(0.01f, fullBobSpeed);
+            minimumBobSpeed = Mathf.Clamp(minimumBobSpeed, 0f, fullBobSpeed);
+            bobBlendSpeed = Mathf.Max(0.01f, bobBlendSpeed);
+            aimBobMultiplier = Mathf.Clamp01(aimBobMultiplier);
 
             if (Application.isPlaying && _initialized && isActiveAndEnabled)
             {
@@ -539,6 +599,64 @@ namespace EndLink.Core
             playerTargeting ??= followTarget.GetComponentInParent<PlayerTargeting>();
             playerInputReader ??= followTarget.GetComponentInParent<PlayerInputReader>();
             playerController ??= followTarget.GetComponentInParent<PlayerController>();
+            _playerStateMachine ??= followTarget.GetComponentInParent<PlayerStateMachine>();
+        }
+
+        private void UpdateLocomotionBob(float deltaTime)
+        {
+            if (_cameraController == null)
+            {
+                return;
+            }
+
+            if (!enableLocomotionBob || playerController == null)
+            {
+                _bobWeight = 0f;
+                _cameraController.ClearAdditiveViewOffset();
+                return;
+            }
+
+            bool isLocomotionState = _playerStateMachine == null
+                || _playerStateMachine.CurrentStateId == PlayerStateId.Move;
+            float planarSpeed = playerController.PlanarSpeed;
+            bool canBob = isLocomotionState
+                && playerController.IsGrounded
+                && planarSpeed > minimumBobSpeed;
+
+            float speedWeight = canBob
+                ? Mathf.InverseLerp(minimumBobSpeed, fullBobSpeed, planarSpeed)
+                : 0f;
+            float targetWeight = _aimViewActive
+                ? speedWeight * aimBobMultiplier
+                : speedWeight;
+
+            _bobWeight = Mathf.MoveTowards(
+                _bobWeight,
+                targetWeight,
+                bobBlendSpeed * Mathf.Max(0f, deltaTime));
+
+            if (canBob)
+            {
+                float sprintBlend = playerController.IsSprinting ? 1f : 0f;
+                float frequency = Mathf.Lerp(bobFrequency.x, bobFrequency.y, sprintBlend);
+                frequency *= Mathf.Lerp(0.7f, 1f, speedWeight);
+                _bobPhase = Mathf.Repeat(
+                    _bobPhase + deltaTime * frequency * Mathf.PI * 2f,
+                    Mathf.PI * 4f);
+            }
+
+            if (_bobWeight <= 0.0001f)
+            {
+                _cameraController.ClearAdditiveViewOffset();
+                return;
+            }
+
+            float sprintAmount = playerController.IsSprinting ? 1f : 0f;
+            Vector2 amplitude = Vector2.Lerp(walkBobAmplitude, sprintBobAmplitude, sprintAmount);
+            float horizontal = Mathf.Sin(_bobPhase * 0.5f) * amplitude.x;
+            float vertical = -Mathf.Cos(_bobPhase) * amplitude.y;
+            Vector3 shoulderMotion = new Vector3(horizontal, vertical, 0f) * _bobWeight;
+            _cameraController.SetAdditiveViewOffset(Vector3.zero, shoulderMotion);
         }
 
         private void ApplyMode(PlayerViewMode mode, bool snapDistance)

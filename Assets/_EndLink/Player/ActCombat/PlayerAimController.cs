@@ -94,7 +94,6 @@ namespace EndLink.Combat
         private void OnEnable()
         {
             _weaponController.FormChanged += OnWeaponFormChanged;
-            _combatDriver.ActionStarted += OnActionStarted;
             _aimInputArmed = _inputReader == null || !_inputReader.AimHeld;
         }
 
@@ -103,11 +102,6 @@ namespace EndLink.Combat
             if (_weaponController != null)
             {
                 _weaponController.FormChanged -= OnWeaponFormChanged;
-            }
-
-            if (_combatDriver != null)
-            {
-                _combatDriver.ActionStarted -= OnActionStarted;
             }
 
             EndAim(false);
@@ -221,6 +215,12 @@ namespace EndLink.Combat
             if (!RequiresAimForBasicAttack || _stateMachine == null)
             {
                 return false;
+            }
+
+            // B-form firing enters Attack. Keep the held aim active until the action returns to locomotion.
+            if (_combatDriver != null && _combatDriver.IsExecutingAction)
+            {
+                return true;
             }
 
             return _stateMachine.CurrentStateId == PlayerStateId.Idle
@@ -363,14 +363,5 @@ namespace EndLink.Combat
             }
         }
 
-        private void OnActionStarted(CombatActionDefinition actionDefinition)
-        {
-            if (IsAiming
-                && RequiresAimForBasicAttack
-                && actionDefinition == _weaponController.CurrentBasicAttackAction)
-            {
-                EndAim(true);
-            }
-        }
     }
 }

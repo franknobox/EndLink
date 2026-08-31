@@ -210,6 +210,7 @@ Animator 参数：
 - `EnemyStateMachine.requiredAlertTime`：目标持续停留多久后进入 `Combat`，当前默认可设置为 3 秒
 - `EnemyStateMachine.logSensorChanges`：是否打印索敌发现、丢失和进入 Combat 的日志
 - `EnemyStateMachine.drawDetectionGizmo`：是否绘制索敌范围 Gizmo
+- `EnemyStateMachine.stateIndicatorMaterialSource`：头顶状态点使用的显式基础材质；Windows Build 应配置该引用，避免 Primitive 默认 Shader 被构建剥离
 - `hitDuration`：`Hit` 受击硬直时间
 - `retargetOnDamage`：受到有效伤害时是否把当前目标切换为伤害来源
 - `poise`：敌人的隐性韧性阈值；动作 `HitStrength` 达到该值才触发 `Hit`

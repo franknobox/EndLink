@@ -114,6 +114,7 @@
 - 支持鼠标锁定，方便第三人称自由视角操作。
 - `PlayerViewController` 提供 `FastAction` 与 `SoulsLike` 两种局外可选模式，建议挂在 `EndLink_3rd_Camera`。
 - `PlayerViewController` 独立保存 `FastAction` 与 `SoulsLike` 两套完整预设，切换模式时把所选参数交给 `ThirdPersonCameraController` 执行。
+- `PlayerViewController` 可按玩家实际水平速度叠加移动步态晃动，支持总开关、步行/冲刺幅度、频率、混合速度和瞄准衰减比例；晃动只作为运行时偏移，不会改写两套镜头预设。
 - `ThirdPersonCameraController` 的 Inspector 只保留对象引用和共享输入选项；已由预设接管的镜头参数保持序列化但不再重复显示。
 - `FastAction` 使用偏高、偏远、旋转较快的预设；已有组件第一次升级时会自动从当前 `ThirdPersonCameraController` 捕获原调参。
 - `SoulsLike` 使用偏近、偏低、旋转较慢的预设；中键建立硬锁后，相机平滑朝向目标锁定点。
@@ -399,6 +400,7 @@
 - `distanceScoreWeight`：`CameraForward` 模式下的距离评分权重
 - `showTargetIndicator`：是否显示软锁目标点
 - `targetIndicatorPrefab`：自定义目标点 prefab，空则自动生成简单小白点
+- `targetIndicatorMaterial`：自动生成目标点使用的显式基础材质；Windows Build 应配置该引用，避免仅靠运行时 Shader 查找时被构建剥离
 - `targetIndicatorOffset`：目标点相对计算位置的世界偏移
 - `targetIndicatorSurfaceOffset`：目标点从目标身体表面向外推出的距离
 - `targetIndicatorAlwaysOnTop`：自动生成目标点是否尽量优先于目标身体显示

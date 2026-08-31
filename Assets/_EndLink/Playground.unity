@@ -9359,6 +9359,7 @@ MonoBehaviour:
   distanceScoreWeight: 1
   showTargetIndicator: 1
   targetIndicatorPrefab: {fileID: 0}
+  targetIndicatorMaterial: {fileID: 2100000, guid: 5e13cc5aba104a04a6bf0f45cde60262, type: 2}
   targetIndicatorOffset: {x: 0, y: 0, z: 0}
   targetIndicatorSurfaceOffset: 0.04
   targetIndicatorAlwaysOnTop: 1
@@ -14269,7 +14270,7 @@ MonoBehaviour:
   m_Center: {x: 0, y: 2, z: 0}
   m_LayerMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 4294966271
   m_UseGeometry: 1
   m_DefaultArea: 0
   m_GenerateLinks: 0
@@ -14743,6 +14744,7 @@ MonoBehaviour:
   maxChaseRadius: 18
   lostTargetDelay: 0.75
   returnStopDistance: 0.2
+  stateIndicatorMaterialSource: {fileID: 2100000, guid: 5e13cc5aba104a04a6bf0f45cde60262, type: 2}
   logStateChanges: 0
   logSensorChanges: 0
   drawDetectionGizmo: 1
@@ -17116,6 +17118,7 @@ MonoBehaviour:
   maxChaseRadius: 18
   lostTargetDelay: 0.75
   returnStopDistance: 0.2
+  stateIndicatorMaterialSource: {fileID: 2100000, guid: 5e13cc5aba104a04a6bf0f45cde60262, type: 2}
   logStateChanges: 0
   logSensorChanges: 0
   drawDetectionGizmo: 1
@@ -30762,6 +30765,7 @@ MonoBehaviour:
   maxChaseRadius: 18
   lostTargetDelay: 0.75
   returnStopDistance: 0.2
+  stateIndicatorMaterialSource: {fileID: 2100000, guid: 5e13cc5aba104a04a6bf0f45cde60262, type: 2}
   logStateChanges: 0
   logSensorChanges: 0
   drawDetectionGizmo: 1

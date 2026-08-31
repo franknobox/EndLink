@@ -140,6 +140,11 @@ namespace EndLink.Enemies
         [SerializeField, Min(0f)]
         private float returnStopDistance = 0.2f;
 
+        [Header("状态提示")]
+        [Tooltip("头顶状态点使用的基础材质。正式构建建议显式指定，避免 Primitive 默认 Shader 被剥离。")]
+        [SerializeField]
+        private Material stateIndicatorMaterialSource;
+
         [Header("调试")]
         [Tooltip("是否打印敌人大状态切换日志。排查受击、进战和死亡流程时开启。")]
         [SerializeField]
@@ -969,7 +974,10 @@ namespace EndLink.Enemies
                 return;
             }
 
-            _stateIndicatorMaterial = CreateStateIndicatorMaterial(_stateIndicatorRenderer.sharedMaterial);
+            Material sourceMaterial = stateIndicatorMaterialSource != null
+                ? stateIndicatorMaterialSource
+                : _stateIndicatorRenderer.sharedMaterial;
+            _stateIndicatorMaterial = CreateStateIndicatorMaterial(sourceMaterial);
             _stateIndicatorRenderer.sharedMaterial = _stateIndicatorMaterial;
         }
 

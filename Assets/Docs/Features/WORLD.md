@@ -19,11 +19,13 @@
 - `BOX_Tree_LowPoly` 使用封闭低多边形块构成较圆润的树冠，`BOX_Tree_Conical` 使用三层封闭锥台构成简化锥形轮廓，`BOX_Tree_Conifer` 以分散针叶簇构成细节版针叶树，`BOX_Tree_Conifer_LowPoly` 则减少枝层并用细长方块表现叶片，便于与细节版直接比较。四者均不使用曲线或 Spline，树干与树冠保留独立材质槽且默认均为白色。
 - `BOX_Tower_Lattice` 保留原名称作为约 `41m` 高、直径约 `9m` 的大型塔体占位，由低面数圆柱底座和直立圆柱构成，不预设桁架、观景舱等具体结构，避免白盒阶段限制后续美术设计。
 - 模块默认使用白色材质、`Environment` Layer 和实体 `MeshCollider`，不附带玩法脚本；实体白盒 Mesh 保持外表面封闭且朝向外侧，避免从外部观察时出现空面。大型数据簇使用 URP 纯白 Lit 材质，不显示 ProBuilder 网格、刻度或文字。
+- `Background` Layer 固定使用索引 10，供不需要参与导航烘焙的远景建筑和背景体量使用；现有 `NavMeshSurface` 的采集 Layer Mask 已排除该层。`Ignore Raycast` 只表示不参与默认物理射线，不作为 NavMesh 分类使用。
 - 白盒关卡 Prefab 统一使用 `BOX_` 前缀，与普通玩法或视觉 Prefab 的 `PF_` 前缀区分。
 
 ### 相关物体 / 配置
 - Prefab：`Assets/_EndLink/World/Prefab/Blockout`。
 - Mesh：`Assets/Art/Environments/Blockout`。
+- 现代艺术街区净化迁移场景：`Assets/Art/Environments/ModernArt/LD_ModernArt_Env.unity`；仅保留同名原点根节点下的 `Env` 与 `Layout`，可与正式场景 Additive 打开后整组迁移。
 - 当前包含三种 `BOX_Rock`、三种 `BOX_DataCube`、三种大型 `BOX_DataCluster`、圆润/简化锥形/细节针叶/方块针叶四种树木、`BOX_Tower_Lattice`、`BOX_Pillar_Narrow`、`BOX_Pillar_Thick`、`BOX_Boundary_X`、规则/不规则墙体、门洞、楼梯、坡道、窄桥、垂直爬梯和不规则天花板。
 - 楼梯单级高度为 `0.25m`，用于基础 CharacterController 通行验证；垂直爬梯目前只有白盒外形和碰撞，不包含攀爬逻辑。
 

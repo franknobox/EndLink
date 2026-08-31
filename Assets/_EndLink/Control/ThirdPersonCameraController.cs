@@ -148,9 +148,25 @@ namespace EndLink.Core
         private float _fieldOfViewSmoothVelocity;
         private Vector3 _currentShoulderOffset;
         private Vector3 _shoulderOffsetSmoothVelocity;
+        private Vector3 _additiveTargetWorldOffset;
+        private Vector3 _additiveShoulderOffset;
 
         /// <summary>当前相机跟随的玩家根节点，供视角模式协调器解析玩家组件。</summary>
         public Transform FollowTarget => followTarget;
+
+        /// <summary>Applies a runtime composition offset without changing the saved view preset.</summary>
+        public void SetAdditiveViewOffset(Vector3 targetOffset, Vector3 shoulderOffsetDelta)
+        {
+            _additiveTargetWorldOffset = targetOffset;
+            _additiveShoulderOffset = shoulderOffsetDelta;
+        }
+
+        /// <summary>Clears runtime composition offsets such as locomotion bob.</summary>
+        public void ClearAdditiveViewOffset()
+        {
+            _additiveTargetWorldOffset = Vector3.zero;
+            _additiveShoulderOffset = Vector3.zero;
+        }
 
         /// <summary>读取当前自由相机参数，用于保存高速模式基准。</summary>
         public PlayerViewSettings CaptureViewSettings()
@@ -396,6 +412,8 @@ namespace EndLink.Core
 
         private void OnDisable()
         {
+            ClearAdditiveViewOffset();
+
             if (!lockCursorOnEnable)
             {
                 return;
@@ -444,7 +462,7 @@ namespace EndLink.Core
 
             // CameraTarget 跟随角色根节点位置，并抬高到胸口/头部之间。
             // 相机旋转只作用在 CameraTarget 上，不直接旋转玩家本体。
-            cameraTarget.position = followTarget.position + targetWorldOffset;
+            cameraTarget.position = followTarget.position + targetWorldOffset + _additiveTargetWorldOffset;
         }
 
         private void UpdateRotation(float deltaTime)
@@ -609,7 +627,7 @@ namespace EndLink.Core
                 _cinemachineCamera.Target.CustomLookAtTarget = false;
             }
 
-            _thirdPersonFollow.ShoulderOffset = _currentShoulderOffset;
+            _thirdPersonFollow.ShoulderOffset = _currentShoulderOffset + _additiveShoulderOffset;
             _thirdPersonFollow.VerticalArmLength = verticalArmLength;
             _thirdPersonFollow.CameraSide = cameraSide;
             _thirdPersonFollow.Damping = damping;

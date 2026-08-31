@@ -78,6 +78,12 @@ namespace EndLink.Core
         /// <summary>当前帧玩家是否正在冲刺移动。</summary>
         public bool IsSprinting => _isSprinting;
 
+        /// <summary>Current smoothed planar velocity in world space.</summary>
+        public Vector3 PlanarVelocity => _planarVelocity;
+
+        /// <summary>Current smoothed planar speed in meters per second.</summary>
+        public float PlanarSpeed => _planarVelocity.magnitude;
+
         /// <summary>当前 CharacterController 是否认为玩家贴地。</summary>
         public bool IsGrounded => _characterController != null && _characterController.isGrounded;
 

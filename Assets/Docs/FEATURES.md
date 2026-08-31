@@ -31,11 +31,11 @@
 | --- | --- | --- |
 | [新版 Input System 输入读取](Features/PLAYER.md#feature-input-system) | 已完成三形态输入版 | 负责读取玩家移动、攻击、防御、瞄准、目标锁定、武器形态切换和 Look 等输入；手柄 `LT` 可快捷切入 B 形态瞄准，攻击/格挡为 `RB / LB`。 |
 | [玩家 CharacterController 移动](Features/PLAYER.md#feature-player-movement) | 已完成锁定移动版 | 负责玩家平滑移动、基础跳跃、重力贴地、转向、目标相对移动，以及战斗击退的短时衰减后退。 |
-| [第三人称视角模式](Features/PLAYER.md#feature-third-person-camera) | 已完成锁定操控版 | 独立保存高速自由与魂类近距两套镜头预设；魂类硬锁会统一驱动镜头、玩家朝向、锁定移动和定向闪避。 |
+| [第三人称视角模式](Features/PLAYER.md#feature-third-person-camera) | 已完成步态反馈版 | 独立保存高速自由与魂类近距两套镜头预设；魂类硬锁统一驱动锁定操控，并支持不改写预设的可调移动步态晃动。 |
 | [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成动作取消策略版 | 负责八个玩家状态，并承接普攻缓冲、动作锁、取消窗口、普攻/技能派生、闪避/格挡取消和强制打断。 |
 | [玩家 ActCombat 基础](Features/PLAYER.md#feature-player-act-combat) | 已完成格挡反馈版 | 提供三段普攻连段、无效下一段超时退出、攻击踏步与软锁追踪，以及带白模反馈的正面格挡和短窗口弹反。 |
 | [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成动画器骨架版 | 同步玩家状态、移动和 Action 参数，提供 `Reaction > Action > Locomotion` 统一动画器结构，并转发动画判定、取消窗口与动作结束事件。 |
-| [玩家目标选择](Features/PLAYER.md#feature-player-targeting) | 已完成方向切换版 | 自动软目标按固定间隔刷新；魂类视角可固定、解除，并通过鼠标横向滑动或手柄右摇杆左右推动切换硬锁目标。 |
+| [玩家目标选择](Features/PLAYER.md#feature-player-targeting) | 已完成构建材质版 | 自动软目标按固定间隔刷新；魂类视角支持方向切换硬锁目标，目标指示器使用显式材质避免构建 Shader 剥离。 |
 | [玩家战斗驱动](Features/PLAYER.md#feature-player-combat-driver) | 已完成多判定窗口版 | 由状态机调用，支持数据或动画事件驱动判定，并允许单个动画动作重复开启独立 Hitbox 窗口。 |
 | [当前架构边界](Features/PLAYER.md#feature-architecture-boundary) | 已建立初版约定 | 初步明确输入读取、玩家移动、相机控制、状态机、战斗驱动、命中检测之间的职责边界。 |
 
@@ -74,7 +74,7 @@
 | [敌人身份与生命目标](Features/ENEMIES.md#feature-enemy-identity-health) | 已完成分类基础版 | 提供正式敌人根身份、根类别、战斗定位、生命受击、视觉受击反馈、死亡事件、目标有效性、死亡退场、战斗标签容器和基础调试显示。 |
 | [敌人韧性、平衡与失衡](Features/ENEMIES.md#feature-enemy-balance-stagger) | 已完成第一版 | 用隐性韧性判断单次命中是否触发受击，以可恢复平衡值驱动独立失衡状态，并向后续处决流程暴露资格和事件。 |
 | [敌人 Animator 桥接](Features/ENEMIES.md#feature-enemy-animator) | 已完成受控根运动版 | 把敌人移动、大状态和动作参数同步给 Animator，并支持动画关键帧驱动判定、动作结束和按动作应用水平根位移。 |
-| [敌人感知与大状态机](Features/ENEMIES.md#feature-enemy-state-sensor) | 已完成失衡接线版 | 提供 Idle、Alert、Combat、Hit、Stagger、Return、Dead 外层状态，以及自动感知、受击接战、脱战归位和目标所有权管理。 |
+| [敌人感知与大状态机](Features/ENEMIES.md#feature-enemy-state-sensor) | 已完成状态提示材质版 | 提供 Idle、Alert、Combat、Hit、Stagger、Return、Dead 外层状态，以及自动感知、受击接战、脱战归位和使用显式材质的状态提示。 |
 | [敌人基础战斗行为](Features/ENEMIES.md#feature-enemy-combat-behavior) | 已完成近战/远程第一版 | 根据敌人战斗定位选用近战或远程七阶段行为；远程单位会维持距离带、检查攻击视线、过近后撤并在受阻或攻击后侧向重新选位。 |
 | [敌人围攻协调](Features/ENEMIES.md#feature-enemy-combat-coordination) | 已完成观察移动版 | 通过区域协调器统一管理敌人归属、攻击评分、同时攻击数量、许可预留、动态软站位和等待/攻击准备机动。 |
 | [敌人移动与战斗能力](Features/ENEMIES.md#feature-enemy-motor-combat) | 已完成多段动作版 | 提供地面移动、NavMesh 追击、转向、重力、碰撞推挤、衰减击退、普攻/技能选择和单 Action 多段判定。 |
@@ -83,7 +83,7 @@
 
 | 功能名 | 当前状态 | 内容说明 |
 | --- | --- | --- |
-| [白盒关卡模块库](Features/WORLD.md#feature-blockout-module-library) | 已完成通行与环境模块扩展版 | 提供统一使用 `BOX_` 前缀、带封闭实体网格的石块、树木、大型塔体占位、数据体块、窄桥及常用建筑结构 Prefab。 |
+| [白盒关卡模块库](Features/WORLD.md#feature-blockout-module-library) | 已完成环境迁移版 | 提供 `BOX_` 白盒模块、现代艺术街区净化迁移场景，以及不参与 NavMesh 烘焙的 `Background` Layer 约定。 |
 | [武器物体交互](Features/WORLD.md#feature-weapon-object-interaction) | 已完成场景接线版 | 通过通用 `ObjInteractable` 接收 A/B/C 武器命中，统一驱动 `IObjFunction`，并在功能生效时提供闪白反馈。 |
 | [通用出生点与检查点](Features/WORLD.md#feature-world-spawn-checkpoint) | 已完成坠落死亡版 | 提供世界出生锚点、开场出生、检查点休整、玩家死亡复活和默认 `Y=-50` 坠落出界判定，并为未来存档与敌人生成保留稳定位置身份。 |
 | [两层移动电梯](Features/WORLD.md#feature-elevator-platform) | 已完成武器交互版 | 提供由交互子物体触发的上下层往返平台，通过运动学 Rigidbody 驱动物理实体，并为 CharacterController 乘客补偿平台三维位移。 |

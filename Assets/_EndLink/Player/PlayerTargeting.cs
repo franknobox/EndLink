@@ -82,6 +82,10 @@ namespace EndLink.Combat
         [SerializeField]
         private GameObject targetIndicatorPrefab;
 
+        [Tooltip("自动生成目标点使用的基础材质。正式构建建议显式指定，避免运行时查找的 Shader 被剥离。")]
+        [SerializeField]
+        private Material targetIndicatorMaterial;
+
         [Tooltip("目标点相对目标包围盒中心的世界偏移。默认在身体中心。")]
         [SerializeField]
         private Vector3 targetIndicatorOffset = Vector3.zero;
@@ -651,6 +655,14 @@ namespace EndLink.Combat
 
         private Material CreateRuntimeIndicatorMaterial()
         {
+            if (targetIndicatorMaterial != null)
+            {
+                Material configuredMaterial = new(targetIndicatorMaterial);
+                ApplyTargetIndicatorColor(configuredMaterial);
+                ConfigureIndicatorMaterialDepth(configuredMaterial);
+                return configuredMaterial;
+            }
+
             Shader shader = Shader.Find("Universal Render Pipeline/Unlit");
 
             if (shader == null)
@@ -670,6 +682,17 @@ namespace EndLink.Combat
             }
 
             Material material = new(shader);
+            ApplyTargetIndicatorColor(material);
+            ConfigureIndicatorMaterialDepth(material);
+            return material;
+        }
+
+        private void ApplyTargetIndicatorColor(Material material)
+        {
+            if (material == null)
+            {
+                return;
+            }
 
             if (material.HasProperty("_BaseColor"))
             {
@@ -680,8 +703,6 @@ namespace EndLink.Combat
                 material.SetColor("_Color", targetIndicatorColor);
             }
 
-            ConfigureIndicatorMaterialDepth(material);
-            return material;
         }
 
         private void ConfigureIndicatorMaterialDepth(Material material)
