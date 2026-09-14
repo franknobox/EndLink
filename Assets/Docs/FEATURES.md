@@ -34,7 +34,7 @@
 | [第三人称视角模式](Features/PLAYER.md#feature-third-person-camera) | 已完成步态反馈版 | 独立保存高速自由与魂类近距两套镜头预设；魂类硬锁统一驱动锁定操控，并支持不改写预设的可调移动步态晃动。 |
 | [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成动作取消策略版 | 负责八个玩家状态，并承接普攻缓冲、动作锁、取消窗口、普攻/技能派生、闪避/格挡取消和强制打断。 |
 | [玩家 ActCombat 基础](Features/PLAYER.md#feature-player-act-combat) | 已完成格挡反馈版 | 提供三段普攻连段、无效下一段超时退出、攻击踏步与软锁追踪，以及带白模反馈的正面格挡和短窗口弹反。 |
-| [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成动画器骨架版 | 同步玩家状态、移动和 Action 参数，提供 `Reaction > Action > Locomotion` 统一动画器结构，并转发动画判定、取消窗口与动作结束事件。 |
+| [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成动画器骨架版 | 同步玩家状态、移动和 Action 参数，提供 `Reaction > Action > Locomotion` 统一动画器结构，并转发动画判定、取消窗口与动作结束事件。Zoey 已提供初版 Humanoid 绑定模型、待机与小跑循环，以及独立 Unity Cloth 防护披肩测试版，暂未接入场景。 |
 | [玩家目标选择](Features/PLAYER.md#feature-player-targeting) | 已完成构建材质版 | 自动软目标按固定间隔刷新；魂类视角支持方向切换硬锁目标，目标指示器使用显式材质避免构建 Shader 剥离。 |
 | [玩家战斗驱动](Features/PLAYER.md#feature-player-combat-driver) | 已完成多判定窗口版 | 由状态机调用，支持数据或动画事件驱动判定，并允许单个动画动作重复开启独立 Hitbox 窗口。 |
 | [当前架构边界](Features/PLAYER.md#feature-architecture-boundary) | 已建立初版约定 | 初步明确输入读取、玩家移动、相机控制、状态机、战斗驱动、命中检测之间的职责边界。 |

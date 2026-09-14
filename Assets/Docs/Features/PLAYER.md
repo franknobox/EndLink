@@ -312,6 +312,34 @@
 - 动画优先级固定为 `Reaction > Action > Locomotion`：死亡和受击可以抢占动作，攻击、技能、闪避和格挡可以抢占待机与移动。
 - 第一版状态均为空 Motion 骨架，后续可直接填入正式 Clip，并继续增加锁定移动、失衡、击倒和处决等状态。
 
+Zoey 初版绑定资源：
+- Blender 源文件：`Tools/Zoey_Rig.blend`。包含全身、手指和披风骨骼及蒙皮，共 65 根骨骼；打开后在 Pose Mode 旋转骨骼，使用 `Alt+R` 清除旋转。
+- Unity 模型：`Assets/Art/Characters/Zoey_Body_Rig.fbx`。基于 `Zoey_Body_v02.obj`，沿用 `MAT_Zoey_Test`，配置为 Humanoid，自建 Avatar；52 个 Humanoid 骨骼映射通过有效性验证。
+- 独立视觉预制体：`Assets/Art/Characters/PF_Zoey_Rig.prefab`。保留 Animator 与 Avatar，不绑定 Controller，关闭 Apply Root Motion，不包含玩法组件。原 `PF_Zoey_test` 和场景保持不变。
+- 静止模型高度约 1.77817 米，以 Demo_Blockout 中调校后的旧视觉体为参照；导出后世界空间蒙皮高度误差小于 0.001 米。
+- 当前仅完成基础 FK 绑定，没有动画 Clip、IK 控制器、面部表情或布料模拟。披风骨骼需手动调姿势；后续制作大幅战斗动作时需继续修整肩、髋、手指和披风权重及穿插。
+- `Tools/zoey_bind.py` 是该版 OBJ 专用的可重复生成脚本，会覆盖上述 Blender 源文件和 FBX。手工调权重后不要直接重跑；模型拓扑变化时必须重新审查分件映射。
+- 本轮验证包含 Blender 抬臂、屈膝、转身、握拳与披风测试姿势，权重归一化及每顶点最多四根骨骼检查，以及 Unity Avatar 有效性、导出尺寸和实际蒙皮屈膝变形检查；未接入正式动画验证。
+
+Zoey 基础动画初版：
+- `Tools/Zoey_Motion.blend` 保留 `Idle`、`Walk` 两个 Action；原 `Zoey_Rig.blend` 和绑定模型不覆盖。打开动画源文件，在 Action Editor 切换动作；待机播放范围 1–121 帧，移动 1–19 帧，均为 30 FPS。
+- `Assets/Art/Characters/ANI_Zoey_Idle.fbx`：`Idle`，4 秒循环，放松站姿，双脚略微错开、重心偏移、非对称垂臂和轻微呼吸，减少持续屈膝。
+- `Assets/Art/Characters/ANI_Zoey_Walk.fbx`：保留 `Walk` 名称，现为 0.6 秒轻快小跑循环，对应 Demo_Blockout 玩家普通移动 3.5 米/秒的节奏。包含交替迈步、摆臂、胸胯反向转动和重心转移；脚步按两段骨骼求解后烘焙，不依赖运行时 IK。
+- 两个 FBX 使用 Humanoid、Loop Time、Loop Pose；根旋转、Y 和 XZ 位移均 Bake Into Pose，不驱动游戏角色位移。FBX 包含同版蒙皮，便于独立预览，实际使用只引用其中 Clip 即可。
+- 在 Unity 选中对应 FBX，进入 Animation 页签，展开底部预览后播放；Clip 名没有 `ANI_` 前缀。尚未替换 `AC_Player` 的 Motion 或场景视觉体。
+- 当前为基础测试动作；移动支撑段脚底后移约 0.63 米 / 0.18 秒，以 3.5 米/秒为制作参考。接入时仍需用实际地面速度、Avatar 重定向效果检查滑步；5 米/秒冲刺尚无独立动作。披风仍为骨骼近似摆动，没有物理布料。
+- Blender 验证所有采样顶点为有限值、首尾蒙皮姿势一致；Unity 验证两个 Avatar、Humanoid Clip、循环标记及在 `PF_Zoey_Rig` 上的 Playable 播放。未进行完整玩家控制与正式战斗动作验证。
+- `Tools/zoey_motion.py` 可重新生成这两个动作和动画源文件；会覆盖动画文件，手动精修后勿直接重跑。
+
+Zoey 物理披肩测试版：
+- `Assets/Art/Characters/PF_Zoey_Cloth.prefab` 是独立比较版本，不替换场景或 `PF_Zoey_Rig`。模型为 `Zoey_Body_Cloth.fbx`；`Tools/Zoey_Cloth.blend` 仅保存拆分后的网格和绑定，物理模拟在 Unity 中运行。
+- `Zoey_Cape` 为独立蒙皮网格，保留 716 个源顶点。披肩参考姿态跟随 UpperChest，取消原披风骨链的蒙皮权重，避免物理与旧披风动画叠加；身体和硬质装饰保持原绑定。
+- 使用 Unity Cloth：Stretching Stiffness 0.95、Bending Stiffness 0.65、Damping 0.55、Friction 0.35、Solver Frequency 120；启用 Gravity、Tethers 和 Continuous Collision。参数是偏挺括防护雨衣的视觉起点，不代表真实高分子材料测量值。
+- 肩领及胸前固定区 Max Distance 为 0，其余向下渐变至最大 0.18 米；World Velocity Scale 0.12、World Acceleration Scale 0.04，不添加随机风力。胸背、双臂和双大腿共配置七个专用 Capsule Collider，使用 Ignore Raycast 和 Trigger，避免成为额外实体碰撞壳。
+- 测试 Animator 为 `Assets/_EndLink/Player/Animate/AC_Zoey_ClothTest.controller`，默认 Idle；运行时将 Animator 参数 `MoveSpeed` 设为大于 0.1 可切到 Walk，设为 0 返回 Idle。这个控制器仅用于布料预览，不替代正式 `AC_Player`。
+- 查看物理效果需把预制体拖入测试场景后进入 Play Mode；FBX Animation 预览与 Blender 源文件不包含 Unity Cloth 模拟。当前未处理复活传送、极端动作、自碰撞与环境碰撞，不应直接视为正式角色接入完成。
+- 已进行独立空场景 Play Mode 冒烟验证：待机转移动、根物体平移和转向，检查模拟顶点为有限值且有运动，并渲染运行截图。尚未进行长时间压力测试和实际战斗验证。
+
 对应脚本：
 - `Assets/_EndLink/Control/PlayerAnimatorDriver.cs`
 - `Assets/_EndLink/Control/Animation/CombatAnimatorParams.cs`
