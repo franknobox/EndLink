@@ -33,6 +33,56 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 
 </details>
 
+<a id="feature-playtest-controls"></a>
+
+### Feature：Playtest 快捷控制
+
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- 通过 `EndLink > Debug > Playtest Controls` 打开，仅在 Play Mode 中允许执行操作。
+- 玩家区域显示当前状态、生命和检查点，支持回满生命、清空战斗标签、清除动作与闪避冷却、重置战斗状态和立即返回当前检查点。
+- 武器区域显示当前 A/B/C 形态，并支持运行时解锁 B、C 形态。
+- 敌人区域统计正式敌人与死亡数量，支持批量恢复生命、平衡、动作冷却、状态和战斗标签；第一版保留敌人当前位置，不负责传送回出生点。
+- 提供玩家和敌人的快速选中，以及场景引用刷新入口。
+- 所有控制只修改当前 Play Mode 运行状态，不保存场景、不写回 Prefab，也不维护第二套配置数据。
+
+对应脚本：
+- `Assets/_EndLink/Editor/PlaytestControlsWindow.cs`
+
+相关运行时接口：
+- `PlayerCombatDriver.ClearCooldowns()`
+- `PlayerStateMachine.ClearCooldowns()`
+
+</details>
+
+<a id="feature-scene-tuning"></a>
+
+### Feature：场景联调窗口
+
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- 通过 `EndLink > Debug > Scene Tuning` 打开，按玩家、镜头、战斗和敌人四个页面集中展示当前活动场景的高频联调参数。
+- 所有控件直接读写来源组件的真实序列化字段，不保存中间副本；每组会标明来源组件，并支持快速选中定位。
+- 玩家页覆盖移动、冲刺、转向、重力、跳跃、CharacterController、攻击移动、输入缓冲、取消许可、闪避和受击参数。
+- 镜头页覆盖 Fast Action / Souls Like 两套完整预设，以及射击瞄准、硬锁、步态晃动和目标切换参数。
+- 战斗页覆盖玩家攻击力与击退承受、连段窗口、攻击踏步、格挡弹反、射击检测和场景反馈通道。
+- 敌人页可以指定单个 `EnemyActor`，调整生命、Balance、移动、感知、战斗距离、动作循环和动作资产，并可调整场景围攻协调器。
+- Edit Mode 修改支持 Undo，并将真实来源场景标记为已修改；Play Mode 中可以实时调参，但退出播放后仍按 Unity 默认行为还原。
+- Play Mode 中只记录通过本窗口修改的白名单字段；镜头预设等嵌套结构会拆分为具体字段，不保存整个组件快照或运行时状态。
+- 退出 Play Mode 后仅在存在有效差异时弹出提醒，可查看并应用、全部放弃或稍后处理；未处理数量会显示在窗口工具栏。
+- 待应用面板显示来源对象、组件、参数及修改前后值，支持逐项勾选、定位、应用和放弃；应用操作支持 Undo 并标记场景为已修改。
+- 差异通过 `SessionState` 和 `GlobalObjectId` 暂存在当前 Unity Editor 会话中，不创建配置资产；再次进入 Play Mode 前会提醒尚未处理的记录。
+
+对应脚本：
+- `Assets/_EndLink/Editor/SceneTuningWindow.cs`
+- `Assets/_EndLink/Editor/SceneTuningChangeTracker.cs`
+
+</details>
+
 <a id="feature-probuilder-mesh-repair"></a>
 
 ### Feature：ProBuilder 网格修补

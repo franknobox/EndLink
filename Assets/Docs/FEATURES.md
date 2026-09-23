@@ -34,7 +34,7 @@
 | [第三人称视角模式](Features/PLAYER.md#feature-third-person-camera) | 已完成步态反馈版 | 独立保存高速自由与魂类近距两套镜头预设；魂类硬锁统一驱动锁定操控，并支持不改写预设的可调移动步态晃动。 |
 | [玩家有限状态机](Features/PLAYER.md#feature-player-state-machine) | 已完成动作取消策略版 | 负责八个玩家状态，并承接普攻缓冲、动作锁、取消窗口、普攻/技能派生、闪避/格挡取消和强制打断。 |
 | [玩家 ActCombat 基础](Features/PLAYER.md#feature-player-act-combat) | 已完成格挡反馈版 | 提供三段普攻连段、无效下一段超时退出、攻击踏步与软锁追踪，以及带白模反馈的正面格挡和短窗口弹反。 |
-| [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成动画器骨架版 | 同步玩家状态、移动和 Action 参数，提供 `Reaction > Action > Locomotion` 统一动画器结构，并转发动画判定、取消窗口与动作结束事件。Zoey 已提供初版 Humanoid 绑定模型、待机与小跑循环，以及独立 Unity Cloth 防护披肩测试版，暂未接入场景。 |
+| [玩家 Animator 桥接](Features/PLAYER.md#feature-player-animator) | 已完成可插拔视觉版 | 同步玩家状态、移动和 Action 参数，提供 `Reaction > Action > Locomotion` 统一动画器结构；视觉 Prefab 可通过 `PlayerVisualAnimatorBridge` 放入玩家 `Visuals` 后自动接线。Zoey 已提供绑定、待机、小跑和 Unity Cloth 防护披肩测试版。 |
 | [玩家目标选择](Features/PLAYER.md#feature-player-targeting) | 已完成构建材质版 | 自动软目标按固定间隔刷新；魂类视角支持方向切换硬锁目标，目标指示器使用显式材质避免构建 Shader 剥离。 |
 | [玩家战斗驱动](Features/PLAYER.md#feature-player-combat-driver) | 已完成多判定窗口版 | 由状态机调用，支持数据或动画事件驱动判定，并允许单个动画动作重复开启独立 Hitbox 窗口。 |
 | [当前架构边界](Features/PLAYER.md#feature-architecture-boundary) | 已建立初版约定 | 初步明确输入读取、玩家移动、相机控制、状态机、战斗驱动、命中检测之间的职责边界。 |
@@ -106,3 +106,5 @@
 | [场景配置体检](Features/TOOLS.md#feature-scene-doctor) | 已完成白盒规则版 | 扫描当前活动场景中的缺失引用、关键接线、NavMesh、BOX_ 子节点 Override、白盒网格缺失/错位碰撞、场景归类和 Layer/Tag，支持筛选、定位与复制报告。 |
 | [ProBuilder 网格修补](Features/TOOLS.md#feature-probuilder-mesh-repair) | 已完成面朝向与封口第一版 | 默认查询并翻转与相邻面方向不一致的疑似反向面；边界封口作为独立手动模式，支持封口、双环桥接、Undo 和碰撞刷新。 |
 | [输入绑定工具](Features/TOOLS.md#feature-input-binding-tool) | 已完成双页面版 | 使用接近游戏键位设置的键鼠/手柄双页面展示默认绑定，支持点击槽位监听修改、清除、冲突检查、Undo 和手动应用。 |
+| [Playtest 快捷控制](Features/TOOLS.md#feature-playtest-controls) | 已完成第一版 | 在 Play Mode 中集中恢复玩家、清理标签与冷却、返回检查点、解锁武器形态并批量重置敌人；所有操作只影响当前运行。 |
+| [场景联调窗口](Features/TOOLS.md#feature-scene-tuning) | 已完成运行时差异版 | 按玩家、镜头、战斗和敌人集中编辑高频参数；支持 Play Mode 字段级差异记录、退出提醒、逐项选择并通过 Undo 应用回场景。 |

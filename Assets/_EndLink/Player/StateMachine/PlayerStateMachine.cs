@@ -421,6 +421,16 @@ namespace EndLink.Core
         }
 
         /// <summary>
+        /// 清除玩家动作与闪避冷却，但不改变当前状态或中断正在执行的动作。
+        /// 供 Playtest、训练场和后续关卡重置流程使用。
+        /// </summary>
+        public void ClearCooldowns()
+        {
+            _combatDriver?.ClearCooldowns();
+            _nextDodgeAllowedTime = Time.time;
+        }
+
+        /// <summary>
         /// 尝试消费仍在有效期内的普攻输入。
         /// 只有动作真正可执行时才会清空缓冲，短暂冷却不会提前吃掉输入。
         /// </summary>

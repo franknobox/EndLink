@@ -243,6 +243,16 @@ namespace EndLink.Combat
         }
 
         /// <summary>
+        /// 清除所有动作冷却记录。
+        /// 供复活、Playtest 调试和后续训练场重置使用；不会中断当前正在执行的动作。
+        /// </summary>
+        public void ClearCooldowns()
+        {
+            _nextReadyTimes.Clear();
+            _lastExecutedAction = null;
+        }
+
+        /// <summary>
         /// 取消尚未完成的玩家动作时序。
         /// 受击、死亡或主动退出攻击状态时调用，避免前摇中的 Hitbox 在状态结束后继续生成。
         /// </summary>

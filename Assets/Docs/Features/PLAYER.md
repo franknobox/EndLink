@@ -305,6 +305,8 @@
 - 参数名都可以在 Inspector 修改；Animator Controller 不存在对应参数时会安全跳过。
 - `CombatAnimatorParams` 定义后续玩家、队友和敌人可共用的 Animator 参数名和 Hash，不绑定具体连段或动画状态名。
 - `PlayerAnimatorDriver` 会在 Animator 同物体上自动确保存在 `CombatAnimationEventReceiver`，无需给每个视觉模型重复手动挂载。
+- 自带 Animator Controller 的玩家视觉 Prefab 可在自身根节点挂 `PlayerVisualAnimatorBridge`，随后直接放入 `Player_Root/Visuals`。组件会自动寻找 Prefab 内 Animator 及父级玩家组件；父级已有 `PlayerAnimatorDriver` 时把新 Animator 注册给它，否则自行同步移动、状态、武器形态和 Action 参数。
+- 可插拔视觉 Controller 按需声明 `CombatAnimatorParams` 中的参数；桥接只写入实际存在的参数，因此仅有 `MoveSpeed` 的测试 Controller 也能工作。攻击、受击、闪避和死亡动画需要对应 Controller 提供参数、状态和 Motion。
 - `CombatAnimationEventReceiver` 把 Clip 上的 `OnActionHitboxStart`、`OnActionHitboxEnd`、`OnActionCanCancel`、`OnActionEnd` 转发给角色 Driver。
 - `ICombatRootMotionReceiver` 预留 Root Motion 位移接入口，后续可让动画驱动位移再交给角色移动层处理。
 - `PlayerStateMachine` 已实现 `ICombatActionLockReceiver`，处理动作开始锁定、取消窗口、自然结束和外部打断。
@@ -336,12 +338,13 @@ Zoey 物理披肩测试版：
 - `Zoey_Cape` 为独立蒙皮网格，保留 716 个源顶点。披肩参考姿态跟随 UpperChest，取消原披风骨链的蒙皮权重，避免物理与旧披风动画叠加；身体和硬质装饰保持原绑定。
 - 使用 Unity Cloth：Stretching Stiffness 0.95、Bending Stiffness 0.65、Damping 0.55、Friction 0.35、Solver Frequency 120；启用 Gravity、Tethers 和 Continuous Collision。参数是偏挺括防护雨衣的视觉起点，不代表真实高分子材料测量值。
 - 肩领及胸前固定区 Max Distance 为 0，其余向下渐变至最大 0.18 米；World Velocity Scale 0.12、World Acceleration Scale 0.04，不添加随机风力。胸背、双臂和双大腿共配置七个专用 Capsule Collider，使用 Ignore Raycast 和 Trigger，避免成为额外实体碰撞壳。
-- 测试 Animator 为 `Assets/_EndLink/Player/Animate/AC_Zoey_ClothTest.controller`，默认 Idle；运行时将 Animator 参数 `MoveSpeed` 设为大于 0.1 可切到 Walk，设为 0 返回 Idle。这个控制器仅用于布料预览，不替代正式 `AC_Player`。
+- 测试 Animator 为 `Assets/_EndLink/Player/Animate/AC_Zoey_ClothTest.controller`，默认 Idle；`PF_Zoey_Cloth` 根节点已挂 `PlayerVisualAnimatorBridge`，放入 `Player_Root/Visuals` 后会根据父级 `CharacterController.velocity` 自动设置 `MoveSpeed`，大于 0.1 切到 Walk，回到 0 切回 Idle。这个控制器当前只包含移动表现。
 - 查看物理效果需把预制体拖入测试场景后进入 Play Mode；FBX Animation 预览与 Blender 源文件不包含 Unity Cloth 模拟。当前未处理复活传送、极端动作、自碰撞与环境碰撞，不应直接视为正式角色接入完成。
 - 已进行独立空场景 Play Mode 冒烟验证：待机转移动、根物体平移和转向，检查模拟顶点为有限值且有运动，并渲染运行截图。尚未进行长时间压力测试和实际战斗验证。
 
 对应脚本：
 - `Assets/_EndLink/Control/PlayerAnimatorDriver.cs`
+- `Assets/_EndLink/Control/PlayerVisualAnimatorBridge.cs`
 - `Assets/_EndLink/Control/Animation/CombatAnimatorParams.cs`
 - `Assets/_EndLink/Control/Animation/CombatAnimationEventReceiver.cs`
 - `Assets/_EndLink/Control/Animation/ICombatAnimationEventListener.cs`
@@ -455,6 +458,7 @@ Zoey 物理披肩测试版：
 - 当前执行内容是生成指定 Hitbox prefab；有自动软锁目标时先让玩家正面转向目标，判定生成瞬间读取角色实时正前方，使前摇期间的跟随转向能同步影响 Hitbox 朝向。
 - 不同动作按各自 `CombatActionDefinition` 独立记录冷却。
 - 暴露只读动作冷却剩余时间、归一化冷却值，以及指定动作的冷却查询，供战斗 UI 区分普攻、技能和连携槽。
+- 提供动作与闪避冷却清理入口，供 Playtest、训练场和复活扩展统一重置运行时状态。
 - 实现 `ICombatActionExecutor`，状态机通过统一 `CanExecute` / `TryExecute` 入口检查和执行动作。
 - 支持通过动作资产中的 `Hitbox Spawn Distance` 和 `Hitbox Spawn Height` 调整 Hitbox 生成位置。
 - 生成 Hitbox 后会调用 `HitboxBase.Initialize(gameObject)` 传入攻击者。
