@@ -279,6 +279,12 @@ namespace EndLink.Editor
                         Selection.activeObject = asset;
                         EditorGUIUtility.PingObject(asset);
                     }
+
+                    if (asset is CombatActionDefinition action
+                        && GUILayout.Button("校准", GUILayout.Width(56f)))
+                    {
+                        ActionAnimationCalibrationWindow.Open(action);
+                    }
                 }
             }
         }

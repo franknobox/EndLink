@@ -83,6 +83,31 @@ Editor 工具、数据创建工具和调试监视窗口详情。
 
 </details>
 
+<a id="feature-action-animation-calibration"></a>
+
+### Feature：Action 与动画校准
+
+<details>
+<summary>展开详情</summary>
+
+功能说明：
+- 通过 `EndLink > Combat > Action Animation Calibration` 打开，也可以从 Combat Data Tool 的 Action 列表点击“校准”直接带入动作资产。
+- 校准上下文由 `CombatActionDefinition`、`AnimationClip`、`AnimatorController` 和具体 Animator State 组成；可从 Project 或场景选择读取，并按 Clip、ActionId 或 ActionType 自动匹配 State。
+- 对比 Action 的前摇、有效、后摇和安全超时总时长与 State 播放速度修正后的 Clip 时长；State 使用动态速度参数时会明确提示无法静态确定最终时长。
+- 对 Animation Event 检查 `OnActionHitboxStart`、`OnActionHitboxEnd`、`OnActionCanCancel` 和 `OnActionEnd` 的缺失、范围和顺序；支持识别单 Action 多判定窗口，并报告未闭合或 ActionEnd 后仍有事件的情况。
+- 时间轴同时显示 Action 数据时序、Clip 长度和动画事件标记，事件列表可选择是否包含非战斗事件。
+- Animator 关联检查会扫描嵌套 State Machine、直接 Clip 和 Blend Tree，检查所选 State 的 Motion、`ActionTrigger` 入口以及 ActionId 精确映射或 ActionType 通用映射；仅按 ActionType 关联时会提示后续同类动作共用状态的风险。
+- Scene View 空间预览以指定动作根节点为基准，显示有效攻击距离、Hitbox 生成点与 Prefab Collider；Projectile 会显示最大飞行路径，启用 Root Motion 的动作会按 Clip `averageSpeed × length × scale` 显示水平位移估算。
+- 第一版只执行诊断和可视化，不自动添加 Animation Event、不修改 FBX Importer，也不重写 Animator Transition，避免工具根据错误上下文批量破坏动画资产。
+- Root Motion 轨迹当前是平均速度估算，不是逐帧采样；Capsule 与 MeshCollider 使用边界近似显示，后续需要动作姿态逐帧预览时再接入隔离的动画采样对象。
+
+对应脚本：
+- `Assets/_EndLink/Editor/ActionAnimationCalibrationWindow.cs`
+- `Assets/_EndLink/Editor/ActionAnimationCalibrationAnalyzer.cs`
+- `Assets/_EndLink/Editor/CombatDataToolWindow.cs`
+
+</details>
+
 <a id="feature-probuilder-mesh-repair"></a>
 
 ### Feature：ProBuilder 网格修补

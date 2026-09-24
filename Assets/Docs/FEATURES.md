@@ -108,3 +108,4 @@
 | [输入绑定工具](Features/TOOLS.md#feature-input-binding-tool) | 已完成双页面版 | 使用接近游戏键位设置的键鼠/手柄双页面展示默认绑定，支持点击槽位监听修改、清除、冲突检查、Undo 和手动应用。 |
 | [Playtest 快捷控制](Features/TOOLS.md#feature-playtest-controls) | 已完成第一版 | 在 Play Mode 中集中恢复玩家、清理标签与冷却、返回检查点、解锁武器形态并批量重置敌人；所有操作只影响当前运行。 |
 | [场景联调窗口](Features/TOOLS.md#feature-scene-tuning) | 已完成运行时差异版 | 按玩家、镜头、战斗和敌人集中编辑高频参数；支持 Play Mode 字段级差异记录、退出提醒、逐项选择并通过 Undo 应用回场景。 |
+| [Action 与动画校准](Features/TOOLS.md#feature-action-animation-calibration) | 已完成诊断预览第一版 | 对照 Action、Clip 与 Animator State，检查动画事件、动作时长和状态映射，并在 Scene View 预览 Hitbox、攻击距离、Projectile 路径与 Root Motion 估算位移。 |
